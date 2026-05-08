@@ -1,0 +1,32 @@
+from fastapi import APIRouter
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
+from app.llm import gemini
+
+router = APIRouter(prefix="/chat", tags=["chat"])
+
+
+class ChatRequest(BaseModel):
+    prompt: str = Field(..., min_length=1, max_length=8000)
+    system: str | None = Field(default=None, max_length=4000)
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0)
+
+
+@router.post("/stream")
+async def chat_stream(req: ChatRequest) -> StreamingResponse:
+    async def gen():
+        async for chunk in gemini.stream_chat(
+            req.prompt, system=req.system, temperature=req.temperature
+        ):
+            yield chunk
+
+    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+
+
+@router.post("")
+async def chat_once(req: ChatRequest) -> dict[str, str]:
+    text = await gemini.generate(
+        req.prompt, system=req.system, temperature=req.temperature
+    )
+    return {"text": text}

@@ -1,0 +1,192 @@
+// Prisma schema for CommerceOS admin.
+//
+// Generates two surfaces:
+//   1. Auth.js (v5) tables: User, Account, Session, VerificationToken.
+//   2. Commerce domain: Category, Product, Inventory, Customer, Order, OrderItem.
+//
+// Money is stored as integer minor units (e.g. kuruş for TRY, cents for USD).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth.js ────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  emailVerified  DateTime?
+  image          String?
+  hashedPassword String?
+  role           Role      @default(VIEWER)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  accounts Account[]
+  sessions Session[]
+  orders   Order[]   @relation("OrderCreatedBy")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Commerce ───────────────────────────────────────────────────────────────
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  parentId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+  products Product[]
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  sku         String        @unique
+  description String?
+  price       Int // minor units
+  currency    String        @default("TRY")
+  status      ProductStatus @default(DRAFT)
+  images      Json          @default("[]")
+  categoryId  String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  inventory  Inventory?
+  orderItems OrderItem[]
+
+  @@index([status])
+  @@index([categoryId])
+}
+
+model Inventory {
+  id        String   @id @default(cuid())
+  productId String   @unique
+  quantity  Int      @default(0)
+  reserved  Int      @default(0)
+  location  String   @default("default")
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  address   Json?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique
+  customerId  String
+  createdById String?
+  status      OrderStatus @default(PENDING)
+  subtotal    Int
+  tax         Int         @default(0)
+  shipping    Int         @default(0)
+  total       Int
+  currency    String      @default("TRY")
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  customer  Customer    @relation(fields: [customerId], references: [id])
+  createdBy User?       @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items     OrderItem[]
+
+  @@index([status])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+  name      String // snapshot at time of order
+  quantity  Int
+  unitPrice Int // minor units, snapshot
+  total     Int
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@index([productId])
+}
