@@ -43,6 +43,30 @@ export async function listCategoryTree(): Promise<CategoryNode[]> {
   return roots;
 }
 
+export async function getCategoryById(id: string) {
+  return db.category.findUnique({
+    where: { id },
+    include: {
+      parent: { select: { id: true, name: true, slug: true } },
+      children: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          _count: { select: { products: true } },
+        },
+        orderBy: { name: "asc" },
+      },
+      products: {
+        select: { id: true, name: true, sku: true, status: true },
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+      },
+      _count: { select: { products: true } },
+    },
+  });
+}
+
 /** Returns the id and all descendant ids for the given root. */
 export async function getDescendantIds(rootId: string): Promise<string[]> {
   const all = await db.category.findMany({

@@ -11,6 +11,10 @@ export async function getDiscountByCode(code: string) {
   return db.discount.findUnique({ where: { code: code.toUpperCase() } });
 }
 
+export async function getDiscountById(id: string) {
+  return db.discount.findUnique({ where: { id } });
+}
+
 export type DiscountStatus = "scheduled" | "active" | "expired" | "disabled";
 
 export function deriveStatus(d: {

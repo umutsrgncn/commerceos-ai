@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Power, Trash2 } from "lucide-react";
+import { Pencil, Plus, Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -110,6 +110,16 @@ export default async function DiscountsPage() {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-1">
+                            <Link href={`/admin/discounts/${d.id}`}>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Düzenle"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </Link>
                             <form action={toggleDiscountAction}>
                               <input type="hidden" name="id" value={d.id} />
                               <Button

@@ -61,3 +61,36 @@ export const discountCreateSchema = z
   );
 
 export type DiscountCreateInput = z.infer<typeof discountCreateSchema>;
+
+/** Edit form: id required, code is immutable, geri kalan alanlar değişebilir. */
+export const discountUpdateSchema = z
+  .object({
+    id: z.string().cuid(),
+    description: z.string().max(200).optional().nullable(),
+    type: z.enum(DISCOUNT_TYPES),
+    percentValue: percentField.optional(),
+    fixedValue: minorMoneyField.optional(),
+    minSubtotal: minorMoneyField.optional(),
+    maxRedemptions: z
+      .union([z.string(), z.number(), z.literal("")])
+      .transform((v) => (v === "" || v == null ? null : Number(v) || null))
+      .pipe(z.number().int().positive().nullable()),
+    startsAt: optionalDate,
+    endsAt: optionalDate,
+    isActive: z.coerce.boolean().default(true),
+  })
+  .refine(
+    (data) =>
+      data.type === "PERCENTAGE" ? data.percentValue !== undefined : true,
+    { path: ["percentValue"], message: "Yüzde değeri gerekli" }
+  )
+  .refine((data) => (data.type === "FIXED" ? data.fixedValue !== undefined : true), {
+    path: ["fixedValue"],
+    message: "Sabit tutar gerekli",
+  })
+  .refine(
+    (data) => !data.startsAt || !data.endsAt || data.endsAt > data.startsAt,
+    { path: ["endsAt"], message: "Bitiş tarihi başlangıçtan sonra olmalı" }
+  );
+
+export type DiscountUpdateInput = z.infer<typeof discountUpdateSchema>;
