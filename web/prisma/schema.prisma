@@ -129,14 +129,38 @@ model Product {
 }
 
 model Inventory {
-  id        String   @id @default(cuid())
-  productId String   @unique
-  quantity  Int      @default(0)
-  reserved  Int      @default(0)
-  location  String   @default("default")
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  productId    String   @unique
+  quantity     Int      @default(0)
+  reserved     Int      @default(0)
+  reorderLevel Int      @default(5)
+  location     String   @default("default")
+  updatedAt    DateTime @updatedAt
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product     Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  adjustments InventoryAdjustment[]
+}
+
+enum AdjustmentReason {
+  RESTOCK
+  SALE
+  RETURN
+  LOSS
+  CORRECTION
+}
+
+model InventoryAdjustment {
+  id          String           @id @default(cuid())
+  inventoryId String
+  delta       Int // positive = stock added, negative = removed
+  reason      AdjustmentReason @default(CORRECTION)
+  note        String?
+  userId      String?
+  createdAt   DateTime         @default(now())
+
+  inventory Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+
+  @@index([inventoryId, createdAt])
 }
 
 model Customer {
