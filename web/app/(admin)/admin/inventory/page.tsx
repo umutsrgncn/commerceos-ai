@@ -3,6 +3,7 @@ import { AlertTriangle, Boxes, Package, Search, XCircle } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ProductThumb } from "@/components/products/product-thumb";
 import { listInventory } from "@/lib/queries/inventory";
 import { formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -142,9 +143,13 @@ export default async function InventoryPage({
                 return (
                   <li key={p.id} className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
                     <div className="flex flex-1 items-center gap-3">
-                      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[color:var(--color-fg)]/[0.04] text-lg">
-                        📦
-                      </span>
+                      <ProductThumb
+                        images={p.images}
+                        alt={p.name}
+                        className="h-12 w-12"
+                        rounded="lg"
+                      />
+
                       <div className="min-w-0 flex-1">
                         <Link
                           href={`/admin/products/${p.id}`}

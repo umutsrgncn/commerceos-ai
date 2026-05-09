@@ -6,13 +6,20 @@ import { GripVertical, Image as ImageIcon, UploadCloud, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { AiImageButton } from "./ai-image-button";
 
 interface ImageUploaderProps {
   name: string;
   initial?: string[];
+  /** Provides current form state when the user opens the AI image button. */
+  aiInput?: () => {
+    name: string;
+    description?: string | null;
+    category?: string | null;
+  };
 }
 
-export function ImageUploader({ name, initial = [] }: ImageUploaderProps) {
+export function ImageUploader({ name, initial = [], aiInput }: ImageUploaderProps) {
   const [urls, setUrls] = useState<string[]>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,9 +65,22 @@ export function ImageUploader({ name, initial = [] }: ImageUploaderProps) {
     });
   }
 
+  function appendUrls(newUrls: string[]) {
+    setUrls((prev) => [...prev, ...newUrls]);
+  }
+
   return (
     <div className="space-y-3">
       <input type="hidden" name={name} value={JSON.stringify(urls)} />
+
+      {aiInput && (
+        <div className="flex items-center justify-between">
+          <span className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
+            Görseller
+          </span>
+          <AiImageButton getInput={aiInput} onUrls={appendUrls} />
+        </div>
+      )}
 
       <div
         ref={dropRef}
