@@ -1,18 +1,14 @@
 import type { NextConfig } from "next";
 
+/**
+ * Direct rewrites to the AI service are intentionally NOT wired here —
+ * every AI call must go through an authed Next.js route handler or
+ * server action so that the FastAPI service stays internal-only.
+ */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   experimental: {
     typedRoutes: true,
-  },
-  async rewrites() {
-    const aiBase = process.env.AI_SERVICE_URL ?? "http://localhost:8000";
-    return [
-      {
-        source: "/api/ai/:path*",
-        destination: `${aiBase}/:path*`,
-      },
-    ];
   },
 };
 
