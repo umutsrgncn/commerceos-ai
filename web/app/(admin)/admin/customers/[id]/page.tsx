@@ -8,6 +8,7 @@ import { getCustomerById } from "@/lib/queries/customers";
 import { deleteCustomerAction } from "@/lib/actions/customers";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import { CustomerForm } from "../components/customer-form";
+import { SegmentPanel } from "../components/segment-panel";
 
 export const metadata = { title: "Müşteri — CommerceOS" };
 
@@ -66,6 +67,15 @@ export default async function CustomerDetailPage({
           address: customer.address as Address,
         }}
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>AI ile segmentasyon</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <SegmentPanel customerId={customer.id} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

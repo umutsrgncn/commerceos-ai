@@ -214,3 +214,26 @@ model OrderItem {
   @@index([orderId])
   @@index([productId])
 }
+
+enum DiscountType {
+  PERCENTAGE // value 0-100
+  FIXED // value in minor units (e.g. 5000 = 50.00 TRY off)
+}
+
+model Discount {
+  id              String       @id @default(cuid())
+  code            String       @unique
+  description     String?
+  type            DiscountType
+  value           Int
+  minSubtotal     Int          @default(0) // minor units gating the discount
+  maxRedemptions  Int? // null = unlimited
+  redemptionCount Int          @default(0)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([isActive, endsAt])
+}

@@ -40,6 +40,7 @@ export async function createProductAction(
     currency: formData.get("currency") ?? "TRY",
     status: formData.get("status") ?? "DRAFT",
     categoryId: formData.get("categoryId") || null,
+    images: formData.get("images") ?? "[]",
     initialQuantity: formData.get("initialQuantity") ?? 0,
   };
 
@@ -95,6 +96,7 @@ export async function updateProductAction(
     currency: formData.get("currency") ?? undefined,
     status: formData.get("status") ?? undefined,
     categoryId: formData.get("categoryId") || null,
+    images: formData.get("images") ?? undefined,
   };
 
   const parsed = productUpdateSchema.safeParse(raw);

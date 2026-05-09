@@ -37,6 +37,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# uploaded media (lokal disk, prod'da S3 vb. olur)
+/public/uploads/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts.bak

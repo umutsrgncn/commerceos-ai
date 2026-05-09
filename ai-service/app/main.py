@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.routers import chat, health, insights, products
+from app.routers import chat, customers, health, insights, messages, products
 
 settings = get_settings()
 logging.basicConfig(level=settings.log_level.upper())
@@ -26,3 +26,5 @@ app.include_router(health.router)
 app.include_router(chat.router)
 app.include_router(products.router)
 app.include_router(insights.router)
+app.include_router(messages.router)
+app.include_router(customers.router)

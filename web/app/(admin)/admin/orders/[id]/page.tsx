@@ -9,6 +9,7 @@ import { transitionOrderAction } from "@/lib/actions/orders";
 import { getNextStatuses, statusLabel } from "@/lib/orders/workflow";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import { OrderStatusBadge } from "../components/order-status-badge";
+import { DraftMessagePanel } from "../components/draft-message-panel";
 
 export const metadata = { title: "Sipariş — CommerceOS" };
 
@@ -149,6 +150,21 @@ export default async function OrderDetailPage({
                   {order.customer.phone}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                AI ile mesaj öner
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <DraftMessagePanel
+                orderNumber={order.orderNumber}
+                customerName={order.customer.name}
+                totalLabel={formatMoney(order.total, order.currency)}
+              />
             </CardContent>
           </Card>
 
