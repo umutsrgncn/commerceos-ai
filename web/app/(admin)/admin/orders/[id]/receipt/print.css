@@ -1,0 +1,21 @@
+/* Yazdırma için temizleme: yan menü, top bar, butonlar görünmesin. */
+@media print {
+  [data-receipt-hide] {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+    color: #000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .receipt-page {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  @page {
+    margin: 16mm 14mm;
+  }
+}

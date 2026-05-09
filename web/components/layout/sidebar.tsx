@@ -10,6 +10,7 @@ export function Sidebar() {
 
   const main = NAV_ITEMS.filter((item) => item.group === "main");
   const ai = NAV_ITEMS.filter((item) => item.group === "ai");
+  const system = NAV_ITEMS.filter((item) => item.group === "system");
 
   return (
     <aside className="hidden h-screen w-60 shrink-0 flex-col border-r border-[color:var(--color-border)] bg-[color:var(--color-bg)] md:flex">
@@ -35,6 +36,18 @@ export function Sidebar() {
           <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
         ))}
       </nav>
+
+      {system.length > 0 && (
+        <div className="mt-auto border-t border-[color:var(--color-border)] p-3">
+          {system.map((item) => (
+            <NavLink
+              key={item.href}
+              item={item}
+              active={isActive(pathname, item.href)}
+            />
+          ))}
+        </div>
+      )}
     </aside>
   );
 }
