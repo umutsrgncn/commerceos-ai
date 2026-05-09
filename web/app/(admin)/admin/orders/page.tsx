@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import type { OrderStatus } from "@prisma/client";
 
 import { Button } from "@/components/ui/button";
@@ -83,6 +83,7 @@ export default async function OrdersPage({
                     <th className="px-4 py-3 text-right font-medium">Kalem</th>
                     <th className="px-4 py-3 text-right font-medium">Tutar</th>
                     <th className="px-4 py-3 text-right font-medium">Açıldı</th>
+                    <th className="px-4 py-3 text-right font-medium">İşlem</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -116,6 +117,14 @@ export default async function OrdersPage({
                       </td>
                       <td className="px-4 py-3 text-right text-xs text-[color:var(--color-muted)]">
                         {formatRelativeTime(o.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link href={`/admin/orders/${o.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-3.5 w-3.5" />
+                            İncele
+                          </Button>
+                        </Link>
                       </td>
                     </tr>
                   ))}

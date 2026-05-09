@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Eye, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -67,6 +67,7 @@ export default async function CustomersPage({
                     <th className="px-4 py-3 text-left font-medium">Telefon</th>
                     <th className="px-4 py-3 text-right font-medium">Sipariş</th>
                     <th className="px-4 py-3 text-right font-medium">Eklendi</th>
+                    <th className="px-4 py-3 text-right font-medium">İşlem</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -94,6 +95,14 @@ export default async function CustomersPage({
                       </td>
                       <td className="px-4 py-3 text-right text-xs text-[color:var(--color-muted)]">
                         {formatRelativeTime(c.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link href={`/admin/customers/${c.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-3.5 w-3.5" />
+                            Düzenle
+                          </Button>
+                        </Link>
                       </td>
                     </tr>
                   ))}

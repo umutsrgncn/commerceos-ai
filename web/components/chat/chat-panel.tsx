@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, Square } from "lucide-react";
+import {
+  Boxes,
+  MessageSquare,
+  Package,
+  Send,
+  Sparkles,
+  Square,
+  TrendingUp,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,11 +17,31 @@ import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/types/chat";
 import { MessageBubble } from "./message-bubble";
 
-const SUGGESTIONS = [
-  "Bugün dikkat etmem gereken siparişler nelerdir?",
-  "İptal siparişe nasıl mesaj atmalıyım?",
-  "Pamuklu tişört ürün açıklaması yaz.",
-  "Stok azalan kalemleri bana hatırlat.",
+const SUGGESTIONS: Array<{
+  icon: React.ComponentType<{ className?: string }>;
+  text: string;
+  hint: string;
+}> = [
+  {
+    icon: TrendingUp,
+    text: "Bugün dikkat etmem gereken siparişler nelerdir?",
+    hint: "Operasyon",
+  },
+  {
+    icon: MessageSquare,
+    text: "İptal siparişe nasıl mesaj atmalıyım?",
+    hint: "Müşteri iletişimi",
+  },
+  {
+    icon: Package,
+    text: "Pamuklu tişört için ürün açıklaması yaz.",
+    hint: "İçerik üret",
+  },
+  {
+    icon: Boxes,
+    text: "Stok azalan kalemleri hatırlat ve yeniden sipariş öner.",
+    hint: "Envanter",
+  },
 ];
 
 function newId() {
@@ -102,8 +130,41 @@ export function ChatPanel() {
     abortRef.current?.abort();
   }
 
+  function reset() {
+    setMessages([]);
+    abortRef.current?.abort();
+  }
+
   return (
     <div className="flex h-[calc(100vh-7rem)] flex-col gap-4">
+      {/* Header */}
+      <div className="flex items-center justify-between rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-5 py-3">
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-sm">
+            <Sparkles className="h-4 w-4" />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Asistan</span>
+              <span className="rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.04] px-2 py-0.5 text-[10px] font-mono text-[color:var(--color-muted)]">
+                gemini-2.5-flash
+              </span>
+            </div>
+            <div className="text-xs text-[color:var(--color-muted)]">
+              {messages.length === 0
+                ? "Hazır"
+                : `${Math.ceil(messages.length / 2)} tur · ${streaming ? "yazıyor…" : "bekleniyor"}`}
+            </div>
+          </div>
+        </div>
+        {messages.length > 0 && (
+          <Button type="button" variant="ghost" size="sm" onClick={reset}>
+            Yeni sohbet
+          </Button>
+        )}
+      </div>
+
+      {/* Messages */}
       <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-6"
@@ -111,7 +172,7 @@ export function ChatPanel() {
         {messages.length === 0 ? (
           <EmptyState onPick={(text) => send(text)} />
         ) : (
-          <div className="space-y-4">
+          <div className="mx-auto max-w-3xl space-y-4">
             {messages.map((msg, i) => (
               <MessageBubble
                 key={msg.id}
@@ -123,12 +184,13 @@ export function ChatPanel() {
         )}
       </div>
 
+      {/* Composer */}
       <form
         onSubmit={(e) => {
           e.preventDefault();
           send(input);
         }}
-        className="flex items-end gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3"
+        className="mx-auto flex w-full max-w-3xl items-end gap-2 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-2 shadow-sm focus-within:border-[color:var(--color-accent)]/40 focus-within:ring-2 focus-within:ring-[color:var(--color-accent)]/15"
       >
         <Textarea
           ref={textareaRef}
@@ -140,9 +202,9 @@ export function ChatPanel() {
               send(input);
             }
           }}
-          placeholder="Bir soru yaz… Enter göndermek için, Shift+Enter satır arası."
+          placeholder="Bir soru yaz… ⏎ gönder, Shift+⏎ satır arası"
           rows={2}
-          className="min-h-12 resize-none border-none focus-visible:ring-0"
+          className="min-h-12 resize-none border-none bg-transparent focus-visible:ring-0"
         />
         {streaming ? (
           <Button type="button" variant="outline" size="icon" onClick={stop} aria-label="Durdur">
@@ -160,32 +222,43 @@ export function ChatPanel() {
 
 function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-6 text-center">
-      <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg">
-        <Sparkles className="h-6 w-6" />
-      </div>
-      <div className="space-y-1">
-        <h3 className="text-lg font-semibold">CommerceOS Asistan</h3>
-        <p className="max-w-md text-sm text-[color:var(--color-muted)]">
+    <div className="mx-auto flex h-full max-w-3xl flex-col items-center justify-center gap-8 text-center">
+      <div className="space-y-3">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20">
+          <Sparkles className="h-7 w-7" />
+        </div>
+        <h3 className="text-xl font-semibold tracking-tight">CommerceOS Asistan</h3>
+        <p className="mx-auto max-w-md text-sm text-[color:var(--color-muted)]">
           Ürün metni yaz, sipariş süreçlerini sorgula, müşteri mesajı taslakla.
-          Gemini ile çalışıyor.
+          Gemini ile çalışıyor — verdiğin sayıyı sapmadan kullanır.
         </p>
       </div>
 
-      <div className="flex w-full max-w-2xl flex-wrap justify-center gap-2">
-        {SUGGESTIONS.map((suggestion) => (
-          <button
-            key={suggestion}
-            type="button"
-            onClick={() => onPick(suggestion)}
-            className={cn(
-              "rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.025] px-3 py-1.5 text-xs",
-              "text-[color:var(--color-muted)] transition hover:bg-[color:var(--color-fg)]/[0.06] hover:text-[color:var(--color-fg)]"
-            )}
-          >
-            {suggestion}
-          </button>
-        ))}
+      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+        {SUGGESTIONS.map((s) => {
+          const Icon = s.icon;
+          return (
+            <button
+              key={s.text}
+              type="button"
+              onClick={() => onPick(s.text)}
+              className={cn(
+                "group flex items-start gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.025] p-4 text-left transition",
+                "hover:border-[color:var(--color-accent)]/40 hover:bg-[color:var(--color-fg)]/[0.05]"
+              )}
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[color:var(--color-bg)] text-[color:var(--color-muted)] transition group-hover:text-[color:var(--color-accent)]">
+                <Icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="text-[10px] font-medium uppercase tracking-wider text-[color:var(--color-muted)]">
+                  {s.hint}
+                </div>
+                <div className="mt-0.5 text-sm">{s.text}</div>
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

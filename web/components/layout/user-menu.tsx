@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Menu } from "@ark-ui/react/menu";
 import { Portal } from "@ark-ui/react/portal";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
@@ -41,19 +42,23 @@ export function UserMenu({
               )}
             </div>
             <div className="my-1 h-px bg-[color:var(--color-border)]" />
-            <Menu.Item
-              value="profile"
-              className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm outline-none data-[highlighted]:bg-[color:var(--color-fg)]/[0.06]"
-            >
-              <UserIcon className="h-4 w-4" />
-              Profil
+            <Menu.Item value="profile" asChild>
+              <Link
+                href="/admin/profile"
+                className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm outline-none data-[highlighted]:bg-[color:var(--color-fg)]/[0.06]"
+              >
+                <UserIcon className="h-4 w-4" />
+                Profil
+              </Link>
             </Menu.Item>
-            <Menu.Item
-              value="settings"
-              className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm outline-none data-[highlighted]:bg-[color:var(--color-fg)]/[0.06]"
-            >
-              <Settings className="h-4 w-4" />
-              Ayarlar
+            <Menu.Item value="settings" asChild>
+              <Link
+                href="/admin/settings"
+                className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-1.5 text-sm outline-none data-[highlighted]:bg-[color:var(--color-fg)]/[0.06]"
+              >
+                <Settings className="h-4 w-4" />
+                Ayarlar
+              </Link>
             </Menu.Item>
             <div className="my-1 h-px bg-[color:var(--color-border)]" />
             <form action={signOutAction}>

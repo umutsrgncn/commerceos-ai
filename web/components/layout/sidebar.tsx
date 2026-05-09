@@ -13,10 +13,10 @@ export function Sidebar() {
   const system = NAV_ITEMS.filter((item) => item.group === "system");
 
   return (
-    <aside className="hidden h-screen w-60 shrink-0 flex-col border-r border-[color:var(--color-border)] bg-[color:var(--color-bg)] md:flex">
+    <aside className="hidden md:flex sticky top-0 h-screen w-60 shrink-0 flex-col self-start border-r border-[color:var(--color-border)] bg-[color:var(--color-bg)]">
       <Link
         href="/admin"
-        className="flex h-16 items-center gap-2 px-5 text-lg font-semibold tracking-tight"
+        className="flex h-16 shrink-0 items-center gap-2 px-5 text-lg font-semibold tracking-tight"
       >
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-sm">
           ⌘
@@ -24,7 +24,7 @@ export function Sidebar() {
         CommerceOS
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-1 p-3">
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
         {main.map((item) => (
           <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
         ))}
@@ -38,7 +38,7 @@ export function Sidebar() {
       </nav>
 
       {system.length > 0 && (
-        <div className="mt-auto border-t border-[color:var(--color-border)] p-3">
+        <div className="shrink-0 border-t border-[color:var(--color-border)] p-3">
           {system.map((item) => (
             <NavLink
               key={item.href}
