@@ -17,6 +17,7 @@ import {
 } from "@/lib/actions/products";
 import { formatMinorUnits } from "@/lib/schemas/products";
 import { AiDescribeButton } from "./ai-describe-button";
+import { ImageUploader } from "./image-uploader";
 
 type Category = { id: string; name: string };
 
@@ -34,6 +35,7 @@ type Mode =
         currency: string;
         status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
         categoryId: string | null;
+        images?: string[];
       };
     };
 
@@ -152,6 +154,15 @@ export function ProductForm(props: Props) {
               />
               <FieldError messages={state?.fieldErrors?.description} />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Görseller</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ImageUploader name="images" initial={initial?.images ?? []} />
           </CardContent>
         </Card>
 

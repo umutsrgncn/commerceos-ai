@@ -61,6 +61,9 @@ export default async function EditProductPage({
           currency: product.currency,
           status: product.status,
           categoryId: product.categoryId,
+          images: Array.isArray(product.images)
+            ? (product.images as string[]).filter((u) => typeof u === "string")
+            : [],
         }}
       />
     </div>

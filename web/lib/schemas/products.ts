@@ -21,6 +21,21 @@ const priceField = z
     return Math.round(num * 100);
   });
 
+const imagesField = z
+  .union([z.array(z.string().url()), z.string()])
+  .transform((val) => {
+    if (Array.isArray(val)) return val;
+    if (!val) return [];
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed.filter((u) => typeof u === "string") : [];
+    } catch {
+      return [];
+    }
+  })
+  .pipe(z.array(z.string()).max(20))
+  .default([]);
+
 export const productCreateSchema = z.object({
   name: z.string().min(2, "Ad en az 2 karakter").max(160),
   slug: z
@@ -34,6 +49,7 @@ export const productCreateSchema = z.object({
   currency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
   status: z.enum(PRODUCT_STATUSES).default("DRAFT"),
   categoryId: z.string().cuid().optional().nullable(),
+  images: imagesField,
   initialQuantity: z
     .union([z.string(), z.number()])
     .transform((val) => Number(val) || 0)
