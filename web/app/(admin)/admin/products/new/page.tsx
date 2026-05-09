@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { listCategoriesFlat } from "@/lib/queries/products";
+import { listCategoryOptions } from "@/lib/queries/categories";
 import { ProductForm } from "../components/product-form";
 
 export const metadata = { title: "Yeni ürün — CommerceOS" };
 
 export default async function NewProductPage() {
-  const categories = await listCategoriesFlat();
+  const categories = await listCategoryOptions();
 
   return (
     <div className="space-y-6">

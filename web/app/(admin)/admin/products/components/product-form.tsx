@@ -162,7 +162,18 @@ export function ProductForm(props: Props) {
             <CardTitle>Görseller</CardTitle>
           </CardHeader>
           <CardContent>
-            <ImageUploader name="images" initial={initial?.images ?? []} />
+            <ImageUploader
+              name="images"
+              initial={initial?.images ?? []}
+              aiInput={() => ({
+                name: nameRef.current?.value ?? "",
+                description: descriptionRef.current?.value ?? null,
+                category:
+                  props.categories.find(
+                    (c) => c.id === categoryRef.current?.value
+                  )?.name ?? null,
+              })}
+            />
           </CardContent>
         </Card>
 

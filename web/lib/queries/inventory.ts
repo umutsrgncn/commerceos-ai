@@ -37,6 +37,7 @@ export async function listInventory(filters: InventoryListFilters = {}) {
       sku: true,
       status: true,
       currency: true,
+      images: true,
       inventory: {
         select: {
           id: true,

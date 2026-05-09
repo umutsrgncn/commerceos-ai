@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { getProductById, listCategoriesFlat } from "@/lib/queries/products";
+import { getProductById } from "@/lib/queries/products";
+import { listCategoryOptions } from "@/lib/queries/categories";
 import { deleteProductAction } from "@/lib/actions/products";
 import { ProductForm } from "../components/product-form";
 
@@ -17,7 +18,7 @@ export default async function EditProductPage({
   const { id } = await params;
   const [product, categories] = await Promise.all([
     getProductById(id),
-    listCategoriesFlat(),
+    listCategoryOptions(),
   ]);
 
   if (!product) notFound();

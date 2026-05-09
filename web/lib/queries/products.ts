@@ -3,16 +3,43 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import type { ProductStatusValue } from "@/lib/schemas/products";
 
+export type ProductSort =
+  | "updated_desc"
+  | "updated_asc"
+  | "created_desc"
+  | "created_asc"
+  | "price_desc"
+  | "price_asc"
+  | "name_asc";
+
+const PRODUCT_ORDER_BY: Record<ProductSort, Prisma.ProductOrderByWithRelationInput> = {
+  updated_desc: { updatedAt: "desc" },
+  updated_asc: { updatedAt: "asc" },
+  created_desc: { createdAt: "desc" },
+  created_asc: { createdAt: "asc" },
+  price_desc: { price: "desc" },
+  price_asc: { price: "asc" },
+  name_asc: { name: "asc" },
+};
+
 export type ProductListFilters = {
   q?: string;
   status?: ProductStatusValue;
   categoryId?: string;
   page?: number;
   pageSize?: number;
+  sort?: ProductSort;
 };
 
 export async function listProducts(filters: ProductListFilters = {}) {
-  const { q, status, categoryId, page = 1, pageSize = 20 } = filters;
+  const {
+    q,
+    status,
+    categoryId,
+    page = 1,
+    pageSize = 20,
+    sort = "updated_desc",
+  } = filters;
 
   const where: Prisma.ProductWhereInput = {
     ...(status ? { status } : {}),
@@ -35,7 +62,7 @@ export async function listProducts(filters: ProductListFilters = {}) {
         category: { select: { id: true, name: true } },
         inventory: { select: { quantity: true } },
       },
-      orderBy: { updatedAt: "desc" },
+      orderBy: PRODUCT_ORDER_BY[sort] ?? PRODUCT_ORDER_BY.updated_desc,
       skip: (page - 1) * pageSize,
       take: pageSize,
     }),

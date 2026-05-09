@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ProductThumb } from "@/components/products/product-thumb";
 import { listProducts } from "@/lib/queries/products";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import type { ProductStatusValue } from "@/lib/schemas/products";
@@ -84,17 +85,26 @@ export default async function ProductsPage({
                       className="border-b border-[color:var(--color-border)] last:border-b-0 hover:bg-[color:var(--color-fg)]/[0.025]"
                     >
                       <td className="px-4 py-3">
-                        <Link
-                          href={`/admin/products/${product.id}`}
-                          className="font-medium hover:underline"
-                        >
-                          {product.name}
-                        </Link>
-                        {product.category && (
-                          <div className="text-xs text-[color:var(--color-muted)]">
-                            {product.category.name}
+                        <div className="flex items-center gap-3">
+                          <ProductThumb
+                            images={product.images}
+                            alt={product.name}
+                            className="h-10 w-10"
+                          />
+                          <div className="min-w-0">
+                            <Link
+                              href={`/admin/products/${product.id}`}
+                              className="block truncate font-medium hover:underline"
+                            >
+                              {product.name}
+                            </Link>
+                            {product.category && (
+                              <div className="text-xs text-[color:var(--color-muted)]">
+                                {product.category.name}
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs text-[color:var(--color-muted)]">
                         {product.sku}

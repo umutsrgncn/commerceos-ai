@@ -67,6 +67,29 @@ export async function getCategoryById(id: string) {
   });
 }
 
+/**
+ * Hiyerarşik dropdown için breadcrumb-formatlı liste:
+ *   [{ id, name: "Kıyafet" }, { id, name: "Kıyafet › Tişört" }, ...]
+ *
+ * Sıralama parent-then-children — aynı select'te alt kategoriler
+ * üst kategorilerin hemen ardında görünür.
+ */
+export async function listCategoryOptions(): Promise<
+  { id: string; name: string }[]
+> {
+  const tree = await listCategoryTree();
+  const out: { id: string; name: string }[] = [];
+
+  function visit(node: CategoryNode, prefix: string) {
+    const label = prefix ? `${prefix} › ${node.name}` : node.name;
+    out.push({ id: node.id, name: label });
+    for (const child of node.children) visit(child, label);
+  }
+
+  for (const root of tree) visit(root, "");
+  return out;
+}
+
 /** Returns the id and all descendant ids for the given root. */
 export async function getDescendantIds(rootId: string): Promise<string[]> {
   const all = await db.category.findMany({
