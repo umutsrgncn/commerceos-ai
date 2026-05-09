@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { recordActivity } from "@/lib/activity";
 import { orderCreateSchema, orderStatusTransitionSchema } from "@/lib/schemas/orders";
 import { canTransition, generateOrderNumber } from "@/lib/orders/workflow";
 
@@ -107,7 +108,14 @@ export async function createOrderAction(
           notes: notes ?? null,
           items: { create: orderItems },
         },
-        select: { id: true },
+        select: { id: true, orderNumber: true },
+      });
+
+      await recordActivity({
+        action: "order.create",
+        entityType: "order",
+        entityId: created.id,
+        metadata: { orderNumber: created.orderNumber, total, currency },
       });
 
       revalidatePath("/admin/orders");
@@ -143,6 +151,12 @@ export async function transitionOrderAction(formData: FormData) {
   }
 
   await db.order.update({ where: { id }, data: { status: to } });
+  await recordActivity({
+    action: "order.transition",
+    entityType: "order",
+    entityId: id,
+    metadata: { from: order.status, to },
+  });
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);
 }

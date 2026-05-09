@@ -1,4 +1,5 @@
 import {
+  Activity,
   BarChart3,
   Boxes,
   FolderTree,
@@ -6,6 +7,7 @@ import {
   MessageSquare,
   Package,
   Percent,
+  Settings,
   ShoppingCart,
   Users,
   type LucideIcon,
@@ -15,7 +17,7 @@ export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
-  group: "main" | "ai";
+  group: "main" | "ai" | "system";
 };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -28,4 +30,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/discounts", label: "İndirimler", icon: Percent, group: "main" },
   { href: "/admin/analytics", label: "Analitik", icon: BarChart3, group: "main" },
   { href: "/admin/ai", label: "AI Asistan", icon: MessageSquare, group: "ai" },
+  { href: "/admin/activity", label: "Etkinlik", icon: Activity, group: "system" },
+  { href: "/admin/settings", label: "Ayarlar", icon: Settings, group: "system" },
 ];

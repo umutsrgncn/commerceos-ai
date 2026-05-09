@@ -194,9 +194,70 @@ model Order {
   customer  Customer    @relation(fields: [customerId], references: [id])
   createdBy User?       @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   items     OrderItem[]
+  refunds   Refund[]
 
   @@index([status])
   @@index([customerId])
+}
+
+enum RefundReason {
+  CUSTOMER_REQUEST
+  DEFECTIVE
+  WRONG_ITEM
+  LATE_DELIVERY
+  CANCELLED
+  OTHER
+}
+
+enum RefundStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+}
+
+model Refund {
+  id        String       @id @default(cuid())
+  orderId   String
+  amount    Int // minor units
+  reason    RefundReason @default(CUSTOMER_REQUEST)
+  status    RefundStatus @default(PENDING)
+  notes     String?
+  userId    String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+}
+
+model SystemSettings {
+  // Singleton row — there is only ever one record, keyed by literal "default".
+  id              String   @id @default("default")
+  companyName     String   @default("CommerceOS Demo")
+  taxId           String?
+  address         String?
+  phone           String?
+  email           String?
+  defaultCurrency String   @default("TRY")
+  defaultTaxRate  Float    @default(0)
+  timezone        String   @default("Europe/Istanbul")
+  updatedAt       DateTime @updatedAt
+}
+
+model ActivityLog {
+  id         String   @id @default(cuid())
+  action     String // dot.path: 'product.create', 'order.transition', 'refund.create'
+  entityType String?
+  entityId   String?
+  userId     String?
+  userName   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([userId])
 }
 
 model OrderItem {

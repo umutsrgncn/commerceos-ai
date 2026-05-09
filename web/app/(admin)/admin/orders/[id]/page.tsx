@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getOrderById } from "@/lib/queries/orders";
+import { listRefundsForOrder, getRefundedTotal } from "@/lib/queries/refunds";
 import { transitionOrderAction } from "@/lib/actions/orders";
 import { getNextStatuses, statusLabel } from "@/lib/orders/workflow";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import { OrderStatusBadge } from "../components/order-status-badge";
 import { DraftMessagePanel } from "../components/draft-message-panel";
+import { RefundPanel } from "../components/refund-panel";
 
 export const metadata = { title: "Sipariş — CommerceOS" };
 
@@ -21,6 +23,11 @@ export default async function OrderDetailPage({
   const { id } = await params;
   const order = await getOrderById(id);
   if (!order) notFound();
+
+  const [refunds, refundedSoFar] = await Promise.all([
+    listRefundsForOrder(order.id),
+    getRefundedTotal(order.id),
+  ]);
 
   const nextStatuses = getNextStatuses(order.status);
 
@@ -47,9 +54,14 @@ export default async function OrderDetailPage({
           </p>
         </div>
 
-        {nextStatuses.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {nextStatuses.map((status) => (
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/admin/orders/${order.id}/receipt`}>
+            <Button type="button" variant="outline" size="sm">
+              <Printer className="h-4 w-4" />
+              Yazdır
+            </Button>
+          </Link>
+          {nextStatuses.map((status) => (
               <form key={status} action={transitionOrderAction}>
                 <input type="hidden" name="id" value={order.id} />
                 <input type="hidden" name="to" value={status} />
@@ -63,7 +75,6 @@ export default async function OrderDetailPage({
               </form>
             ))}
           </div>
-        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -150,6 +161,21 @@ export default async function OrderDetailPage({
                   {order.customer.phone}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">İade</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RefundPanel
+                orderId={order.id}
+                orderTotal={order.total}
+                currency={order.currency}
+                refundedSoFar={refundedSoFar}
+                refunds={refunds}
+              />
             </CardContent>
           </Card>
 

@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { recordActivity } from "@/lib/activity";
 import {
   productCreateSchema,
   productUpdateSchema,
@@ -59,6 +60,13 @@ export async function createProductAction(
           create: { quantity: initialQuantity ?? 0 },
         },
       },
+    });
+
+    await recordActivity({
+      action: "product.create",
+      entityType: "product",
+      entityId: created.id,
+      metadata: { name: created.name, sku: created.sku },
     });
 
     revalidatePath("/admin/products");
@@ -130,7 +138,13 @@ export async function deleteProductAction(formData: FormData) {
   const id = formData.get("id");
   if (typeof id !== "string") return;
 
-  await db.product.delete({ where: { id } });
+  const deleted = await db.product.delete({ where: { id } });
+  await recordActivity({
+    action: "product.delete",
+    entityType: "product",
+    entityId: id,
+    metadata: { name: deleted.name, sku: deleted.sku },
+  });
   revalidatePath("/admin/products");
   redirect("/admin/products");
 }
