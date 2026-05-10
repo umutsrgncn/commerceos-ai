@@ -33,9 +33,18 @@ test.describe("Expenses", () => {
 
     await authedPage.getByLabel(/Açıklama/i).fill(desc);
     await authedPage.getByLabel(/^Tutar$/i).fill("100.00");
-    await authedPage.getByRole("button", { name: /Gideri kaydet|Kaydet/i }).first().click();
+    await authedPage
+      .getByRole("button", { name: /Gideri kaydet/i })
+      .last()
+      .click();
 
-    await authedPage.waitForURL(/\/admin\/expenses/, { timeout: 15_000 });
+    // Action redirect → /admin/expenses (new değil, /new değil)
+    await authedPage.waitForURL(
+      (u) =>
+        u.pathname === "/admin/expenses" ||
+        /^\/admin\/expenses\/cm[a-z0-9]+$/.test(u.pathname),
+      { timeout: 15_000 },
+    );
 
     const db = getDb();
     const e = await db.expense.findFirst({ where: { description: desc } });

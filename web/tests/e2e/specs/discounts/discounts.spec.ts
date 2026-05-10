@@ -19,11 +19,13 @@ test.describe("Discounts", () => {
 
     await authedPage.getByLabel(/^Kod$/i).fill(code);
     await authedPage.getByLabel(/Yüzde değeri/i).fill("20");
-    await authedPage.getByRole("button", { name: /Kodu kaydet|Kaydet/i }).first().click();
+    // Sticky bottom bar'daki form submit
+    await authedPage
+      .getByRole("button", { name: /Kodu kaydet/i })
+      .last()
+      .click();
 
-    await authedPage.waitForURL(/\/admin\/discounts(\/|\?|$)/, {
-      timeout: 15_000,
-    });
+    await authedPage.waitForURL(/\/admin\/discounts$/, { timeout: 15_000 });
 
     // DB'de var
     const db = getDb();

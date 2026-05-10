@@ -1,20 +1,20 @@
 /**
  * Birleşik test fixture.
  *
- * Çoğu spec şunu kullanır:
  *   import { test, expect } from "../../fixtures";
  *
- * Bu, otopilot guard + AI mock + opsiyonel programmatic auth + DB helper'ı
- * tek import'tan getirir.
+ * Kapsam:
+ *   - autopilot guard (her test başı/sonu OFF)
+ *   - AI mock (default ON, E2E_REAL_AI=1 ile kapatılır)
+ *   - authedPage (programmatic login + AI mock'lar yüklenmiş)
  *
- * Auth UI test ediliyorsa `auth.ts` import etme — `@playwright/test`'i
- * direkt kullan.
+ * Auth UI test ediliyorsa fixtures'tan değil vanilla `@playwright/test`'i
+ * kullan.
  */
 
 import { mergeTests } from "@playwright/test";
 import { test as autopilotGuard } from "./autopilot-guard";
-import { test as aiMock } from "./ai-mock";
 import { test as authed } from "./authed";
 
-export const test = mergeTests(autopilotGuard, aiMock, authed);
+export const test = mergeTests(autopilotGuard, authed);
 export { expect } from "@playwright/test";

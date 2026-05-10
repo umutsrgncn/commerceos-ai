@@ -14,16 +14,20 @@ test.describe("Settings — şirket + GİB", () => {
       authedPage.getByRole("heading", { name: /Mağaza ayarları/i }),
     ).toBeVisible();
 
-    const companyInput = authedPage.getByLabel(/Şirket adı/i);
+    const companyInput = authedPage.getByLabel(/Firma adı/i);
     await companyInput.fill("CommerceOS E2E Test Şirketi");
 
-    // İlk kayıt butonu — şirket bilgileri formu
-    const saveButtons = authedPage.getByRole("button", { name: /Kaydet/i });
-    await saveButtons.first().click();
+    // İlk form'un submit butonu (şirket bilgileri)
+    await authedPage
+      .locator("form")
+      .first()
+      .getByRole("button", { name: /Kaydet/i })
+      .click();
 
     // Sayfa yenilense bile alan kalsın
+    await authedPage.waitForTimeout(800);
     await authedPage.reload();
-    await expect(authedPage.getByLabel(/Şirket adı/i)).toHaveValue(
+    await expect(authedPage.getByLabel(/Firma adı/i)).toHaveValue(
       "CommerceOS E2E Test Şirketi",
     );
   });
@@ -31,9 +35,9 @@ test.describe("Settings — şirket + GİB", () => {
   test("GİB modu test/üretim seçilebilir", async ({ authedPage }) => {
     await authedPage.goto(ROUTES.settings);
 
-    // GİB section'da test mode rozet veya seçici görünür
+    // GİB section heading
     await expect(
-      authedPage.getByText(/GİB E-Fatura Entegrasyonu/i),
+      authedPage.getByRole("heading", { name: /GİB E-Fatura Entegrasyonu/i }),
     ).toBeVisible();
   });
 });

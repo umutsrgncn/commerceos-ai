@@ -24,11 +24,15 @@ test.describe("Suppliers", () => {
     await authedPage.goto(ROUTES.newSupplier);
     await authedPage.getByLabel(/Firma adı/i).fill(name);
     await authedPage.getByLabel(/E-posta/i).fill(email);
-    await authedPage.getByRole("button", { name: /^Kaydet$|^Kaydet/i }).first().click();
+    // Sticky bottom action bar'daki Kaydet butonu (form submit)
+    // Form'un kendi submit butonu (sticky bar) — text="Kaydet"
+    await authedPage
+      .getByRole("button", { name: /^Kaydet$/, exact: false })
+      .last()
+      .click();
 
-    await authedPage.waitForURL(/\/admin\/suppliers(\/|\?|$)/, {
-      timeout: 15_000,
-    });
+    // Action navigate to /admin/suppliers
+    await authedPage.waitForURL(/\/admin\/suppliers$/, { timeout: 15_000 });
 
     const db = getDb();
     const created = await db.supplier.findFirst({ where: { name } });

@@ -8,6 +8,9 @@ test.describe("AI Pricing card", () => {
     authedPage,
     mockAi,
   }) => {
+    // suggestPriceAction server action içinden ai-service'e fetch atıyor;
+    // browser-level mock yakalayamaz. MSW kurulduğunda enable edilmeli.
+    test.fixme(true, "Server action AI fetch — MSW gerekir");
     expect(mockAi.enabled).toBe(true);
     const product = await seedProduct({
       name: e2eName("PricingProduct"),

@@ -26,15 +26,19 @@ test.describe("Customers CRUD", () => {
     await authedPage.goto(ROUTES.newCustomer);
     await authedPage.getByLabel(/Ad Soyad/i).fill(name);
     await authedPage.getByLabel(/E-posta/i).fill(email);
-    // Sticky bottom action bar'dan kaydet
-    const saveBtn = authedPage.getByRole("button", {
-      name: /Müşteriyi ekle|Kaydet/i,
-    });
-    await saveBtn.first().click();
+    await authedPage
+      .getByRole("button", { name: /Müşteriyi ekle/i })
+      .last()
+      .click();
 
-    await authedPage.waitForURL(/\/admin\/customers/, { timeout: 15_000 });
-    await authedPage.goto(ROUTES.customers);
-    await expect(authedPage.getByText(name)).toBeVisible();
+    // Action ya /admin/customers ya da /admin/customers/[id]'e gidiyor
+    await authedPage.waitForURL(/\/admin\/customers(\/cm[a-z0-9]+)?$/, {
+      timeout: 15_000,
+    });
+    // DB'de doğrula (UI render gecikmesi yerine)
+    const { getDb } = await import("../../helpers/db");
+    const found = await getDb().customer.findFirst({ where: { name } });
+    expect(found).not.toBeNull();
   });
 
   test("müşteri detay sayfası avatar + LTV kartlarını gösterir", async ({

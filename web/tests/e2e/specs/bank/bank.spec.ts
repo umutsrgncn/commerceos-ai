@@ -21,8 +21,12 @@ test.describe("Bank reconciliation", () => {
     authedPage,
   }) => {
     await authedPage.goto(ROUTES.bankImport);
-    await expect(authedPage.getByText(/Banka bilgisi/i)).toBeVisible();
-    await expect(authedPage.getByText(/CSV dosyası/i)).toBeVisible();
+    await expect(
+      authedPage.getByRole("heading", { name: /Banka bilgisi/i }),
+    ).toBeVisible();
+    await expect(
+      authedPage.getByRole("heading", { name: /CSV dosyası/i }),
+    ).toBeVisible();
   });
 
   test("webhook idempotent çalışır (aynı reference 2. kez)", async ({

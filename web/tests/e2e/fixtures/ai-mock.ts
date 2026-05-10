@@ -1,17 +1,14 @@
 /**
- * AI mock fixture — Playwright page.route ile /api/ai/* + ai-service
- * çağrılarını intercept eder ve deterministik mock yanıtlar döner.
+ * AI mock fixture — Playwright route intercept ile /api/ai/* + ai-service
+ * çağrılarını deterministik mock yanıtlarla cevaplar.
  *
- * E2E_REAL_AI=1 set edilmişse mock devre dışı — gerçek AI'a düşer.
+ * E2E_REAL_AI=1 ile mock devre dışı.
  *
  * Kullanım:
- *   const { test, expect } = await import("../../fixtures");
- *   test("foo", async ({ authedPage, mockAi }) => {
- *     await mockAi.enable();
- *     // veya: await mockAi.override("expenseCategorize", { confidence: 50 });
+ *   import { test } from "../../fixtures";
+ *   test("...", async ({ authedPage, mockAi }) => {
+ *     mockAi.override("pricingSuggest", { confidence: 50 });
  *   });
- *
- * Default: aktif. Disable için `mockAi.disable()`.
  */
 
 import { test as base, type Page } from "@playwright/test";
@@ -19,22 +16,61 @@ import { AI_MOCKS } from "../mocks/ai-responses";
 
 const REAL_AI = process.env.E2E_REAL_AI === "1";
 
+type Overrides = Partial<{ [K in keyof typeof AI_MOCKS]: unknown }>;
+
 export type AiMockFixture = {
   mockAi: {
     enabled: boolean;
-    disable: () => Promise<void>;
+    /** Spesifik bir mock'u override et (test içinden çağrılır). */
     override: <K extends keyof typeof AI_MOCKS>(
       key: K,
       patch: Partial<(typeof AI_MOCKS)[K]>,
     ) => void;
   };
+  /** Bir page'e AI mock route'larını yükle. authed fixture bunu otomatik
+   *  her authedPage için çağırır — direkt kullanmana gerek yok. */
+  installAiMocks: (page: Page) => Promise<void>;
 };
 
-type Overrides = Partial<{ [K in keyof typeof AI_MOCKS]: unknown }>;
+export const test = base.extend<AiMockFixture>({
+  installAiMocks: async ({}, use) => {
+    await use(async (page: Page) => {
+      if (REAL_AI) return;
+      await installRoutes(page, {});
+    });
+  },
 
-/** Tek bir page'e mock route'larını yükle. */
+  mockAi: async ({ page, installAiMocks }, use) => {
+    const overrides: Overrides = {};
+    const enabled = !REAL_AI;
+
+    if (enabled) {
+      // Default page'e de yükle (auth UI testi gibi authedPage olmayan
+      // durumlar için)
+      await installRoutes(page, overrides);
+    }
+
+    await use({
+      enabled,
+      override<K extends keyof typeof AI_MOCKS>(
+        key: K,
+        patch: Partial<(typeof AI_MOCKS)[K]>,
+      ) {
+        const cur = (overrides[key] ?? AI_MOCKS[key]) as Record<string, unknown>;
+        overrides[key] = {
+          ...cur,
+          ...patch,
+        } as never;
+      },
+    });
+    // installAiMocks fixture'ı authedPage'de zaten yükledi
+    void installAiMocks;
+  },
+});
+
+// ─── route installation ─────────────────────────────────────────────────────
+
 async function installRoutes(page: Page, overrides: Overrides) {
-  // Helper: bir url pattern + mock key birleştir
   async function mockJson(
     pattern: string | RegExp,
     key: keyof typeof AI_MOCKS,
@@ -60,15 +96,12 @@ async function installRoutes(page: Page, overrides: Overrides) {
     });
   }
 
-  // ─── Next.js /api/ai/* proxy'leri ─────────────────────────────────────────
+  // /api/ai/* (Next.js proxy'leri — browser fetch)
   await mockJson("**/api/ai/cashflow-forecast", "cashflowForecast");
   await mockJson("**/api/ai/anomaly-scan", "anomalyScan");
   await mockText("**/api/ai/finance-insight", "financeInsightStream");
 
-  // ─── Doğrudan AI service URL'lerine atılan istekler ────────────────────
-  // (Server action'lar AI_BASE üzerinden çağrı yapar — bu test browser'dan
-  // görülmez ama Next.js içinde proxy'lendiyse görünür. Aşağıdaki pattern'ler
-  // ai-service direkt çağrıları için.)
+  // ai-service direkt (bazı test'ler programmatic POST atabilir)
   await mockJson("**/finance/expense/categorize", "expenseCategorize");
   await mockJson("**/finance/discount/suggest", "discountSuggest");
   await mockJson("**/finance/cashflow/forecast", "cashflowForecast");
@@ -87,44 +120,5 @@ async function installRoutes(page: Page, overrides: Overrides) {
   await mockText("**/chat/stream", "chatStream");
   await mockText("**/finance/insight/stream", "financeInsightStream");
 }
-
-export const test = base.extend<AiMockFixture>({
-  mockAi: async ({ page }, use) => {
-    const overrides: Overrides = {};
-    let enabled = !REAL_AI;
-
-    if (enabled) {
-      await installRoutes(page, overrides);
-    }
-
-    await use({
-      enabled,
-      async disable() {
-        await page.unroute("**/api/ai/**");
-        await page.unroute("**/finance/**");
-        await page.unroute("**/pricing/**");
-        await page.unroute("**/receipt/**");
-        await page.unroute("**/reviews/**");
-        await page.unroute("**/bank/match");
-        await page.unroute("**/messages/**");
-        await page.unroute("**/products/describe");
-        await page.unroute("**/customers/segment");
-        await page.unroute("**/goals/suggest");
-        await page.unroute("**/chat/**");
-        enabled = false;
-      },
-      override<K extends keyof typeof AI_MOCKS>(
-        key: K,
-        patch: Partial<(typeof AI_MOCKS)[K]>,
-      ) {
-        const cur = (overrides[key] ?? AI_MOCKS[key]) as Record<string, unknown>;
-        overrides[key] = {
-          ...cur,
-          ...patch,
-        } as never;
-      },
-    });
-  },
-});
 
 export { expect } from "@playwright/test";
