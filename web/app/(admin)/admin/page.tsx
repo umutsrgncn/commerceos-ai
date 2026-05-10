@@ -28,6 +28,7 @@ import {
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
 import { GoalWidget } from "@/components/dashboard/goal-widget";
+import { AnomalyBanner } from "@/components/dashboard/anomaly-banner";
 import { OrderStatusBadge } from "./orders/components/order-status-badge";
 
 export const metadata = { title: "Dashboard — CommerceOS" };
@@ -73,6 +74,8 @@ export default async function DashboardPage() {
           Bugünün özeti — sayılar son 24 saatlik dilimden.
         </p>
       </div>
+
+      <AnomalyBanner />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard

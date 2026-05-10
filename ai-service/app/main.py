@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.routers import (
     agent,
+    anomaly,
     bank,
     cashflow,
     chat,
@@ -51,3 +52,4 @@ app.include_router(finance.router)
 app.include_router(bank.router)
 app.include_router(receipt_ocr.router)
 app.include_router(cashflow.router)
+app.include_router(anomaly.router)
