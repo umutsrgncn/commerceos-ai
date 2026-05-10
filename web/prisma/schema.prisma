@@ -324,9 +324,18 @@ model SystemSettings {
   autoPilotEnabled            Boolean @default(false)
   autoPilotMonthlyBudgetMinor Int? // Aylık operasyon bütçesi (kuruş)
   autoPilotConfidenceThreshold Int @default(75) // 0-100, AI minimum güven eşiği
-  autoPilotAutoReplyReviews   Boolean @default(true)
-  autoPilotAutoIssueInvoices  Boolean @default(true)
-  autoPilotAutoReorderStock   Boolean @default(true)
+  // ─── Yorumlar grubu ───
+  autoPilotAutoReplyReviews     Boolean @default(true) // yeni yoruma cevap
+  autoPilotAutoAnalyzeReviews   Boolean @default(true) // negatif yorumu flag
+  // ─── Finans grubu ───
+  autoPilotAutoIssueInvoices    Boolean @default(true) // CONFIRMED'da fatura kes
+  autoPilotAutoMatchBank        Boolean @default(true) // havale eşik düşür
+  autoPilotAutoConfirmOrders    Boolean @default(false) // havale eşleşince CONFIRMED'a al (riskli)
+  // ─── Stok & Tedarikçi ───
+  autoPilotAutoReorderStock     Boolean @default(true) // stok düşünce sipariş
+  autoPilotAutoSuggestPrice     Boolean @default(false) // haftalık fiyat önerisi
+  // ─── Müşteri ───
+  autoPilotAutoSegmentCustomers Boolean @default(true) // yeni müşteri AI segment
   autoPilotEnabledAt          DateTime?
   updatedAt            DateTime @updatedAt
 }

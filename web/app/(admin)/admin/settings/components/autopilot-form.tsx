@@ -2,12 +2,16 @@
 
 import { useState, useTransition } from "react";
 import {
+  AlertCircle,
+  Building2,
   CheckCircle2,
   Loader2,
   MessageSquare,
   Package,
   Receipt,
   Sparkles,
+  TrendingUp,
+  Users,
   Zap,
 } from "lucide-react";
 
@@ -21,9 +25,18 @@ type AutoPilotInitial = {
   enabled: boolean;
   monthlyBudgetMinor: number | null;
   confidenceThreshold: number;
+  // Yorumlar
   autoReplyReviews: boolean;
+  autoAnalyzeReviews: boolean;
+  // Finans
   autoIssueInvoices: boolean;
+  autoMatchBank: boolean;
+  autoConfirmOrders: boolean;
+  // Stok & Tedarikçi
   autoReorderStock: boolean;
+  autoSuggestPrice: boolean;
+  // Müşteri
+  autoSegmentCustomers: boolean;
   enabledAt: Date | null;
 };
 
@@ -35,21 +48,51 @@ export function AutoPilotForm({ initial }: { initial: AutoPilotInitial }) {
       : "",
   );
   const [threshold, setThreshold] = useState(initial.confidenceThreshold);
-  const [reviews, setReviews] = useState(initial.autoReplyReviews);
-  const [invoices, setInvoices] = useState(initial.autoIssueInvoices);
-  const [stock, setStock] = useState(initial.autoReorderStock);
+
+  // Rule toggles
+  const [replyReviews, setReplyReviews] = useState(initial.autoReplyReviews);
+  const [analyzeReviews, setAnalyzeReviews] = useState(
+    initial.autoAnalyzeReviews,
+  );
+  const [issueInvoices, setIssueInvoices] = useState(
+    initial.autoIssueInvoices,
+  );
+  const [matchBank, setMatchBank] = useState(initial.autoMatchBank);
+  const [confirmOrders, setConfirmOrders] = useState(
+    initial.autoConfirmOrders,
+  );
+  const [reorderStock, setReorderStock] = useState(initial.autoReorderStock);
+  const [suggestPrice, setSuggestPrice] = useState(initial.autoSuggestPrice);
+  const [segmentCustomers, setSegmentCustomers] = useState(
+    initial.autoSegmentCustomers,
+  );
+
   const [pending, start] = useTransition();
   const [feedback, setFeedback] = useState<{
     ok: boolean;
     message: string;
   } | null>(null);
 
+  const ruleCount = [
+    replyReviews,
+    analyzeReviews,
+    issueInvoices,
+    matchBank,
+    confirmOrders,
+    reorderStock,
+    suggestPrice,
+    segmentCustomers,
+  ].filter(Boolean).length;
+
   function save() {
     setFeedback(null);
     const budgetMinor = budget
       ? Math.round(parseFloat(budget.replace(",", ".")) * 100)
       : null;
-    if (budgetMinor !== null && (!Number.isFinite(budgetMinor) || budgetMinor < 0)) {
+    if (
+      budgetMinor !== null &&
+      (!Number.isFinite(budgetMinor) || budgetMinor < 0)
+    ) {
       setFeedback({ ok: false, message: "Bütçe geçersiz." });
       return;
     }
@@ -58,9 +101,14 @@ export function AutoPilotForm({ initial }: { initial: AutoPilotInitial }) {
         enabled,
         monthlyBudgetMinor: budgetMinor,
         confidenceThreshold: threshold,
-        autoReplyReviews: reviews,
-        autoIssueInvoices: invoices,
-        autoReorderStock: stock,
+        autoReplyReviews: replyReviews,
+        autoAnalyzeReviews: analyzeReviews,
+        autoIssueInvoices: issueInvoices,
+        autoMatchBank: matchBank,
+        autoConfirmOrders: confirmOrders,
+        autoReorderStock: reorderStock,
+        autoSuggestPrice: suggestPrice,
+        autoSegmentCustomers: segmentCustomers,
       });
       if (!r.ok) {
         setFeedback({ ok: false, message: r.error ?? "Hata" });
@@ -68,7 +116,7 @@ export function AutoPilotForm({ initial }: { initial: AutoPilotInitial }) {
         setFeedback({
           ok: true,
           message: enabled
-            ? "Otopilot aktif. AI olayları dinliyor."
+            ? `Otopilot aktif. ${ruleCount} kural çalışıyor — sağ alttan canlı izle.`
             : "Otopilot kapatıldı. Manuel moda döndü.",
         });
       }
@@ -110,12 +158,17 @@ export function AutoPilotForm({ initial }: { initial: AutoPilotInitial }) {
                     AKTİF
                   </span>
                 )}
+                {enabled && (
+                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium tabular-nums text-emerald-700 dark:text-emerald-400">
+                    {ruleCount}/8 kural
+                  </span>
+                )}
               </div>
               <p className="mt-0.5 max-w-md text-xs text-[color:var(--color-muted)]">
-                AI mağazanın günlük operasyonunu yönetir: yorum cevapları,
-                e-fatura kesimi, stok sipariş maili, havale eşleştirme. Sen
-                onay vermek istemezsen direkt yapar; kararları{" "}
-                <strong>Otopilot</strong> sayfasında izlersin.
+                AI mağazanın günlük operasyonunu yönetir. Aşağıdaki 4 kategori
+                altında hangi olaylara müdahale etsin senin onayına bağlı.
+                Aktif olduğunda <strong>sağ alttaki canlı pilot</strong>'tan
+                AI'nın aldığı her kararı anlık görürsün.
               </p>
               {initial.enabledAt && enabled && (
                 <p className="mt-1 text-[10px] text-[color:var(--color-muted)]">
@@ -147,89 +200,158 @@ export function AutoPilotForm({ initial }: { initial: AutoPilotInitial }) {
         </div>
       </div>
 
-      {/* Sub-settings */}
-      <div className={cn("space-y-3", !enabled && "opacity-60")}>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="ap-budget">
-              Aylık operasyon bütçesi (₺, opsiyonel)
-            </Label>
-            <Input
-              id="ap-budget"
-              inputMode="decimal"
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              placeholder="50000"
-              disabled={!enabled}
-            />
-            <p className="text-[10px] text-[color:var(--color-muted)]">
-              AI bu bütçeyi aşacak işlemleri öneri olarak bekletir.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="ap-threshold">
-              Otomatik aksiyon güven eşiği: %{threshold}
-            </Label>
-            <input
-              id="ap-threshold"
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={threshold}
-              onChange={(e) => setThreshold(Number(e.target.value))}
-              disabled={!enabled}
-              className="w-full accent-fuchsia-500"
-            />
-            <p className="text-[10px] text-[color:var(--color-muted)]">
-              Bu değerin altındaki AI kararları manuel onay bekler.
-            </p>
-          </div>
+      {/* Bütçe + Threshold */}
+      <div className={cn("grid gap-3 sm:grid-cols-2", !enabled && "opacity-60")}>
+        <div className="space-y-1.5">
+          <Label htmlFor="ap-budget">
+            Aylık operasyon bütçesi (₺, opsiyonel)
+          </Label>
+          <Input
+            id="ap-budget"
+            inputMode="decimal"
+            value={budget}
+            onChange={(e) => setBudget(e.target.value)}
+            placeholder="50000"
+            disabled={!enabled}
+          />
+          <p className="text-[10px] text-[color:var(--color-muted)]">
+            AI bu bütçeyi aşacak işlemleri öneri olarak bekletir.
+          </p>
         </div>
 
-        <div className="space-y-2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="ap-threshold">
+            Otomatik aksiyon güven eşiği: %{threshold}
+          </Label>
+          <input
+            id="ap-threshold"
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={threshold}
+            onChange={(e) => setThreshold(Number(e.target.value))}
+            disabled={!enabled}
+            className="w-full accent-fuchsia-500"
+          />
+          <p className="text-[10px] text-[color:var(--color-muted)]">
+            Bu değerin altındaki AI kararları manuel onay bekler.
+          </p>
+        </div>
+      </div>
+
+      {/* Otomasyon kuralları — 4 kategori */}
+      <div className={cn("space-y-3", !enabled && "opacity-60")}>
+        <div className="flex items-center justify-between">
           <div className="text-xs font-medium uppercase tracking-wider text-[color:var(--color-muted)]">
             Otomasyon kuralları
           </div>
+          <span className="text-[10px] text-[color:var(--color-muted)]">
+            {ruleCount} aktif / 8 toplam
+          </span>
+        </div>
+
+        <RuleGroup
+          icon={<MessageSquare className="h-3.5 w-3.5 text-amber-500" />}
+          title="Yorumlar"
+          accent="amber"
+        >
           <ToggleRow
-            icon={<MessageSquare className="h-3.5 w-3.5 text-amber-500" />}
             label="Yorum cevapları"
             description="Yeni yorum geldiğinde AI samimi bir cevap üretir ve yayınlar"
-            checked={reviews}
-            onChange={setReviews}
+            checked={replyReviews}
+            onChange={setReplyReviews}
             disabled={!enabled}
           />
           <ToggleRow
-            icon={<Receipt className="h-3.5 w-3.5 text-emerald-500" />}
+            label="Negatif yorum analizi"
+            description="3 yıldız altı yorumları AI 'şikayet/ürün sorunu/kargo' diye etiketler ve flag eder"
+            checked={analyzeReviews}
+            onChange={setAnalyzeReviews}
+            disabled={!enabled}
+          />
+        </RuleGroup>
+
+        <RuleGroup
+          icon={<Receipt className="h-3.5 w-3.5 text-emerald-500" />}
+          title="Finans & Faturalama"
+          accent="emerald"
+        >
+          <ToggleRow
             label="E-fatura kesimi"
             description="Sipariş onaylandığında uygun belge tipiyle (e-fatura/e-arşiv) otomatik kesilir"
-            checked={invoices}
-            onChange={setInvoices}
+            checked={issueInvoices}
+            onChange={setIssueInvoices}
             disabled={!enabled}
           />
           <ToggleRow
-            icon={<Package className="h-3.5 w-3.5 text-indigo-500" />}
-            label="Stok sipariş maili"
-            description="Stok kritik seviyeye düştüğünde uygun tedarikçiye AI ile sipariş maili"
-            checked={stock}
-            onChange={setStock}
+            label="Havale eşleştirme"
+            description="Banka tx geldiğinde AI sipariş eşleştirir; eşik bu sayfadaki güven sliderı"
+            checked={matchBank}
+            onChange={setMatchBank}
             disabled={!enabled}
           />
-        </div>
+          <ToggleRow
+            label="Sipariş otomatik onayı"
+            description="Havale eşleşince siparişi PENDING'den CONFIRMED'a alır (riskli — manuel önerilir)"
+            checked={confirmOrders}
+            onChange={setConfirmOrders}
+            disabled={!enabled}
+            warning
+          />
+        </RuleGroup>
+
+        <RuleGroup
+          icon={<Package className="h-3.5 w-3.5 text-indigo-500" />}
+          title="Stok & Tedarikçi"
+          accent="indigo"
+        >
+          <ToggleRow
+            label="Stok sipariş maili"
+            description="Stok kritik seviyeye düştüğünde uygun tedarikçiye AI ile sipariş maili"
+            checked={reorderStock}
+            onChange={setReorderStock}
+            disabled={!enabled}
+          />
+          <ToggleRow
+            label="Haftalık fiyat önerisi"
+            description="AI haftalık marj/satış analizi yapar, fiyat önerilerini Otopilot timeline'a düşürür"
+            checked={suggestPrice}
+            onChange={setSuggestPrice}
+            disabled={!enabled}
+          />
+        </RuleGroup>
+
+        <RuleGroup
+          icon={<Users className="h-3.5 w-3.5 text-fuchsia-500" />}
+          title="Müşteri"
+          accent="fuchsia"
+        >
+          <ToggleRow
+            label="Müşteri segmentasyonu"
+            description="Yeni müşteri eklendiğinde AI 'sadık/yeni/risky' diye etiketler"
+            checked={segmentCustomers}
+            onChange={setSegmentCustomers}
+            disabled={!enabled}
+          />
+        </RuleGroup>
       </div>
 
       {feedback && (
         <div
           className={cn(
-            "rounded-md border p-3 text-sm",
+            "flex items-start gap-2 rounded-md border p-3 text-sm",
             feedback.ok
               ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
               : "border-red-500/30 bg-red-500/10 text-red-500",
           )}
         >
-          {feedback.ok && <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />}
-          {feedback.message}
+          {feedback.ok ? (
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          ) : (
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          )}
+          <span>{feedback.message}</span>
         </div>
       )}
 
@@ -252,26 +374,57 @@ export function AutoPilotForm({ initial }: { initial: AutoPilotInitial }) {
   );
 }
 
-function ToggleRow({
+function RuleGroup({
   icon,
+  title,
+  accent,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  accent: "amber" | "emerald" | "indigo" | "fuchsia";
+  children: React.ReactNode;
+}) {
+  const borderClass = {
+    amber: "border-amber-500/20 bg-amber-500/[0.02]",
+    emerald: "border-emerald-500/20 bg-emerald-500/[0.02]",
+    indigo: "border-indigo-500/20 bg-indigo-500/[0.02]",
+    fuchsia: "border-fuchsia-500/20 bg-fuchsia-500/[0.02]",
+  }[accent];
+
+  return (
+    <div className={cn("rounded-lg border p-3", borderClass)}>
+      <div className="flex items-center gap-1.5 pb-2 text-xs font-semibold tracking-wide">
+        {icon}
+        {title}
+      </div>
+      <div className="space-y-1 divide-y divide-[color:var(--color-border)]/50">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ToggleRow({
   label,
   description,
   checked,
   onChange,
   disabled,
+  warning,
 }: {
-  icon: React.ReactNode;
   label: string;
   description: string;
   checked: boolean;
   onChange: (v: boolean) => void;
   disabled?: boolean;
+  warning?: boolean;
 }) {
   return (
     <label
       className={cn(
-        "flex items-start gap-3 rounded-md p-2 transition",
-        !disabled && "hover:bg-[color:var(--color-fg)]/[0.03]",
+        "flex items-start gap-3 py-2 transition",
+        !disabled && "cursor-pointer",
         disabled && "cursor-not-allowed",
       )}
     >
@@ -284,8 +437,12 @@ function ToggleRow({
       />
       <div className="flex-1">
         <div className="flex items-center gap-1.5 text-sm font-medium">
-          {icon}
           {label}
+          {warning && (
+            <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+              riskli
+            </span>
+          )}
         </div>
         <p className="mt-0.5 text-xs text-[color:var(--color-muted)]">
           {description}

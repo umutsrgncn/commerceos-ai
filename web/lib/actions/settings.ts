@@ -84,41 +84,64 @@ export async function updateGibSettingsAction(
   return { ok: true };
 }
 
-export async function updateAutoPilotSettingsAction(input: {
+export type AutoPilotRuleInput = {
   enabled: boolean;
   monthlyBudgetMinor: number | null;
   confidenceThreshold: number;
+  // Yorumlar
   autoReplyReviews: boolean;
+  autoAnalyzeReviews: boolean;
+  // Finans
   autoIssueInvoices: boolean;
+  autoMatchBank: boolean;
+  autoConfirmOrders: boolean;
+  // Stok & Tedarikçi
   autoReorderStock: boolean;
-}): Promise<{ ok: boolean; error?: string }> {
+  autoSuggestPrice: boolean;
+  // Müşteri
+  autoSegmentCustomers: boolean;
+};
+
+export async function updateAutoPilotSettingsAction(
+  input: AutoPilotRuleInput,
+): Promise<{ ok: boolean; error?: string }> {
   await requireAdmin();
 
-  const threshold = Math.max(0, Math.min(100, Math.round(input.confidenceThreshold)));
+  const threshold = Math.max(
+    0,
+    Math.min(100, Math.round(input.confidenceThreshold)),
+  );
   const wasEnabled = await db.systemSettings
-    .findUnique({ where: { id: SINGLETON_ID }, select: { autoPilotEnabled: true } })
+    .findUnique({
+      where: { id: SINGLETON_ID },
+      select: { autoPilotEnabled: true },
+    })
     .then((s) => s?.autoPilotEnabled ?? false);
+
+  const data = {
+    autoPilotEnabled: input.enabled,
+    autoPilotMonthlyBudgetMinor: input.monthlyBudgetMinor,
+    autoPilotConfidenceThreshold: threshold,
+    autoPilotAutoReplyReviews: input.autoReplyReviews,
+    autoPilotAutoAnalyzeReviews: input.autoAnalyzeReviews,
+    autoPilotAutoIssueInvoices: input.autoIssueInvoices,
+    autoPilotAutoMatchBank: input.autoMatchBank,
+    autoPilotAutoConfirmOrders: input.autoConfirmOrders,
+    autoPilotAutoReorderStock: input.autoReorderStock,
+    autoPilotAutoSuggestPrice: input.autoSuggestPrice,
+    autoPilotAutoSegmentCustomers: input.autoSegmentCustomers,
+  };
 
   await db.systemSettings.upsert({
     where: { id: SINGLETON_ID },
     update: {
-      autoPilotEnabled: input.enabled,
-      autoPilotMonthlyBudgetMinor: input.monthlyBudgetMinor,
-      autoPilotConfidenceThreshold: threshold,
-      autoPilotAutoReplyReviews: input.autoReplyReviews,
-      autoPilotAutoIssueInvoices: input.autoIssueInvoices,
-      autoPilotAutoReorderStock: input.autoReorderStock,
+      ...data,
       autoPilotEnabledAt:
         input.enabled && !wasEnabled ? new Date() : undefined,
     },
     create: {
       id: SINGLETON_ID,
-      autoPilotEnabled: input.enabled,
-      autoPilotMonthlyBudgetMinor: input.monthlyBudgetMinor,
-      autoPilotConfidenceThreshold: threshold,
-      autoPilotAutoReplyReviews: input.autoReplyReviews,
-      autoPilotAutoIssueInvoices: input.autoIssueInvoices,
-      autoPilotAutoReorderStock: input.autoReorderStock,
+      ...data,
       autoPilotEnabledAt: input.enabled ? new Date() : null,
     },
   });

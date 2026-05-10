@@ -77,8 +77,13 @@ export default async function SettingsPage() {
             monthlyBudgetMinor: settings.autoPilotMonthlyBudgetMinor,
             confidenceThreshold: settings.autoPilotConfidenceThreshold,
             autoReplyReviews: settings.autoPilotAutoReplyReviews,
+            autoAnalyzeReviews: settings.autoPilotAutoAnalyzeReviews,
             autoIssueInvoices: settings.autoPilotAutoIssueInvoices,
+            autoMatchBank: settings.autoPilotAutoMatchBank,
+            autoConfirmOrders: settings.autoPilotAutoConfirmOrders,
             autoReorderStock: settings.autoPilotAutoReorderStock,
+            autoSuggestPrice: settings.autoPilotAutoSuggestPrice,
+            autoSegmentCustomers: settings.autoPilotAutoSegmentCustomers,
             enabledAt: settings.autoPilotEnabledAt,
           }}
         />
