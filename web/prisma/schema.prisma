@@ -112,7 +112,8 @@ model Product {
   slug        String        @unique
   sku         String        @unique
   description String?
-  price       Int // minor units
+  price       Int // minor units (kuruş)
+  costPrice   Int? // minor units, brüt kâr marjı için
   currency    String        @default("TRY")
   status      ProductStatus @default(DRAFT)
   images      Json          @default("[]")
@@ -211,10 +212,12 @@ model Order {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  customer  Customer    @relation(fields: [customerId], references: [id])
-  createdBy User?       @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  items     OrderItem[]
-  refunds   Refund[]
+  customer     Customer          @relation(fields: [customerId], references: [id])
+  createdBy    User?             @relation("OrderCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  items        OrderItem[]
+  refunds      Refund[]
+  invoice      Invoice?
+  bankPayments BankTransaction[]
 
   @@index([status])
   @@index([customerId])
@@ -251,6 +254,47 @@ model Refund {
   @@index([orderId, createdAt])
 }
 
+enum ExpenseCategory {
+  RENT // Kira
+  PAYROLL // Personel/maaş
+  SHIPPING // Kargo
+  MARKETING // Pazarlama
+  SUPPLIES // Ofis/malzeme
+  COGS // Satılan mal maliyeti
+  TAXES // Vergi/SGK
+  UTILITIES // Fatura (elektrik/su/internet)
+  SOFTWARE // Yazılım/SaaS
+  TRAVEL // Seyahat
+  OTHER // Diğer
+}
+
+model SalesGoal {
+  // period 'YYYY-MM' — aylık hedef. Tek satır per ay (unique).
+  id           String   @id @default(cuid())
+  period       String   @unique
+  targetAmount Int // minor units (kuruş), TRY varsayar
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  date        DateTime
+  amount      Int // minor units (kuruş)
+  currency    String          @default("TRY")
+  category    ExpenseCategory @default(OTHER)
+  description String
+  vendor      String?
+  reference   String? // fatura numarası vb.
+  userId      String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([date])
+  @@index([category, date])
+}
+
 model SystemSettings {
   // Singleton row — there is only ever one record, keyed by literal "default".
   id              String   @id @default("default")
@@ -262,7 +306,99 @@ model SystemSettings {
   defaultCurrency String   @default("TRY")
   defaultTaxRate  Float    @default(0)
   timezone        String   @default("Europe/Istanbul")
-  updatedAt       DateTime @updatedAt
+  // GİB e-fatura entegrasyonu — test ortamında mock, prod'da kullanıcının
+  // entegratörüne (Foriba/Logo/BIM) yönlendirilir.
+  gibMode              String   @default("test") // "test" | "production"
+  gibIntegratorUrl     String? // Prod modda zorunlu (entegratör SOAP/REST URL'i)
+  gibUsername          String?
+  gibPasswordEncrypted String? // demo: plaintext OK; prod'da encrypt
+  gibSenderAlias       String? // GİB'de firma alias'ı (urn:mail:test@firma.com.tr)
+  // Banka entegrasyonu (havale/EFT eşleştirme)
+  // Test mode'da local mock simülatör; prod'da gerçek banka webhook URL ile
+  // BDDK lisanslı bağlantı (hackathon scope dışı, architecture-ready)
+  bankMode             String   @default("test") // "test" | "production"
+  bankWebhookSecret    String? // HMAC doğrulaması için
+  bankAccountIban      String? // Mağazanın IBAN'ı, fatura/sipariş eşleştirmesinde
+  bankName             String? // 'Test Bankası' / gerçek banka adı
+  updatedAt            DateTime @updatedAt
+}
+
+enum BankTransactionStatus {
+  UNMATCHED       // hiç eşleştirilmemiş
+  AUTO_MATCHED    // AI otomatik eşleştirdi (≥85% confidence)
+  MANUAL_MATCHED  // kullanıcı manuel eşleştirdi
+  IGNORED         // alakasız tx (komisyon, transfer, vb.)
+}
+
+enum BankTransactionDirection {
+  IN   // gelen havale (tahsilat)
+  OUT  // giden havale (gider/iade)
+}
+
+model BankTransaction {
+  id              String                   @id @default(cuid())
+  bankName        String
+  accountIban     String?
+  reference       String? // banka tarafından verilen referans no (varsa)
+  transactionDate DateTime
+  amountMinor     Int // pozitif IN, negatif OUT (kuruş)
+  currency        String                   @default("TRY")
+  description     String                   @db.Text // havale açıklaması
+  direction       BankTransactionDirection
+  source          String // 'CSV' | 'WEBHOOK' | 'MANUAL'
+  status          BankTransactionStatus    @default(UNMATCHED)
+
+  // Eşleştirme
+  matchedOrderId  String?
+  matchConfidence Int? // 0-100 (AI confidence)
+  matchReasoning  String?                  @db.Text
+  matchedAt       DateTime?
+  matchedBy       String? // 'AI' | 'USER:userId'
+
+  rawData   Json? // ham CSV satırı veya webhook payload (debug/audit)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  matchedOrder Order? @relation(fields: [matchedOrderId], references: [id], onDelete: SetNull)
+
+  @@unique([bankName, reference])
+  @@index([status, transactionDate])
+  @@index([matchedOrderId])
+  @@index([direction, status])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String        @unique // GIB-2026000001 vb.
+  orderId       String        @unique
+  status        InvoiceStatus @default(DRAFT)
+  documentType  String        @default("EFATURA") // 'EFATURA' (B2B/VKN) | 'EARSIV' (B2C/son tüketici)
+  ublXml        String        @db.Text // UBL-TR 1.2 XML
+  uuid          String        @unique // GİB UUID (test'te local generate)
+  totalMinor    Int
+  taxMinor      Int           @default(0)
+  currency      String        @default("TRY")
+  mode          String        @default("test") // 'test' | 'production'
+  sentAt        DateTime?
+  acceptedAt    DateTime?
+  cancelledAt   DateTime?
+  cancelReason  String?
+  errorMessage  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([documentType])
 }
 
 model ActivityLog {

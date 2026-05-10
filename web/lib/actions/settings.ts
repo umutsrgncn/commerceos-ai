@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { settingsUpdateSchema } from "@/lib/schemas/settings";
+import { gibSettingsSchema, settingsUpdateSchema } from "@/lib/schemas/settings";
 
 export type SettingsActionState = {
   ok?: boolean;
@@ -53,5 +53,33 @@ export async function updateSettingsAction(
   // Receipts read settings → revalidate any printed pages too.
   revalidatePath("/admin/orders", "layout");
 
+  return { ok: true };
+}
+
+export async function updateGibSettingsAction(
+  _prev: SettingsActionState,
+  formData: FormData
+): Promise<SettingsActionState> {
+  await requireAdmin();
+
+  const parsed = gibSettingsSchema.safeParse({
+    gibMode: formData.get("gibMode") ?? "test",
+    gibIntegratorUrl: formData.get("gibIntegratorUrl") ?? "",
+    gibUsername: formData.get("gibUsername") || null,
+    gibPasswordEncrypted: formData.get("gibPasswordEncrypted") || null,
+    gibSenderAlias: formData.get("gibSenderAlias") || null,
+  });
+
+  if (!parsed.success) {
+    return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  await db.systemSettings.upsert({
+    where: { id: SINGLETON_ID },
+    update: parsed.data,
+    create: { id: SINGLETON_ID, ...parsed.data },
+  });
+
+  revalidatePath("/admin/settings");
   return { ok: true };
 }

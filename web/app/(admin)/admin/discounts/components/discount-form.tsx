@@ -34,7 +34,18 @@ type DiscountInitial = {
   isActive: boolean;
 };
 
-type Props = { mode: "create" } | { mode: "edit"; initial: DiscountInitial };
+export type DiscountPrefill = {
+  code?: string;
+  description?: string;
+  type?: "PERCENTAGE" | "FIXED";
+  value?: number; // PERCENTAGE → 0-100, FIXED → kuruş
+  minSubtotalMinor?: number;
+  daysFromNow?: number;
+};
+
+type Props =
+  | { mode: "create"; prefill?: DiscountPrefill }
+  | { mode: "edit"; initial: DiscountInitial };
 
 function FieldError({ messages }: { messages?: string[] }) {
   if (!messages?.length) return null;
@@ -67,20 +78,36 @@ function toDatetimeLocal(date: Date | null): string {
 export function DiscountForm(props: Props) {
   const isEdit = props.mode === "edit";
   const initial = isEdit ? props.initial : null;
+  const prefill = props.mode === "create" ? props.prefill : undefined;
   const action = isEdit ? updateDiscountAction : createDiscountAction;
   const [state, formAction] = useActionState<DiscountActionState, FormData>(
     action,
     null
   );
   const [type, setType] = useState<"PERCENTAGE" | "FIXED">(
-    initial?.type ?? "PERCENTAGE"
+    initial?.type ?? prefill?.type ?? "PERCENTAGE"
   );
 
+  // Bitiş tarihi prefill: bugün + N gün
+  const prefillEndsAt = prefill?.daysFromNow
+    ? (() => {
+        const d = new Date();
+        d.setDate(d.getDate() + prefill.daysFromNow);
+        return d;
+      })()
+    : null;
+
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <form action={formAction} className="space-y-6">
       {isEdit && <input type="hidden" name="id" value={initial!.id} />}
 
-      <div className="space-y-6 lg:col-span-2">
+      {state?.error && (
+        <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+          {state.error}
+        </div>
+      )}
+
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Kod</CardTitle>
@@ -92,7 +119,7 @@ export function DiscountForm(props: Props) {
                 id="code"
                 name="code"
                 required={!isEdit}
-                defaultValue={initial?.code}
+                defaultValue={initial?.code ?? prefill?.code ?? ""}
                 disabled={isEdit}
                 placeholder="SUMMER25"
                 className="font-mono uppercase"
@@ -128,7 +155,11 @@ export function DiscountForm(props: Props) {
                   max={100}
                   step="0.5"
                   defaultValue={
-                    initial?.type === "PERCENTAGE" ? initial.value : 10
+                    initial?.type === "PERCENTAGE"
+                      ? initial.value
+                      : prefill?.type === "PERCENTAGE" && prefill.value
+                        ? prefill.value
+                        : 10
                   }
                   required
                 />
@@ -145,7 +176,9 @@ export function DiscountForm(props: Props) {
                   defaultValue={
                     initial?.type === "FIXED"
                       ? (initial.value / 100).toFixed(2)
-                      : ""
+                      : prefill?.type === "FIXED" && prefill.value
+                        ? (prefill.value / 100).toFixed(2)
+                        : ""
                   }
                   placeholder="50.00"
                 />
@@ -160,7 +193,11 @@ export function DiscountForm(props: Props) {
                 name="minSubtotal"
                 inputMode="decimal"
                 defaultValue={
-                  initial ? (initial.minSubtotal / 100).toFixed(2) : "0"
+                  initial
+                    ? (initial.minSubtotal / 100).toFixed(2)
+                    : prefill?.minSubtotalMinor
+                      ? (prefill.minSubtotalMinor / 100).toFixed(2)
+                      : "0"
                 }
               />
             </div>
@@ -171,7 +208,7 @@ export function DiscountForm(props: Props) {
                 id="description"
                 name="description"
                 rows={2}
-                defaultValue={initial?.description ?? ""}
+                defaultValue={initial?.description ?? prefill?.description ?? ""}
                 placeholder="Yaz tatili kampanyası, vb."
               />
             </div>
@@ -198,7 +235,9 @@ export function DiscountForm(props: Props) {
                 id="endsAt"
                 name="endsAt"
                 type="datetime-local"
-                defaultValue={toDatetimeLocal(initial?.endsAt ?? null)}
+                defaultValue={toDatetimeLocal(
+                  initial?.endsAt ?? prefillEndsAt ?? null
+                )}
               />
               <FieldError messages={state?.fieldErrors?.endsAt} />
             </div>
@@ -229,19 +268,21 @@ export function DiscountForm(props: Props) {
         </Card>
       </div>
 
-      <aside className="space-y-3">
-        {state?.error && (
-          <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
-            {state.error}
-          </div>
-        )}
-        <SubmitButton mode={isEdit ? "edit" : "create"} />
-        <Link href="/admin/discounts" className="block">
-          <Button type="button" variant="ghost" className="w-full">
-            İptal
-          </Button>
-        </Link>
-      </aside>
+      <div className="sticky bottom-0 -mx-2 flex items-center justify-between gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)]/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--color-bg)]/70">
+        <p className="text-xs text-[color:var(--color-muted)]">
+          {isEdit
+            ? "Değişiklikler hemen geçerli olur."
+            : "Kod kaydedildikten sonra checkout'ta kullanılabilir."}
+        </p>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/discounts">
+            <Button type="button" variant="ghost" size="sm">
+              İptal
+            </Button>
+          </Link>
+          <SubmitButton mode={isEdit ? "edit" : "create"} />
+        </div>
+      </div>
     </form>
   );
 }

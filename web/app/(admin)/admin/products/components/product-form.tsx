@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
+import { TrendingUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatMoney } from "@/lib/format";
+import { cn } from "@/lib/cn";
 import {
   createProductAction,
   updateProductAction,
@@ -32,6 +35,7 @@ type Mode =
         sku: string;
         description: string | null;
         price: number;
+        costPrice: number | null;
         currency: string;
         status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
         categoryId: string | null;
@@ -181,9 +185,9 @@ export function ProductForm(props: Props) {
           <CardHeader>
             <CardTitle>Fiyatlandırma</CardTitle>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2">
+          <CardContent className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-1.5">
-              <Label htmlFor="price">Fiyat</Label>
+              <Label htmlFor="price">Satış fiyatı</Label>
               <Input
                 id="price"
                 name="price"
@@ -194,6 +198,25 @@ export function ProductForm(props: Props) {
                 placeholder="0.00"
               />
               <FieldError messages={state?.fieldErrors?.price} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="costPrice">Maliyet (opsiyonel)</Label>
+              <Input
+                id="costPrice"
+                name="costPrice"
+                type="text"
+                inputMode="decimal"
+                defaultValue={
+                  initial?.costPrice != null
+                    ? formatMinorUnits(initial.costPrice)
+                    : ""
+                }
+                placeholder="0.00"
+              />
+              <FieldError messages={state?.fieldErrors?.costPrice} />
+              <p className="text-xs text-[color:var(--color-muted)]">
+                Brüt kâr marjı için
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="currency">Para birimi</Label>
@@ -208,6 +231,15 @@ export function ProductForm(props: Props) {
               </Select>
             </div>
           </CardContent>
+          {isEdit && initial?.costPrice != null && initial.costPrice > 0 && (
+            <CardContent className="border-t border-[color:var(--color-border)] pt-4">
+              <MarginPreview
+                price={initial.price}
+                costPrice={initial.costPrice}
+                currency={initial.currency}
+              />
+            </CardContent>
+          )}
         </Card>
 
         {!isEdit && (
@@ -281,5 +313,57 @@ export function ProductForm(props: Props) {
         </div>
       </aside>
     </form>
+  );
+}
+
+function MarginPreview({
+  price,
+  costPrice,
+  currency,
+}: {
+  price: number;
+  costPrice: number;
+  currency: string;
+}) {
+  const profit = price - costPrice;
+  const marginPct = price > 0 ? (profit / price) * 100 : 0;
+  const tone =
+    marginPct < 0
+      ? "text-red-500"
+      : marginPct < 20
+        ? "text-amber-500"
+        : "text-emerald-500";
+
+  return (
+    <div className="grid grid-cols-3 gap-3 text-xs">
+      <div>
+        <div className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+          Brüt kâr
+        </div>
+        <div className={cn("mt-0.5 font-mono text-base font-semibold tabular-nums", tone)}>
+          {formatMoney(profit, currency)}
+        </div>
+      </div>
+      <div>
+        <div className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+          Marj
+        </div>
+        <div className={cn("mt-0.5 font-mono text-base font-semibold tabular-nums", tone)}>
+          %{marginPct.toFixed(1)}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <TrendingUp className={cn("h-4 w-4", tone)} />
+        <span className="text-[color:var(--color-muted)]">
+          {marginPct < 0
+            ? "Maliyetin altında"
+            : marginPct < 20
+              ? "Düşük marj"
+              : marginPct < 40
+                ? "Orta marj"
+                : "Yüksek marj"}
+        </span>
+      </div>
+    </div>
   );
 }

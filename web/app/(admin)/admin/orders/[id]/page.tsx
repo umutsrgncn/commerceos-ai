@@ -9,9 +9,11 @@ import { listRefundsForOrder, getRefundedTotal } from "@/lib/queries/refunds";
 import { transitionOrderAction } from "@/lib/actions/orders";
 import { getNextStatuses, statusLabel } from "@/lib/orders/workflow";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
+import { getInvoiceByOrder } from "@/lib/queries/invoices";
 import { OrderStatusBadge } from "../components/order-status-badge";
 import { DraftMessagePanel } from "../components/draft-message-panel";
 import { RefundPanel } from "../components/refund-panel";
+import { IssueInvoiceButton } from "../components/issue-invoice-button";
 
 export const metadata = { title: "Sipariş — CommerceOS" };
 
@@ -24,9 +26,10 @@ export default async function OrderDetailPage({
   const order = await getOrderById(id);
   if (!order) notFound();
 
-  const [refunds, refundedSoFar] = await Promise.all([
+  const [refunds, refundedSoFar, invoice] = await Promise.all([
     listRefundsForOrder(order.id),
     getRefundedTotal(order.id),
+    getInvoiceByOrder(order.id),
   ]);
 
   const nextStatuses = getNextStatuses(order.status);
@@ -161,6 +164,27 @@ export default async function OrderDetailPage({
                   {order.customer.phone}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">E-fatura</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <IssueInvoiceButton
+                orderId={order.id}
+                existingInvoice={
+                  invoice
+                    ? {
+                        invoiceNumber: invoice.invoiceNumber,
+                        status: invoice.status,
+                        mode: invoice.mode,
+                        documentType: invoice.documentType,
+                      }
+                    : null
+                }
+              />
             </CardContent>
           </Card>
 
