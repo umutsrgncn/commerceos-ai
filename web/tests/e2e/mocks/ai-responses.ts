@@ -171,4 +171,30 @@ export const AI_MOCKS = {
     confidence: 80,
     reasoning: "Geçen ay %20 artış öngörülüyor.",
   },
+
+  // POST /products/dead-stock-campaign
+  deadStockCampaign: {
+    ok: true,
+    product_id: "PLACEHOLDER",
+    product_name: "PLACEHOLDER",
+    suggested_discount_pct: 25,
+    suggested_code: "E2EYAVAS25",
+    campaign_type: "DISCOUNT_PERCENTAGE",
+    duration_days: 14,
+    min_subtotal_minor: 0,
+    target_audience: "tüm müşteriler",
+    messaging: "Sınırlı süre, %25 indirimi kaçırma!",
+    reasoning:
+      "Stok 60+ gün hareketsiz, bağlı sermaye yüksek. %25 indirim marjı korur.",
+    expected_outcome: "14 gün içinde stoğun yarısı eritilebilir.",
+    risk_warning: null,
+    confidence: 82,
+    current_price_minor: 10000,
+    cost_price_minor: 5000,
+    current_margin_pct: 50,
+    new_margin_pct_after_discount: 33.3,
+    stock_quantity: 50,
+    sold_last_60d: 0,
+    days_since_last_sale: null,
+  },
 };
