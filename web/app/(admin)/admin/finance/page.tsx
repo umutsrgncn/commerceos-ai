@@ -28,6 +28,7 @@ import {
 import { formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { CashflowChart } from "./components/cashflow-chart";
+import { CashflowForecast } from "./components/cashflow-forecast";
 import { FinanceAiPanel } from "./components/finance-ai-panel";
 
 export const metadata = { title: "Finans — CommerceOS" };
@@ -182,6 +183,9 @@ export default async function FinancePage({
           )}
         </CardContent>
       </Card>
+
+      {/* AI Cash flow forecast (önümüzdeki 30 gün) */}
+      <CashflowForecast />
 
       {/* AI Finansal İçgörü */}
       <FinanceAiPanel

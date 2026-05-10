@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.routers import (
     agent,
     bank,
+    cashflow,
     chat,
     customers,
     finance,
@@ -49,3 +50,4 @@ app.include_router(goals.router)
 app.include_router(finance.router)
 app.include_router(bank.router)
 app.include_router(receipt_ocr.router)
+app.include_router(cashflow.router)
