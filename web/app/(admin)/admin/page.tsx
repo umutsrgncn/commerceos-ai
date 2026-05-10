@@ -20,18 +20,45 @@ import {
   getRecentOrders,
 } from "@/lib/queries/dashboard";
 import { listLowStock } from "@/lib/queries/inventory";
+import {
+  currentPeriod,
+  getCurrentMonthRevenue,
+  getGoal,
+} from "@/lib/queries/goals";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import { InsightsPanel } from "@/components/dashboard/insights-panel";
+import { GoalWidget } from "@/components/dashboard/goal-widget";
 import { OrderStatusBadge } from "./orders/components/order-status-badge";
 
 export const metadata = { title: "Dashboard — CommerceOS" };
 
+const TR_MONTH = [
+  "Ocak",
+  "Şubat",
+  "Mart",
+  "Nisan",
+  "Mayıs",
+  "Haziran",
+  "Temmuz",
+  "Ağustos",
+  "Eylül",
+  "Ekim",
+  "Kasım",
+  "Aralık",
+];
+
 export default async function DashboardPage() {
-  const [session, stats, recent, lowStock] = await Promise.all([
+  const period = currentPeriod();
+  const now = new Date();
+  const periodLabel = `${TR_MONTH[now.getMonth()]} ${now.getFullYear()}`;
+
+  const [session, stats, recent, lowStock, goal, monthRevenue] = await Promise.all([
     auth(),
     getDashboardStats(),
     getRecentOrders(8),
     listLowStock(6),
+    getGoal(period),
+    getCurrentMonthRevenue(),
   ]);
 
   const name = session?.user?.name?.split(" ")[0] ?? "yönetici";
@@ -179,7 +206,19 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      <InsightsPanel />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <GoalWidget
+          period={period}
+          periodLabel={periodLabel}
+          currentRevenue={monthRevenue}
+          goal={
+            goal
+              ? { targetAmount: goal.targetAmount, notes: goal.notes }
+              : null
+          }
+        />
+        <InsightsPanel />
+      </div>
     </div>
   );
 }

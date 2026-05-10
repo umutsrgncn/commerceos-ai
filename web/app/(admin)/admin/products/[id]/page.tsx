@@ -77,6 +77,7 @@ export default async function EditProductPage({
           sku: product.sku,
           description: product.description,
           price: product.price,
+          costPrice: product.costPrice,
           currency: product.currency,
           status: product.status,
           categoryId: product.categoryId,

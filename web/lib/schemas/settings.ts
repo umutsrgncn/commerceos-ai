@@ -17,3 +17,17 @@ export const settingsUpdateSchema = z.object({
 });
 
 export type SettingsUpdateInput = z.infer<typeof settingsUpdateSchema>;
+
+/** GİB e-fatura entegrasyon ayarları — ayrı section olarak güncellenir. */
+export const gibSettingsSchema = z.object({
+  gibMode: z.enum(["test", "production"]),
+  gibIntegratorUrl: z
+    .string()
+    .url("Geçerli URL gir")
+    .optional()
+    .nullable()
+    .or(z.literal("").transform(() => null)),
+  gibUsername: z.string().max(120).optional().nullable(),
+  gibPasswordEncrypted: z.string().max(240).optional().nullable(),
+  gibSenderAlias: z.string().max(120).optional().nullable(),
+});

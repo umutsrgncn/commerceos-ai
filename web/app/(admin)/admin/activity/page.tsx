@@ -1,11 +1,19 @@
 import Link from "next/link";
 import {
+  Building,
   CircleAlert,
   Coins,
   Edit3,
+  FileUp,
+  Link2,
+  MessageSquare,
   PackagePlus,
+  Receipt,
   RefreshCw,
+  Sparkles,
+  Star,
   Trash2,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 
@@ -17,50 +25,191 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { listActivity } from "@/lib/queries/activity";
-import { formatRelativeTime } from "@/lib/format";
+import { formatRelativeTime, formatMoney } from "@/lib/format";
 
 export const metadata = { title: "Etkinlik — CommerceOS" };
 
-type Variant = "create" | "update" | "delete" | "refund" | "transition" | "neutral";
+type Variant =
+  | "create"
+  | "update"
+  | "delete"
+  | "refund"
+  | "transition"
+  | "money"
+  | "review"
+  | "neutral";
+
+const STATUS_TR: Record<string, string> = {
+  PENDING: "Beklemede",
+  CONFIRMED: "Onaylandı",
+  SHIPPED: "Kargoya verildi",
+  DELIVERED: "Teslim edildi",
+  CANCELLED: "İptal edildi",
+  REFUNDED: "İade edildi",
+};
+
+const trStatus = (s: string) => STATUS_TR[s] ?? s;
 
 const ACTION_META: Record<
   string,
-  { label: (m: Record<string, unknown>) => string; icon: LucideIcon; variant: Variant; href?: (id: string) => string }
+  {
+    label: (m: Record<string, unknown>) => string;
+    icon: LucideIcon;
+    variant: Variant;
+    href?: (id: string) => string;
+  }
 > = {
+  // ─── Ürünler ───
   "product.create": {
-    label: (m) => `Ürün oluşturuldu — ${(m.name as string) ?? "?"}`,
+    label: (m) => `Yeni ürün eklendi: ${(m.name as string) ?? "?"}`,
     icon: PackagePlus,
     variant: "create",
     href: (id) => `/admin/products/${id}`,
   },
   "product.update": {
-    label: (m) => `Ürün güncellendi — ${(m.name as string) ?? "?"}`,
+    label: (m) => `Ürün güncellendi: ${(m.name as string) ?? "?"}`,
     icon: Edit3,
     variant: "update",
     href: (id) => `/admin/products/${id}`,
   },
   "product.delete": {
-    label: (m) => `Ürün silindi — ${(m.name as string) ?? "?"}`,
+    label: (m) => `Ürün silindi: ${(m.name as string) ?? "?"}`,
     icon: Trash2,
     variant: "delete",
   },
+
+  // ─── Siparişler ───
   "order.create": {
-    label: (m) => `Sipariş açıldı — ${(m.orderNumber as string) ?? "?"}`,
+    label: (m) => `Yeni sipariş açıldı: ${(m.orderNumber as string) ?? "?"}`,
     icon: PackagePlus,
     variant: "create",
     href: (id) => `/admin/orders/${id}`,
   },
   "order.transition": {
-    label: (m) => `Durum: ${(m.from as string) ?? "?"} → ${(m.to as string) ?? "?"}`,
+    label: (m) =>
+      `Sipariş durumu değişti: ${trStatus((m.from as string) ?? "?")} → ${trStatus((m.to as string) ?? "?")}`,
     icon: RefreshCw,
     variant: "transition",
     href: (id) => `/admin/orders/${id}`,
   },
+
+  // ─── İade ───
   "refund.create": {
-    label: (m) => `İade açıldı — ${(m.amount as number) ?? 0} kuruş`,
+    label: (m) =>
+      `İade kaydı: ${formatMoney(Number(m.amount ?? 0), "TRY")}`,
     icon: Coins,
     variant: "refund",
     href: (id) => `/admin/orders/${id}`,
+  },
+
+  // ─── Yorum ───
+  "review.create": {
+    label: (m) => `Yorum eklendi (${(m.rating as number) ?? "?"} ★)`,
+    icon: Star,
+    variant: "review",
+    href: (id) => `/admin/products/${id}`,
+  },
+  "review.reply": {
+    label: () => `Yoruma cevap yazıldı`,
+    icon: MessageSquare,
+    variant: "review",
+    href: (id) => `/admin/products/${id}`,
+  },
+  "review.delete": {
+    label: () => `Yorum silindi`,
+    icon: Trash2,
+    variant: "delete",
+  },
+
+  // ─── Finans ───
+  "expense.create": {
+    label: (m) => {
+      const amount = Number(m.amount ?? 0);
+      const cat = (m.category as string) ?? "";
+      return `Gider eklendi: ${formatMoney(amount, "TRY")}${cat ? ` (${cat})` : ""}`;
+    },
+    icon: Wallet,
+    variant: "money",
+    href: (id) => `/admin/expenses/${id}`,
+  },
+  "invoice.issued": {
+    label: (m) => {
+      const num = (m.invoiceNumber as string) ?? "?";
+      const mode = (m.mode as string) ?? "";
+      const dt = (m.documentType as string) ?? "EFATURA";
+      const docLabel = dt === "EARSIV" ? "E-arşiv" : "E-fatura";
+      return `${docLabel} kesildi: ${num}${mode === "test" ? " (test)" : ""}`;
+    },
+    icon: Receipt,
+    variant: "money",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "invoice.failed": {
+    label: (m) => `E-fatura reddedildi: ${(m.invoiceNumber as string) ?? "?"}`,
+    icon: CircleAlert,
+    variant: "delete",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "invoice.reissued": {
+    label: (m) => {
+      const num = (m.invoiceNumber as string) ?? "?";
+      const mode = (m.mode as string) ?? "";
+      return `Fatura yeniden gönderildi: ${num}${mode === "test" ? " (test)" : ""}`;
+    },
+    icon: Receipt,
+    variant: "transition",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "invoice.cancelled": {
+    label: (m) => {
+      const num = (m.invoiceNumber as string) ?? "?";
+      const reason = m.reason as string | null;
+      return reason
+        ? `Fatura iptal edildi: ${num} — ${reason}`
+        : `Fatura iptal edildi: ${num}`;
+    },
+    icon: CircleAlert,
+    variant: "delete",
+    href: (id) => `/admin/orders/${id}`,
+  },
+
+  // ─── Banka entegrasyonu ───
+  "bank.import": {
+    label: (m) => {
+      const imp = (m.imported as number) ?? 0;
+      const auto = (m.autoMatched as number) ?? 0;
+      const bank = (m.bankName as string) ?? "";
+      return `Banka extresi içe aktarıldı${bank ? ` (${bank})` : ""}: ${imp} işlem, ${auto} AI eşleşti`;
+    },
+    icon: FileUp,
+    variant: "transition",
+    href: () => `/admin/bank`,
+  },
+  "bank.matched": {
+    label: (m) => {
+      const auto = m.auto === true;
+      const amount = (m.amountMinor as number) ?? 0;
+      const conf = m.confidence as number | undefined;
+      const sign = auto ? "AI" : "Manuel";
+      return `${sign} eşleştirdi: ${formatMoney(amount, "TRY")}${
+        conf ? ` (%${conf})` : ""
+      }`;
+    },
+    icon: Link2,
+    variant: "money",
+    href: (id) => `/admin/orders/${id}`,
+  },
+
+  // ─── Kullanıcı ───
+  "user.profile.update": {
+    label: () => `Profil güncellendi`,
+    icon: Edit3,
+    variant: "update",
+  },
+  "user.password.change": {
+    label: () => `Şifre değiştirildi`,
+    icon: Edit3,
+    variant: "update",
   },
 };
 
@@ -70,6 +219,8 @@ const VARIANT_STYLES: Record<Variant, string> = {
   delete: "bg-red-500/10 text-red-600 dark:text-red-400",
   refund: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   transition: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
+  money: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+  review: "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
   neutral: "bg-[color:var(--color-fg)]/[0.06] text-[color:var(--color-muted)]",
 };
 
@@ -106,9 +257,7 @@ export default async function ActivityPage() {
                   (item.metadata as Record<string, unknown> | null) ?? {};
                 const Icon = meta?.icon ?? CircleAlert;
                 const variant = meta?.variant ?? "neutral";
-                const label = meta
-                  ? meta.label(metadata)
-                  : item.action;
+                const label = meta ? meta.label(metadata) : item.action;
                 const href =
                   meta?.href && item.entityId ? meta.href(item.entityId) : null;
 
@@ -120,15 +269,12 @@ export default async function ActivityPage() {
                       <Icon className="h-4 w-4" />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium">{label}</div>
+                      <div className="text-sm">{label}</div>
                       <div className="text-xs text-[color:var(--color-muted)]">
-                        {item.userName ?? "Bilinmeyen kullanıcı"} ·{" "}
+                        {item.userName ?? "Sistem"} ·{" "}
                         {formatRelativeTime(item.createdAt)}
                       </div>
                     </div>
-                    <span className="rounded-full bg-[color:var(--color-fg)]/[0.04] px-2 py-0.5 text-[10px] font-mono text-[color:var(--color-muted)]">
-                      {item.action}
-                    </span>
                   </div>
                 );
 
@@ -145,4 +291,3 @@ export default async function ActivityPage() {
     </div>
   );
 }
-

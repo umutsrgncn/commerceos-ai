@@ -9,6 +9,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   const main = NAV_ITEMS.filter((item) => item.group === "main");
+  const finance = NAV_ITEMS.filter((item) => item.group === "finance");
   const ai = NAV_ITEMS.filter((item) => item.group === "ai");
   const system = NAV_ITEMS.filter((item) => item.group === "system");
 
@@ -28,6 +29,21 @@ export function Sidebar() {
         {main.map((item) => (
           <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
         ))}
+
+        {finance.length > 0 && (
+          <>
+            <div className="mt-6 mb-1 px-3 text-xs font-medium uppercase tracking-wider text-[color:var(--color-muted)]">
+              Finans
+            </div>
+            {finance.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                active={isActive(pathname, item.href)}
+              />
+            ))}
+          </>
+        )}
 
         <div className="mt-6 mb-1 px-3 text-xs font-medium uppercase tracking-wider text-[color:var(--color-muted)]">
           AI

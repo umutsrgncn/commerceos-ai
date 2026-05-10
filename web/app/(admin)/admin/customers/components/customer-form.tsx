@@ -70,10 +70,16 @@ export function CustomerForm(props: Props) {
   const addr = initial?.address ?? null;
 
   return (
-    <form action={formAction} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <form action={formAction} className="space-y-6">
       {isEdit && <input type="hidden" name="id" value={initial!.id} />}
 
-      <div className="space-y-6 lg:col-span-2">
+      {state?.error && (
+        <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
+          {state.error}
+        </div>
+      )}
+
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>İletişim</CardTitle>
@@ -180,19 +186,21 @@ export function CustomerForm(props: Props) {
         </Card>
       </div>
 
-      <aside className="space-y-3">
-        {state?.error && (
-          <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-500">
-            {state.error}
-          </div>
-        )}
-        <SubmitButton mode={isEdit ? "edit" : "create"} />
-        <Link href="/admin/customers" className="block">
-          <Button type="button" variant="ghost" className="w-full">
-            İptal
-          </Button>
-        </Link>
-      </aside>
+      <div className="sticky bottom-0 -mx-2 flex items-center justify-between gap-3 rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)]/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-[color:var(--color-bg)]/70">
+        <p className="text-xs text-[color:var(--color-muted)]">
+          {isEdit
+            ? "Değişiklikler bu müşterinin profiline kaydedilecek."
+            : "Yeni müşteri eklenecek."}
+        </p>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/customers">
+            <Button type="button" variant="ghost" size="sm">
+              İptal
+            </Button>
+          </Link>
+          <SubmitButton mode={isEdit ? "edit" : "create"} />
+        </div>
+      </div>
     </form>
   );
 }

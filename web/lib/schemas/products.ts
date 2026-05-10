@@ -46,6 +46,23 @@ export const productCreateSchema = z.object({
   sku: z.string().regex(skuRegex, "SKU 2-40 karakter, büyük harf/rakam/tire"),
   description: z.string().max(8000).optional().nullable(),
   price: priceField,
+  costPrice: z
+    .union([z.string(), z.number(), z.literal(""), z.null()])
+    .transform((val, ctx) => {
+      if (val === "" || val === null || val === undefined) return null;
+      const num =
+        typeof val === "string" ? Number(val.replace(",", ".")) : val;
+      if (!Number.isFinite(num) || num < 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Maliyet 0 veya pozitif olmalı",
+        });
+        return z.NEVER;
+      }
+      return Math.round(num * 100);
+    })
+    .nullable()
+    .optional(),
   currency: z.enum(["TRY", "USD", "EUR"]).default("TRY"),
   status: z.enum(PRODUCT_STATUSES).default("DRAFT"),
   categoryId: z.string().cuid().optional().nullable(),

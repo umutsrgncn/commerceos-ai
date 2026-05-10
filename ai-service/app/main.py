@@ -6,8 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.routers import (
     agent,
+    bank,
     chat,
     customers,
+    finance,
+    goals,
     health,
     images,
     insights,
@@ -41,3 +44,6 @@ app.include_router(customers.router)
 app.include_router(images.router)
 app.include_router(agent.router)
 app.include_router(reviews.router)
+app.include_router(goals.router)
+app.include_router(finance.router)
+app.include_router(bank.router)
