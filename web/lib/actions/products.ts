@@ -135,6 +135,40 @@ export async function updateProductAction(
   }
 }
 
+/** Sadece fiyat güncelle — AI öneri uygulamak için. */
+export async function applyPriceSuggestionAction(input: {
+  productId: string;
+  newPriceMinor: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  await requireSession();
+  if (!input.productId || input.newPriceMinor <= 0) {
+    return { ok: false, error: "Geçersiz parametre" };
+  }
+  const before = await db.product.findUnique({
+    where: { id: input.productId },
+    select: { id: true, name: true, price: true },
+  });
+  if (!before) return { ok: false, error: "Ürün bulunamadı" };
+
+  await db.product.update({
+    where: { id: input.productId },
+    data: { price: input.newPriceMinor },
+  });
+  await recordActivity({
+    action: "product.price.ai_apply",
+    entityType: "product",
+    entityId: input.productId,
+    metadata: {
+      name: before.name,
+      oldPriceMinor: before.price,
+      newPriceMinor: input.newPriceMinor,
+    },
+  });
+  revalidatePath(`/admin/products/${input.productId}`);
+  revalidatePath("/admin/products");
+  return { ok: true };
+}
+
 export async function deleteProductAction(formData: FormData) {
   await requireSession();
   const id = formData.get("id");

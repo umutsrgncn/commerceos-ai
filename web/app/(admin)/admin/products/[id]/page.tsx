@@ -21,6 +21,7 @@ import { cn } from "@/lib/cn";
 import { ProductForm } from "../components/product-form";
 import { ReviewList } from "../components/review-list";
 import { ReviewAiPanel } from "../components/review-ai-panel";
+import { PricingAiCard } from "../components/pricing-ai-card";
 
 export const metadata = { title: "Ürün — CommerceOS" };
 
@@ -85,6 +86,12 @@ export default async function EditProductPage({
             ? (product.images as string[]).filter((u) => typeof u === "string")
             : [],
         }}
+      />
+
+      {/* AI Fiyat Önerisi */}
+      <PricingAiCard
+        productId={product.id}
+        hasCostPrice={product.costPrice != null}
       />
 
       {/* Yorumlar önizleme + AI özet */}

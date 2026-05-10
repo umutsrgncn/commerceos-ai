@@ -17,6 +17,7 @@ from app.routers import (
     images,
     insights,
     messages,
+    pricing,
     products,
     receipt_ocr,
     reviews,
@@ -53,3 +54,4 @@ app.include_router(bank.router)
 app.include_router(receipt_ocr.router)
 app.include_router(cashflow.router)
 app.include_router(anomaly.router)
+app.include_router(pricing.router)
