@@ -153,4 +153,19 @@ yazılmalıdır çünkü Prisma PascalCase kullanır.
   WHERE "createdAt" >= NOW() - INTERVAL '7 days' AND status='EXECUTED' GROUP BY type
 - Tedarikçi yeterliliği: SELECT s.name, COUNT(*) AS sku_count FROM "Supplier" s
   WHERE s."isActive" = true ORDER BY array_length(s."productSkus", 1) DESC
+- Yavaş hareket eden stok (son 30 gün):
+  SELECT p.name, p.sku, i.quantity, p."costPrice",
+         (i.quantity * p."costPrice") AS tied_capital,
+         COALESCE(SUM(oi.quantity), 0) AS sold_30d
+  FROM "Product" p
+  INNER JOIN "Inventory" i ON i."productId" = p.id
+  LEFT JOIN "OrderItem" oi ON oi."productId" = p.id
+  LEFT JOIN "Order" o ON o.id = oi."orderId"
+       AND o."createdAt" >= NOW() - INTERVAL '30 days'
+       AND o.status NOT IN ('CANCELLED','REFUNDED')
+  WHERE p.status='PUBLISHED' AND i.quantity > 0
+  GROUP BY p.id, i.quantity HAVING COALESCE(SUM(oi.quantity),0) <= 1
+  ORDER BY tied_capital DESC NULLS LAST
+- Maliyetsiz ürünler (AI öneri yapamaz):
+  SELECT name, sku FROM "Product" WHERE "costPrice" IS NULL AND status='PUBLISHED'
 """

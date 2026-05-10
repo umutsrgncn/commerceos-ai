@@ -1,14 +1,23 @@
 import Link from "next/link";
-import { AlertTriangle, Boxes, Package, Search, XCircle } from "lucide-react";
+import {
+  AlertTriangle,
+  Boxes,
+  Hourglass,
+  Package,
+  Search,
+  Sparkles,
+  XCircle,
+} from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ProductThumb } from "@/components/products/product-thumb";
-import { listInventory } from "@/lib/queries/inventory";
-import { formatRelativeTime } from "@/lib/format";
+import { listInventory, listSlowMovingStock } from "@/lib/queries/inventory";
+import { formatMoney, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { AdjustForm } from "./components/adjust-form";
 import { StockBadge } from "./components/stock-badge";
+import { SlowMovingPanel } from "./components/slow-moving-panel";
 
 export const metadata = { title: "Envanter — CommerceOS" };
 
@@ -19,7 +28,10 @@ export default async function InventoryPage({
 }) {
   const params = await searchParams;
   const onlyLow = params.low === "1";
-  const items = await listInventory({ q: params.q, onlyLow });
+  const [items, slowMoving] = await Promise.all([
+    listInventory({ q: params.q, onlyLow }),
+    listSlowMovingStock({ daysBack: 30, maxSold: 1, limit: 10 }),
+  ]);
 
   // Stat hesaplamaları
   const totalProducts = items.length;
@@ -112,6 +124,11 @@ export default async function InventoryPage({
           </Link>
         </div>
       </div>
+
+      {/* Yavaş hareket eden stok — AI kampanya */}
+      {slowMoving.length > 0 && (
+        <SlowMovingPanel items={slowMoving} />
+      )}
 
       <Card>
         <CardHeader className="border-b border-[color:var(--color-border)] py-4">

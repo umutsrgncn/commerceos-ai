@@ -8,6 +8,7 @@ from app.routers import (
     agent,
     anomaly,
     bank,
+    campaigns,
     cashflow,
     chat,
     customers,
@@ -55,3 +56,4 @@ app.include_router(receipt_ocr.router)
 app.include_router(cashflow.router)
 app.include_router(anomaly.router)
 app.include_router(pricing.router)
+app.include_router(campaigns.router)

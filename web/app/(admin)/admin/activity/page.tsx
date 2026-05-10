@@ -186,6 +186,17 @@ const ACTION_META: Record<
     variant: "transition",
     href: () => `/admin/bank`,
   },
+  "campaign.dead_stock_apply": {
+    label: (m) => {
+      const code = (m.discountCode as string) ?? "?";
+      const pct = (m.discountPct as number) ?? 0;
+      const product = (m.productName as string) ?? "?";
+      return `Yavaş stok kampanyası başlatıldı: ${product} → ${code} (%${pct})`;
+    },
+    icon: Sparkles,
+    variant: "money",
+    href: () => `/admin/discounts`,
+  },
   "supplier.create": {
     label: (m) => {
       const name = (m.name as string) ?? "?";
