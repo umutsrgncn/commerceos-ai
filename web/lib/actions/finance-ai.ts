@@ -4,6 +4,73 @@ import { auth } from "@/auth";
 
 const AI_BASE = process.env.AI_SERVICE_URL ?? "http://localhost:8000";
 
+export type OcrResult =
+  | {
+      ok: true;
+      amountMinor: number | null;
+      currency: string;
+      vendor: string | null;
+      date: string | null;
+      description: string | null;
+      categoryGuess: string | null;
+      confidence: number;
+      notes: string | null;
+    }
+  | { ok: false; error: string };
+
+/** Gemini Vision ile fiş/fatura fotoğrafından alanları çıkar.
+ *  imageDataUrl: 'data:image/jpeg;base64,...' ya da çıplak base64. */
+export async function ocrReceiptAction(
+  imageDataUrl: string,
+  mimeType?: string,
+): Promise<OcrResult> {
+  const session = await auth();
+  if (!session?.user) return { ok: false, error: "Yetkisiz." };
+  if (!imageDataUrl || imageDataUrl.length < 100) {
+    return { ok: false, error: "Görsel boş veya çok küçük." };
+  }
+  let mt = mimeType ?? "image/jpeg";
+  if (imageDataUrl.startsWith("data:")) {
+    const m = imageDataUrl.match(/^data:([^;]+);base64,/);
+    if (m) mt = m[1];
+  }
+
+  try {
+    const res = await fetch(`${AI_BASE}/receipt/ocr`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_b64: imageDataUrl, mime_type: mt }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      return {
+        ok: false,
+        error: `AI servisi ${res.status}: ${txt.slice(0, 200)}`,
+      };
+    }
+    const data = await res.json();
+    if (!data.ok) {
+      return { ok: false, error: data.error ?? "OCR başarısız" };
+    }
+    return {
+      ok: true,
+      amountMinor: data.amount_minor ?? null,
+      currency: data.currency ?? "TRY",
+      vendor: data.vendor ?? null,
+      date: data.date ?? null,
+      description: data.description ?? null,
+      categoryGuess: data.category_guess ?? null,
+      confidence: data.confidence ?? 0,
+      notes: data.notes ?? null,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Bağlantı hatası",
+    };
+  }
+}
+
 export type CategorizeResult =
   | { ok: true; category: string; confidence: number; reasoning: string }
   | { ok: false; error: string };

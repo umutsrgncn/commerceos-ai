@@ -3,7 +3,16 @@
 import Link from "next/link";
 import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Calendar, Loader2, Receipt, Sparkles, Wallet } from "lucide-react";
+import {
+  Calendar,
+  Camera,
+  Loader2,
+  Receipt,
+  Sparkles,
+  Upload,
+  Wallet,
+  X,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +31,10 @@ import {
   updateExpenseAction,
   type ExpenseActionState,
 } from "@/lib/actions/expenses";
-import { categorizeExpenseAction } from "@/lib/actions/finance-ai";
+import {
+  categorizeExpenseAction,
+  ocrReceiptAction,
+} from "@/lib/actions/finance-ai";
 import {
   EXPENSE_CATEGORIES,
   EXPENSE_CATEGORY_LABELS,
@@ -78,6 +90,8 @@ export function ExpenseForm(props: Props) {
 
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const vendorRef = useRef<HTMLInputElement>(null);
+  const referenceRef = useRef<HTMLInputElement>(null);
+  const dateRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<ExpenseCategoryValue>(
     initial?.category ?? "OTHER"
   );
@@ -91,6 +105,91 @@ export function ExpenseForm(props: Props) {
   const [amountInput, setAmountInput] = useState(
     initial ? (initial.amount / 100).toFixed(2) : ""
   );
+
+  // ─── Receipt OCR state ─────────────────────────────────────────
+  const [ocrPending, setOcrPending] = useState(false);
+  const [ocrPreview, setOcrPreview] = useState<string | null>(null); // data URL for thumbnail
+  const [ocrError, setOcrError] = useState<string | null>(null);
+  const [ocrSuccess, setOcrSuccess] = useState<{
+    confidence: number;
+    vendor: string | null;
+    amount: number | null;
+    date: string | null;
+  } | null>(null);
+
+  function pickReceiptFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.capture = "environment" as never; // mobil: arka kamera
+    input.onchange = async () => {
+      const f = input.files?.[0];
+      if (f) await handleReceiptFile(f);
+    };
+    input.click();
+  }
+
+  async function handleReceiptFile(file: File) {
+    setOcrError(null);
+    setOcrSuccess(null);
+    if (file.size > 8 * 1024 * 1024) {
+      setOcrError("Görsel çok büyük (max 8 MB).");
+      return;
+    }
+    // Preview oluştur
+    const reader = new FileReader();
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("Dosya okunamadı"));
+      reader.readAsDataURL(file);
+    });
+    setOcrPreview(dataUrl);
+    setOcrPending(true);
+
+    const r = await ocrReceiptAction(dataUrl, file.type);
+    setOcrPending(false);
+    if (!r.ok) {
+      setOcrError(r.error);
+      return;
+    }
+
+    // Form alanlarını doldur
+    if (r.description && descriptionRef.current) {
+      descriptionRef.current.value = r.description;
+    }
+    if (r.vendor && vendorRef.current) {
+      vendorRef.current.value = r.vendor;
+    }
+    if (r.amountMinor != null) {
+      setAmountInput((r.amountMinor / 100).toFixed(2));
+    }
+    if (r.date && dateRef.current) {
+      dateRef.current.value = r.date;
+    }
+    if (
+      r.categoryGuess &&
+      (EXPENSE_CATEGORIES as readonly string[]).includes(r.categoryGuess)
+    ) {
+      setCategory(r.categoryGuess as ExpenseCategoryValue);
+      setAiHint({
+        category: r.categoryGuess,
+        confidence: r.confidence,
+        reasoning: "Fotoğraftan AI tespiti",
+      });
+    }
+    setOcrSuccess({
+      confidence: r.confidence,
+      vendor: r.vendor,
+      amount: r.amountMinor,
+      date: r.date,
+    });
+  }
+
+  function clearReceipt() {
+    setOcrPreview(null);
+    setOcrSuccess(null);
+    setOcrError(null);
+  }
 
   async function suggestCategory() {
     setAiError(null);
@@ -128,6 +227,118 @@ export function ExpenseForm(props: Props) {
       {isEdit && <input type="hidden" name="id" value={initial!.id} />}
 
       <div className="space-y-6 lg:col-span-2">
+        {!isEdit && (
+          <Card className="border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/[0.04] to-indigo-500/[0.03]">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="h-4 w-4 text-fuchsia-500" />
+                Fişten otomatik doldur
+                <span className="rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-700 dark:text-fuchsia-400">
+                  AI
+                </span>
+              </CardTitle>
+              <CardDescription>
+                Fatura veya fiş fotoğrafı yükle — Gemini Vision tutar,
+                tedarikçi, tarih ve kategoriyi okuyup formu kendisi doldurur.
+                Mobilden kamerayla çekebilirsin.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {!ocrPreview ? (
+                <button
+                  type="button"
+                  onClick={pickReceiptFile}
+                  className="flex w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-fuchsia-500/30 bg-fuchsia-500/[0.03] px-6 py-8 text-center transition hover:border-fuchsia-500/50 hover:bg-fuchsia-500/[0.06]"
+                >
+                  <Upload className="h-6 w-6 text-fuchsia-500" />
+                  <div className="text-sm font-medium">
+                    Fiş fotoğrafı yükle
+                  </div>
+                  <div className="text-xs text-[color:var(--color-muted)]">
+                    JPG/PNG · max 8 MB · mobilden kamera ile direkt çekebilirsin
+                  </div>
+                </button>
+              ) : (
+                <div className="flex flex-col items-start gap-3 sm:flex-row">
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={ocrPreview}
+                      alt="Receipt preview"
+                      className="max-h-40 rounded-lg border border-[color:var(--color-border)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={clearReceipt}
+                      className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-bg)] shadow-sm hover:bg-red-500/10 hover:text-red-500"
+                      title="Görseli kaldır"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                  <div className="flex-1 space-y-2 text-xs">
+                    {ocrPending && (
+                      <div className="inline-flex items-center gap-2 text-[color:var(--color-muted)]">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-fuchsia-500" />
+                        Gemini Vision görseli okuyor...
+                      </div>
+                    )}
+                    {ocrError && (
+                      <div className="rounded-md border border-red-500/30 bg-red-500/10 p-2 text-red-500">
+                        {ocrError}
+                      </div>
+                    )}
+                    {ocrSuccess && (
+                      <div className="space-y-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/[0.04] p-3">
+                        <div className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-400">
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Form dolduruldu (%{ocrSuccess.confidence})
+                        </div>
+                        <div className="text-[color:var(--color-muted)] space-y-0.5">
+                          {ocrSuccess.vendor && (
+                            <div>
+                              <strong>Tedarikçi:</strong> {ocrSuccess.vendor}
+                            </div>
+                          )}
+                          {ocrSuccess.amount != null && (
+                            <div>
+                              <strong>Tutar:</strong>{" "}
+                              {(ocrSuccess.amount / 100).toLocaleString(
+                                "tr-TR",
+                                {
+                                  minimumFractionDigits: 2,
+                                },
+                              )}{" "}
+                              ₺
+                            </div>
+                          )}
+                          {ocrSuccess.date && (
+                            <div>
+                              <strong>Tarih:</strong> {ocrSuccess.date}
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-[color:var(--color-muted)]">
+                          Alanları gözden geçir, gerekirse düzelt, sonra kaydet.
+                        </p>
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={pickReceiptFile}
+                      disabled={ocrPending}
+                    >
+                      Başka fotoğraf yükle
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -168,6 +379,7 @@ export function ExpenseForm(props: Props) {
               <div className="space-y-1.5">
                 <Label htmlFor="reference">Belge no (opsiyonel)</Label>
                 <Input
+                  ref={referenceRef}
                   id="reference"
                   name="reference"
                   defaultValue={initial?.reference ?? ""}
@@ -267,6 +479,7 @@ export function ExpenseForm(props: Props) {
                 Tarih
               </Label>
               <Input
+                ref={dateRef}
                 id="date"
                 name="date"
                 type="date"

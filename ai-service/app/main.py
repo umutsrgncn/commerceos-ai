@@ -16,6 +16,7 @@ from app.routers import (
     insights,
     messages,
     products,
+    receipt_ocr,
     reviews,
 )
 
@@ -47,3 +48,4 @@ app.include_router(reviews.router)
 app.include_router(goals.router)
 app.include_router(finance.router)
 app.include_router(bank.router)
+app.include_router(receipt_ocr.router)
