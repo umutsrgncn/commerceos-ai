@@ -9,6 +9,7 @@ import {
   Percent,
   Settings,
   ShoppingCart,
+  Star,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/inventory", label: "Envanter", icon: Boxes, group: "main" },
   { href: "/admin/orders", label: "Siparişler", icon: ShoppingCart, group: "main" },
   { href: "/admin/customers", label: "Müşteriler", icon: Users, group: "main" },
+  { href: "/admin/reviews", label: "Yorumlar", icon: Star, group: "main" },
   { href: "/admin/discounts", label: "İndirimler", icon: Percent, group: "main" },
   { href: "/admin/analytics", label: "Analitik", icon: BarChart3, group: "main" },
   { href: "/admin/ai", label: "AI Asistan", icon: MessageSquare, group: "ai" },

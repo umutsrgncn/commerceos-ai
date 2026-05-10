@@ -201,10 +201,147 @@ async function main() {
     });
   }
 
-  console.log("✓ Seed complete.");
+  console.log("→ Seeding product reviews…");
+  // SKU bazında ürünleri yorum eşleştirmesi için sözlük.
+  const bySku = new Map(productRecords.map((p) => [p.sku, p]));
+
+  const reviewTemplates: Array<{
+    sku: string;
+    rating: number;
+    authorName: string;
+    body: string;
+    isPublished?: boolean;
+  }> = [
+    // Premium Pamuklu Tişört (TS-001) — çoğunlukla pozitif
+    {
+      sku: "TS-001",
+      rating: 5,
+      authorName: "Ada Yıldız",
+      body: "Pamuğu çok yumuşak, ilk yıkamadan sonra hiç çekme yapmadı. Kesimi de dediğiniz gibi tam slim. Renk koyu beyaz, fotoğraftaki gibi. Bir tane daha sipariş edeceğim.",
+    },
+    {
+      sku: "TS-001",
+      rating: 4,
+      authorName: "Mert Kılıç",
+      body: "Genel olarak memnunum, kalitesi fiyatına göre iyi. Tek dezavantajı kollar bana biraz uzun geldi ama bu kişisel.",
+    },
+    {
+      sku: "TS-001",
+      rating: 5,
+      authorName: "Selin Demir",
+      body: "İkinci kez sipariş ettim. İlki bir buçuk yıl boyunca yıkana yıkana hâlâ form bozulmadı. Çok teşekkürler.",
+    },
+    {
+      sku: "TS-001",
+      rating: 2,
+      authorName: "Burak Aksoy",
+      body: "Kargo 6 gün sürdü, web sitesinde 'ertesi gün' yazıyordu. Ürün fena değil ama bu süre çok abartı. Bir daha düşünürüm.",
+    },
+
+    // Vintage Baskılı Tişört (TS-002) — karışık
+    {
+      sku: "TS-002",
+      rating: 5,
+      authorName: "Ece Yılmaz",
+      body: "Baskı çok kaliteli, ilk yıkamada hiç solmadı. Vintage hissini güzel veriyor. Kombin için harika.",
+    },
+    {
+      sku: "TS-002",
+      rating: 3,
+      authorName: "Onur Çelik",
+      body: "Baskı güzel ama tişörtün kendisi biraz ince. Yaz için iyi olabilir, kışın altına bir şey lazım.",
+    },
+    {
+      sku: "TS-002",
+      rating: 1,
+      authorName: "Pelin K.",
+      body: "Yanlış beden geldi. M sipariş verdim, S geldi. Müşteri hizmetlerine yazdım, geri dönüş çok yavaş. Bu konuda iyileşme şart.",
+    },
+
+    // Çelik Çift Cidarlı Bardak (MG-001)
+    {
+      sku: "MG-001",
+      rating: 5,
+      authorName: "Hakan Ş.",
+      body: "Sıcağı 4 saat boyunca tuttu, beklediğimden iyi. Kapağı biraz tıklatmaya alışmak gerekiyor ama kullanışlı.",
+    },
+    {
+      sku: "MG-001",
+      rating: 4,
+      authorName: "Defne Arslan",
+      body: "Çok beğendim, ofiste her gün kullanıyorum. Tek not: bulaşık makinesinde olabildiğince üst raf öneriyorum, alttaki sıcak su biraz boyayı solduruyor.",
+    },
+    {
+      sku: "MG-001",
+      rating: 5,
+      authorName: "Cem Oktay",
+      body: "Tam istediğim gibi. Hediye olarak da aldım, çok beğenildi.",
+    },
+
+    // Tuval Bel Çantası (BG-001)
+    {
+      sku: "BG-001",
+      rating: 4,
+      authorName: "Zeynep Polat",
+      body: "Boyu tam istediğim gibi, telefon + cüzdan + anahtar + hatta küçük bir defter sığıyor. Tuval kalitesi solid.",
+    },
+    {
+      sku: "BG-001",
+      rating: 5,
+      authorName: "Tolga İnan",
+      body: "Yürüyüşlerde sürekli kullanıyorum, kayışı sağlam. Renk de güzel duruyor, pörselensiz tutuyor.",
+    },
+    {
+      sku: "BG-001",
+      rating: 2,
+      authorName: "Hande G.",
+      body: "Fermuarı bir hafta sonra tutukluk yapmaya başladı. İade etmek istiyorum ama formu kafa karıştırıcı, açıklama eksik.",
+      isPublished: false,
+    },
+
+    // Porselen Kahve Fincanı (MG-002) — DRAFT product, az yorum
+    {
+      sku: "MG-002",
+      rating: 5,
+      authorName: "Ali Vural",
+      body: "Henüz piyasada değil ama deneme örneği bende, espressonun ağzını çok güzel tutuyor.",
+      isPublished: false,
+    },
+  ];
+
+  // Idempotent kontrol: aynı (productId + authorName + body[0:40]) varsa atla.
+  for (const r of reviewTemplates) {
+    const product = bySku.get(r.sku);
+    if (!product) continue;
+
+    const existing = await db.productReview.findFirst({
+      where: {
+        productId: product.id,
+        authorName: r.authorName,
+        body: { startsWith: r.body.slice(0, 40) },
+      },
+      select: { id: true },
+    });
+
+    if (existing) continue;
+
+    await db.productReview.create({
+      data: {
+        productId: product.id,
+        authorName: r.authorName,
+        rating: r.rating,
+        body: r.body,
+        isPublished: r.isPublished ?? true,
+      },
+    });
+  }
+
+  const reviewCount = await db.productReview.count();
+  console.log(`✓ Seed complete.`);
   console.log("  Admin:    demo@commerceos.dev / demo1234");
   console.log("  Products: 5 (1 düşük stok, 1 tükendi)");
   console.log("  Orders:   3 (DELIVERED, SHIPPED, PENDING)");
+  console.log(`  Reviews:  ${reviewCount} (yayında + taslak karışık)`);
 }
 
 main()

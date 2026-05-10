@@ -13,6 +13,7 @@ from app.routers import (
     insights,
     messages,
     products,
+    reviews,
 )
 
 settings = get_settings()
@@ -39,3 +40,4 @@ app.include_router(messages.router)
 app.include_router(customers.router)
 app.include_router(images.router)
 app.include_router(agent.router)
+app.include_router(reviews.router)

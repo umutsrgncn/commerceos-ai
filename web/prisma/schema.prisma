@@ -120,12 +120,32 @@ model Product {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category   Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   inventory  Inventory?
   orderItems OrderItem[]
+  reviews    ProductReview[]
 
   @@index([status])
   @@index([categoryId])
+}
+
+model ProductReview {
+  id          String    @id @default(cuid())
+  productId   String
+  authorName  String
+  authorEmail String?
+  rating      Int // 1-5
+  body        String
+  reply       String?
+  repliedAt   DateTime?
+  isPublished Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, createdAt])
+  @@index([rating])
 }
 
 model Inventory {
