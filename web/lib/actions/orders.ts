@@ -157,6 +157,17 @@ export async function transitionOrderAction(formData: FormData) {
     entityId: id,
     metadata: { from: order.status, to },
   });
+
+  // Otopilot: CONFIRMED'a geçişte fatura kes
+  if (to === "CONFIRMED") {
+    try {
+      const { autoIssueInvoice } = await import("@/lib/autopilot/core");
+      await autoIssueInvoice(id);
+    } catch {
+      // sessizce devam
+    }
+  }
+
   revalidatePath("/admin/orders");
   revalidatePath(`/admin/orders/${id}`);
 }

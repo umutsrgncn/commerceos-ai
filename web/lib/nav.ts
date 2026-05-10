@@ -3,6 +3,7 @@ import {
   BarChart3,
   Boxes,
   Building,
+  Building2,
   FolderTree,
   LayoutDashboard,
   MessageSquare,
@@ -11,6 +12,7 @@ import {
   Receipt,
   Settings,
   ShoppingCart,
+  Sparkles,
   Star,
   TrendingUp,
   Users,
@@ -40,8 +42,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/expenses", label: "Giderler", icon: Wallet, group: "finance" },
   { href: "/admin/invoices", label: "E-Fatura", icon: Receipt, group: "finance" },
   { href: "/admin/bank", label: "Banka", icon: Building, group: "finance" },
+  { href: "/admin/suppliers", label: "Tedarikçiler", icon: Building2, group: "finance" },
 
   { href: "/admin/ai", label: "AI Asistan", icon: MessageSquare, group: "ai" },
+  { href: "/admin/autopilot", label: "Otopilot", icon: Sparkles, group: "ai" },
   { href: "/admin/activity", label: "Etkinlik", icon: Activity, group: "system" },
   { href: "/admin/settings", label: "Ayarlar", icon: Settings, group: "system" },
 ];

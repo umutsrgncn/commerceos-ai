@@ -108,6 +108,14 @@ export async function createReviewAction(
     metadata: { reviewId: created.id, rating: parsed.data.rating },
   });
 
+  // Otopilot: yorum cevabı yaz (eğer aktif)
+  try {
+    const { autoReplyToReview } = await import("@/lib/autopilot/core");
+    await autoReplyToReview(created.id);
+  } catch {
+    // sessizce devam — otopilot opsiyonel
+  }
+
   revalidatePath(`/admin/products/${parsed.data.productId}`);
   return { ok: true };
 }

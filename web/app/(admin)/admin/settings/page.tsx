@@ -2,11 +2,13 @@ import {
   Building2,
   Receipt,
   Settings as SettingsIcon,
+  Sparkles,
 } from "lucide-react";
 
 import { getSettings } from "@/lib/queries/settings";
 import { SettingsForm } from "./components/settings-form";
 import { GibForm } from "./components/gib-form";
+import { AutoPilotForm } from "./components/autopilot-form";
 
 export const metadata = { title: "Ayarlar — CommerceOS" };
 
@@ -60,6 +62,24 @@ export default async function SettingsPage() {
             gibUsername: settings.gibUsername,
             gibPasswordEncrypted: settings.gibPasswordEncrypted,
             gibSenderAlias: settings.gibSenderAlias,
+          }}
+        />
+      </Section>
+
+      <Section
+        icon={<Sparkles className="h-4 w-4 text-fuchsia-500" />}
+        title="Otopilot Modu"
+        description="AI günlük operasyonu yönetir — yorum cevapları, e-fatura kesimi, stok sipariş, havale eşleştirme. Bütçe ve güven eşiğini sen belirlersin."
+      >
+        <AutoPilotForm
+          initial={{
+            enabled: settings.autoPilotEnabled,
+            monthlyBudgetMinor: settings.autoPilotMonthlyBudgetMinor,
+            confidenceThreshold: settings.autoPilotConfidenceThreshold,
+            autoReplyReviews: settings.autoPilotAutoReplyReviews,
+            autoIssueInvoices: settings.autoPilotAutoIssueInvoices,
+            autoReorderStock: settings.autoPilotAutoReorderStock,
+            enabledAt: settings.autoPilotEnabledAt,
           }}
         />
       </Section>

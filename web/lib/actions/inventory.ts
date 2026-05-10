@@ -73,6 +73,16 @@ export async function adjustInventoryAction(
     throw err;
   }
 
+  // Otopilot: stok kritik seviyeye düştüyse tedarikçiye sipariş tetikle
+  if (delta < 0) {
+    try {
+      const { autoReorderStockIfLow } = await import("@/lib/autopilot/core");
+      await autoReorderStockIfLow(productId);
+    } catch {
+      // sessizce devam
+    }
+  }
+
   revalidatePath("/admin/inventory");
   revalidatePath(`/admin/products/${productId}`);
   revalidatePath("/admin");

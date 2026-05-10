@@ -86,6 +86,23 @@ yazılmalıdır çünkü Prisma PascalCase kullanır.
                    "matchReasoning"? TEXT, "matchedAt", "matchedBy",
                    "rawData" JSONB, "createdAt", "updatedAt")
 
+═══ OTOPILOT & TEDARİKÇİ ═══
+"Supplier" (id, name, email?, phone?, "contactPerson"?, address?, notes?,
+            "productSkus" TEXT[] (sağlanan SKU listesi),
+            "leadTimeDays" INT (varsayılan 7),
+            "isActive" BOOLEAN, "createdAt", "updatedAt")
+"AutoPilotAction" (id,
+                   type 'REVIEW_REPLY'|'INVOICE_ISSUE'|'STOCK_REORDER'|
+                        'BANK_MATCH'|'ORDER_CONFIRM',
+                   status 'PENDING'|'EXECUTED'|'FAILED'|'SKIPPED',
+                   "triggerSource" (örn 'order:cmX', 'review:cmY', 'product:cmZ'),
+                   "triggerSummary" (TR insan-okunur özet),
+                   decision (AI'nın aldığı karar),
+                   reasoning? (gerekçe), confidence? INT (0-100),
+                   "resultRef"? (oluşan kayıt 'invoice:cmX' vb.),
+                   "errorMessage"?, metadata JSONB,
+                   "executedAt"?, "createdAt")
+
 ═══ AUDIT & SETTINGS ═══
 "ActivityLog" (id, action (dot.path: 'product.create', 'order.transition',
                'expense.create', 'invoice.issued', 'invoice.cancelled',
@@ -132,4 +149,8 @@ yazılmalıdır çünkü Prisma PascalCase kullanır.
     * 100.0 / COUNT(*) AS rate FROM "BankTransaction" WHERE direction='IN'
 - Hangi siparişin ödemesi geldi: JOIN "Order" o ON o.id = bt."matchedOrderId"
   WHERE bt.status IN ('AUTO_MATCHED','MANUAL_MATCHED')
+- Otopilot bu hafta kaç aksiyon aldı: SELECT type, COUNT(*) FROM "AutoPilotAction"
+  WHERE "createdAt" >= NOW() - INTERVAL '7 days' AND status='EXECUTED' GROUP BY type
+- Tedarikçi yeterliliği: SELECT s.name, COUNT(*) AS sku_count FROM "Supplier" s
+  WHERE s."isActive" = true ORDER BY array_length(s."productSkus", 1) DESC
 """

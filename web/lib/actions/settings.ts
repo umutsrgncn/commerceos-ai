@@ -83,3 +83,48 @@ export async function updateGibSettingsAction(
   revalidatePath("/admin/settings");
   return { ok: true };
 }
+
+export async function updateAutoPilotSettingsAction(input: {
+  enabled: boolean;
+  monthlyBudgetMinor: number | null;
+  confidenceThreshold: number;
+  autoReplyReviews: boolean;
+  autoIssueInvoices: boolean;
+  autoReorderStock: boolean;
+}): Promise<{ ok: boolean; error?: string }> {
+  await requireAdmin();
+
+  const threshold = Math.max(0, Math.min(100, Math.round(input.confidenceThreshold)));
+  const wasEnabled = await db.systemSettings
+    .findUnique({ where: { id: SINGLETON_ID }, select: { autoPilotEnabled: true } })
+    .then((s) => s?.autoPilotEnabled ?? false);
+
+  await db.systemSettings.upsert({
+    where: { id: SINGLETON_ID },
+    update: {
+      autoPilotEnabled: input.enabled,
+      autoPilotMonthlyBudgetMinor: input.monthlyBudgetMinor,
+      autoPilotConfidenceThreshold: threshold,
+      autoPilotAutoReplyReviews: input.autoReplyReviews,
+      autoPilotAutoIssueInvoices: input.autoIssueInvoices,
+      autoPilotAutoReorderStock: input.autoReorderStock,
+      autoPilotEnabledAt:
+        input.enabled && !wasEnabled ? new Date() : undefined,
+    },
+    create: {
+      id: SINGLETON_ID,
+      autoPilotEnabled: input.enabled,
+      autoPilotMonthlyBudgetMinor: input.monthlyBudgetMinor,
+      autoPilotConfidenceThreshold: threshold,
+      autoPilotAutoReplyReviews: input.autoReplyReviews,
+      autoPilotAutoIssueInvoices: input.autoIssueInvoices,
+      autoPilotAutoReorderStock: input.autoReorderStock,
+      autoPilotEnabledAt: input.enabled ? new Date() : null,
+    },
+  });
+
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/autopilot");
+  revalidatePath("/admin");
+  return { ok: true };
+}

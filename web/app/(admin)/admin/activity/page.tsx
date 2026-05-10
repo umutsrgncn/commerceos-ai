@@ -16,6 +16,7 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+// Sparkles + Building yukarıda zaten import edildi (otopilot/tedarikçi action'ları için)
 
 import {
   Card,
@@ -184,6 +185,47 @@ const ACTION_META: Record<
     icon: FileUp,
     variant: "transition",
     href: () => `/admin/bank`,
+  },
+  "supplier.create": {
+    label: (m) => {
+      const name = (m.name as string) ?? "?";
+      const cnt = (m.productCount as number) ?? 0;
+      return `Tedarikçi eklendi: ${name}${cnt > 0 ? ` (${cnt} SKU)` : ""}`;
+    },
+    icon: Building,
+    variant: "create",
+    href: () => "/admin/suppliers",
+  },
+  "autopilot.review_reply": {
+    label: (m) => {
+      const conf = m.confidence as number | undefined;
+      return `Otopilot yorum cevabı yazdı${conf ? ` (%${conf})` : ""}`;
+    },
+    icon: Sparkles,
+    variant: "transition",
+    href: (id) => `/admin/reviews?productId=${id}`,
+  },
+  "autopilot.invoice_issued": {
+    label: (m) => {
+      const num = (m.invoiceNumber as string) ?? "?";
+      const dt = (m.documentType as string) ?? "EFATURA";
+      const docLabel = dt === "EARSIV" ? "E-arşiv" : "E-fatura";
+      return `Otopilot ${docLabel} kesti: ${num}`;
+    },
+    icon: Sparkles,
+    variant: "money",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "autopilot.stock_reorder": {
+    label: (m) => {
+      const supplier = (m.supplierName as string) ?? "?";
+      const ordered = (m.orderedQty as number) ?? 0;
+      const product = (m.productName as string) ?? "?";
+      return `Otopilot tedarikçiye sipariş yazdı: ${supplier} → ${product} ${ordered} adet`;
+    },
+    icon: Sparkles,
+    variant: "transition",
+    href: () => "/admin/autopilot",
   },
   "bank.matched": {
     label: (m) => {

@@ -320,7 +320,70 @@ model SystemSettings {
   bankWebhookSecret    String? // HMAC doğrulaması için
   bankAccountIban      String? // Mağazanın IBAN'ı, fatura/sipariş eşleştirmesinde
   bankName             String? // 'Test Bankası' / gerçek banka adı
+  // Otopilot Modu — AI'a tüm operasyonu devret
+  autoPilotEnabled            Boolean @default(false)
+  autoPilotMonthlyBudgetMinor Int? // Aylık operasyon bütçesi (kuruş)
+  autoPilotConfidenceThreshold Int @default(75) // 0-100, AI minimum güven eşiği
+  autoPilotAutoReplyReviews   Boolean @default(true)
+  autoPilotAutoIssueInvoices  Boolean @default(true)
+  autoPilotAutoReorderStock   Boolean @default(true)
+  autoPilotEnabledAt          DateTime?
   updatedAt            DateTime @updatedAt
+}
+
+enum AutoPilotActionType {
+  REVIEW_REPLY     // AI yorum cevabı yazdı
+  INVOICE_ISSUE    // AI sipariş için e-fatura kesti
+  STOCK_REORDER    // AI tedarikçiye sipariş maili attı
+  BANK_MATCH       // AI havale eşleştirdi (otopilot threshold)
+  ORDER_CONFIRM    // AI siparişi CONFIRMED'a aldı (ödeme matched sonrası)
+}
+
+enum AutoPilotActionStatus {
+  PENDING    // AI önerdi, bekleyen onay
+  EXECUTED   // AI otomatik gerçekleştirdi
+  FAILED     // başarısız (sebep error'da)
+  SKIPPED    // confidence düşük veya kural devre dışı
+}
+
+model AutoPilotAction {
+  id          String                @id @default(cuid())
+  type        AutoPilotActionType
+  status      AutoPilotActionStatus @default(PENDING)
+  triggerSource String // 'order:cmX', 'review:cmY', 'stock:cmZ', vb.
+  triggerSummary String  @db.Text // İnsan-okunabilir tetikleyici özeti
+  decision    String                @db.Text // AI'nın kararı (kısa)
+  reasoning   String?               @db.Text // AI'nın gerekçesi (uzun)
+  confidence  Int? // 0-100
+  resultRef   String? // İşlem tamamlandığında oluşan kayıt ref'i
+  errorMessage String?
+  metadata    Json?
+  executedAt  DateTime?
+  createdAt   DateTime              @default(now())
+
+  @@index([status, createdAt])
+  @@index([type, createdAt])
+  @@index([triggerSource])
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  contactPerson String?
+  address     String?
+  notes       String?
+  // Bu tedarikçi hangi ürünleri sağlıyor (SKU listesi, basit array)
+  productSkus String[] @default([])
+  // Sipariş geçildikten sonra teslim süresi (gün)
+  leadTimeDays Int?     @default(7)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([email])
+  @@index([isActive])
 }
 
 enum BankTransactionStatus {
