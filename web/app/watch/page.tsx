@@ -3,6 +3,7 @@ import { ArrowLeft, Github, Play, Sparkles } from "lucide-react";
 
 import { HeroParallax } from "@/components/aceternity/hero-parallax";
 import { Button } from "@/components/ui/button";
+import { CommerceOSLogo } from "@/components/brand/logo";
 import { HeroBgOrbs } from "@/components/landing/landing-effects";
 import { WatchPlayer } from "./components/watch-player";
 
@@ -57,13 +58,21 @@ export default function WatchPage() {
 
       {/* Top bar */}
       <header className="relative z-20 mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-xs text-white/80 backdrop-blur transition hover:border-white/30 hover:text-white"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Ana sayfaya dön
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-2">
+            <CommerceOSLogo size={32} />
+            <span className="text-base font-semibold tracking-tight">
+              CommerceOS
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.04] px-3 py-1 text-[11px] text-white/70 backdrop-blur transition hover:border-white/30 hover:text-white"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Ana sayfaya dön
+          </Link>
+        </div>
         <div className="flex items-center gap-2">
           <Link
             href="https://github.com/umutsrgncn/commerceos-ai"

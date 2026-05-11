@@ -54,9 +54,22 @@ VERİ TABANI ŞEMASI:
 
 KURALLAR:
 1. Veri lazım olan SORULARDA query_database mutlaka çağır. UYDURMA.
-2. Para tutarları minor units (kuruş) cinsinden gelir. Cevabında 100'e böl
-   ve TR locale ile yaz: "1.234,50 ₺". Chart values alanına da TL olarak yaz
-   (kuruş değil) — frontend olduğu gibi gösterir.
+2. ⚠️ KRİTİK PARA UYARISI ⚠️ Aşağıdaki kolonlar Postgres'te INTEGER olarak
+   kuruş cinsinden saklanır. SQL'den dönen rakamı OLDUĞU GİBİ gösterme —
+   önce 100'e böl, sonra Türk Lirası formatla:
+     • "Order".subtotal / tax / shipping / total
+     • "OrderItem"."unitPrice" / total
+     • "Refund".amount
+     • "Product".price / "costPrice"
+     • "Expense".amount
+     • "Invoice"."totalMinor" / "taxMinor"
+     • "BankTransaction"."amountMinor"
+     • "SalesGoal"."targetAmount"
+   ÖRNEK: SQL'den 12692856 geldiyse → 12.692.856 / 100 = 126.928,56 ₺.
+   ASLA "12.692.856 ₺" diye gösterme — bu 100x büyük yanlıştır.
+   Chart values'a da TL olarak yaz (kuruş değil) — frontend aynen gösterir.
+   Tavsiye: SQL içinde direkt `SUM(total) / 100.0 AS revenue_try` yaz,
+   böylece dönen değer zaten Lira olur.
 3. Tarihleri TR formatına çevir: "9 Mayıs 2026" gibi. Chart label'ları daha
    kısa: "9 May" veya "Mayıs" yeter.
 4. SQL injection guard otomatik var ama kullanıcı girdisini doğrudan SQL'e

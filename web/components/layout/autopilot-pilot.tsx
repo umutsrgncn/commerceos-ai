@@ -366,18 +366,47 @@ export function AutoPilotPilot({
                 <DemoTriggers />
               )
             ) : (
-              <div className="space-y-2 px-4 py-5 text-center text-xs text-[color:var(--color-muted)]">
-                <p>
-                  Otopilot pasif. <strong>Başlat</strong>'a basınca AI günlük
-                  operasyonu yönetmeye başlar:
+              <div className="space-y-3 px-4 py-4 text-xs text-[color:var(--color-muted)]">
+                <p className="text-center">
+                  <strong className="text-[color:var(--color-fg)]">
+                    Başlat
+                  </strong>
+                  &apos;a basınca Otopilot bu 7 işi paralel yönetir:
                 </p>
-                <ul className="mx-auto inline-block space-y-0.5 text-left text-[11px] leading-relaxed">
-                  <li>• Müşteri yorumlarına Türkçe cevap</li>
-                  <li>• Sipariş onayında otomatik e-fatura</li>
-                  <li>• Kritik stoğa tedarikçi siparişi</li>
-                  <li>• Havale/EFT eşleştirme</li>
-                  <li>• AI fiyat ve segmentasyon önerisi</li>
-                </ul>
+                <div className="grid grid-cols-1 gap-1.5 text-[11px] leading-snug">
+                  <PassiveItem
+                    color="amber"
+                    text="Müşteri yorumlarına Türkçe AI cevap"
+                  />
+                  <PassiveItem
+                    color="red"
+                    text="Negatif yoruma sentiment + flag"
+                  />
+                  <PassiveItem
+                    color="emerald"
+                    text="Sipariş onayında e-fatura / e-arşiv"
+                  />
+                  <PassiveItem
+                    color="indigo"
+                    text="Kritik stoğa tedarikçi siparişi"
+                  />
+                  <PassiveItem
+                    color="blue"
+                    text="Banka havalesi → sipariş eşleştirme"
+                  />
+                  <PassiveItem
+                    color="pink"
+                    text="Yavaş ürüne AI fiyat önerisi"
+                  />
+                  <PassiveItem
+                    color="purple"
+                    text="Müşteri segmentasyonu (VIP / sadık / risky)"
+                  />
+                </div>
+                <p className="rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.03] p-2 text-center text-[10px]">
+                  Bütçe + güven eşiği sen belirlersin, her aksiyon
+                  log&apos;lanır, geri alınabilir.
+                </p>
               </div>
             )}
           </div>
@@ -423,6 +452,32 @@ export function AutoPilotPilot({
         </button>
       </div>
     </>
+  );
+}
+
+// ─── Pasif state item ───────────────────────────────────────────────────────
+
+const PASSIVE_DOT: Record<string, string> = {
+  amber: "bg-amber-400",
+  red: "bg-red-400",
+  emerald: "bg-emerald-400",
+  indigo: "bg-indigo-400",
+  blue: "bg-blue-400",
+  pink: "bg-pink-400",
+  purple: "bg-purple-400",
+  cyan: "bg-cyan-400",
+};
+
+function PassiveItem({ color, text }: { color: string; text: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.02] px-2 py-1.5">
+      <span
+        className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+          PASSIVE_DOT[color] ?? "bg-fuchsia-400"
+        }`}
+      />
+      <span className="text-[color:var(--color-fg)]/85">{text}</span>
+    </div>
   );
 }
 

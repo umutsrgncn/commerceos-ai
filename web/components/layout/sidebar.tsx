@@ -10,9 +10,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
+import { CommerceOSLogo } from "@/components/brand/logo";
 
 const ROLE_RANK: Record<string, number> = {
   VIEWER: 1,
@@ -44,9 +44,7 @@ export function Sidebar({ userRole }: { userRole?: string }) {
         href="/admin"
         className="flex h-16 shrink-0 items-center justify-center gap-2 px-2 md:justify-start md:px-5 text-lg font-semibold tracking-tight"
       >
-        <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-sm shrink-0">
-          <Sparkles className="h-4 w-4" />
-        </span>
+        <CommerceOSLogo size={32} className="shrink-0" />
         <span className="hidden md:inline">CommerceOS</span>
       </Link>
 

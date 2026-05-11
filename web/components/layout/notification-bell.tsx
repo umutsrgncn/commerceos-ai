@@ -5,11 +5,21 @@ import { useEffect, useState } from "react";
 import { Menu } from "@ark-ui/react/menu";
 import { Portal } from "@ark-ui/react/portal";
 import {
+  AlertTriangle,
+  Banknote,
   Bell,
+  Bot,
   Coins,
+  MessageSquare,
+  Package,
   PackagePlus,
+  Receipt,
   RefreshCw,
+  Sparkles,
+  Star,
+  Tag,
   Trash2,
+  UserCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -101,7 +111,132 @@ const ACTION_META: Record<
     icon: Coins,
     href: (id) => `/admin/orders/${id}`,
   },
+
+  // ─── Otopilot (AI otomatik aksiyonları) ───
+  "autopilot.review_reply": {
+    label: () => "Otopilot: Yorum cevabı yazdı",
+    icon: MessageSquare,
+    href: (id) => `/admin/reviews?productId=${id}`,
+  },
+  "autopilot.review_flagged": {
+    label: (m) => {
+      const reason = m.flagReason as string | undefined;
+      return reason
+        ? `Otopilot: Yorum işaretledi — ${reason}`
+        : "Otopilot: Yorum risk olarak işaretlendi";
+    },
+    icon: Star,
+    href: () => `/admin/reviews`,
+  },
+  "autopilot.invoice_issued": {
+    label: () => "Otopilot: E-fatura kesildi",
+    icon: Receipt,
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "autopilot.stock_reorder": {
+    label: () => "Otopilot: Tedarikçiye sipariş yazıldı",
+    icon: Package,
+    href: () => `/admin/suppliers`,
+  },
+  "autopilot.bank_matched": {
+    label: () => "Otopilot: Havale siparişle eşleşti",
+    icon: Banknote,
+    href: () => `/admin/bank`,
+  },
+  "autopilot.order_confirmed": {
+    label: () => "Otopilot: Sipariş onaylandı",
+    icon: PackagePlus,
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "autopilot.price_scan": {
+    label: () => "Otopilot: Yavaş ürünlere fiyat önerisi",
+    icon: Tag,
+    href: () => `/admin/products`,
+  },
+  "autopilot.customer_segmented": {
+    label: (m) => {
+      const segment = m.segment as string | undefined;
+      return segment
+        ? `Otopilot: Müşteri ${segment} segmentine alındı`
+        : "Otopilot: Müşteri segmentlendi";
+    },
+    icon: UserCircle,
+    href: (id) => `/admin/customers/${id}`,
+  },
+
+  // ─── Diğer ortak aksiyonlar ───
+  "invoice.issued": {
+    label: (m) => {
+      const num = m.invoiceNumber as string | undefined;
+      return num ? `E-fatura kesildi: ${num}` : "E-fatura kesildi";
+    },
+    icon: Receipt,
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "invoice.failed": {
+    label: () => "E-fatura kesilemedi",
+    icon: AlertTriangle,
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "review.create": {
+    label: (m) => {
+      const r = m.rating;
+      if (typeof r === "number") return `Yeni yorum: ${r}/5`;
+      return "Yeni yorum eklendi";
+    },
+    icon: Star,
+    href: (id) => `/admin/products/${id}`,
+  },
+  "expense.create": {
+    label: () => "Yeni gider eklendi",
+    icon: Coins,
+    href: (id) => `/admin/expenses/${id}`,
+  },
+  "bank.import": {
+    label: () => "Banka extresi içe aktarıldı",
+    icon: Banknote,
+    href: () => `/admin/bank`,
+  },
+  "kvkk.deletion_requested": {
+    label: () => "KVKK: Yeni veri silme talebi",
+    icon: AlertTriangle,
+    href: () => `/admin/data-requests`,
+  },
+  "user.invited": {
+    label: () => "Ekibe yeni kullanıcı eklendi",
+    icon: UserCircle,
+    href: () => `/admin/users`,
+  },
 };
+
+// Bilinmeyen action key'ler için fallback (raw key gösterme)
+function fallbackLabel(action: string): { label: string; icon: LucideIcon } {
+  if (action.startsWith("autopilot.")) {
+    return { label: "Otopilot AI aksiyonu", icon: Sparkles };
+  }
+  if (action.startsWith("invoice.")) {
+    return { label: "Fatura işlemi", icon: Receipt };
+  }
+  if (action.startsWith("order.")) {
+    return { label: "Sipariş güncellendi", icon: PackagePlus };
+  }
+  if (action.startsWith("product.")) {
+    return { label: "Ürün güncellendi", icon: Package };
+  }
+  if (action.startsWith("customer.")) {
+    return { label: "Müşteri güncellendi", icon: UserCircle };
+  }
+  if (action.startsWith("review.")) {
+    return { label: "Yorum güncellendi", icon: Star };
+  }
+  if (action.startsWith("bank.")) {
+    return { label: "Banka işlemi", icon: Banknote };
+  }
+  if (action.startsWith("kvkk.")) {
+    return { label: "KVKK işlemi", icon: AlertTriangle };
+  }
+  return { label: "Sistem aksiyonu", icon: Bot };
+}
 
 function relativeTime(iso: string): string {
   const d = new Date(iso);
@@ -196,9 +331,17 @@ export function NotificationBell() {
               <ul className="max-h-96 themed-scroll overflow-y-auto">
                 {items.map((it) => {
                   const meta = ACTION_META[it.action];
-                  const Icon = meta?.icon ?? Bell;
                   const metadata = it.metadata ?? {};
-                  const label = meta ? meta.label(metadata) : it.action;
+                  let label: string;
+                  let Icon: LucideIcon;
+                  if (meta) {
+                    label = meta.label(metadata);
+                    Icon = meta.icon;
+                  } else {
+                    const fb = fallbackLabel(it.action);
+                    label = fb.label;
+                    Icon = fb.icon;
+                  }
                   const href =
                     meta?.href && it.entityId ? meta.href(it.entityId) : null;
                   const unread = new Date(it.createdAt).getTime() > lastReadAt;

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   AlertTriangle,
   Banknote,
@@ -14,7 +14,7 @@ import {
   UserCircle,
   Zap,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Event = {
   icon: React.ComponentType<{ className?: string }>;
@@ -172,16 +172,39 @@ export function OtopilotHeroBanner() {
   );
 }
 
+// Stable initial set (5 event); auto-mode adds new ones to the top.
+// Listede en fazla 6 event kalır — yenisi gelince en eski düşer.
 export function OtopilotLiveFeed() {
-  const [tick, setTick] = useState(0);
+  // Her event'e stable id ver (key için)
+  const initial = EVENTS.slice(0, 5).map((e, i) => ({
+    ...e,
+    id: `seed-${i}-${e.title}`,
+  }));
+  const [feed, setFeed] = useState(initial);
+  const counterRef = useRef(0);
 
-  // Her 6 saniyede listeyi rotate et — canlı feed hissi
+  // Her 7sn'de bir rastgele yeni event üstten girer
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 6000);
+    const id = setInterval(() => {
+      const idx = Math.floor(Math.random() * EVENTS.length);
+      const base = EVENTS[idx];
+      counterRef.current += 1;
+      const newEvent = {
+        ...base,
+        ago: "şimdi",
+        id: `live-${counterRef.current}`,
+      };
+      setFeed((prev) => {
+        // Eskileri "X sn önce"ye kaydır (gevşek simülasyon)
+        const aged = prev.map((p, i) => ({
+          ...p,
+          ago: i === 0 ? "az önce" : i === 1 ? "1 dk" : `${i + 1} dk`,
+        }));
+        return [newEvent, ...aged].slice(0, 6);
+      });
+    }, 7000);
     return () => clearInterval(id);
   }, []);
-
-  const rotated = [...EVENTS.slice(tick % EVENTS.length), ...EVENTS.slice(0, tick % EVENTS.length)];
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-black/40">
@@ -195,39 +218,45 @@ export function OtopilotLiveFeed() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-fuchsia-400/70" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-fuchsia-500" />
           </span>
-          son 5 dk · {EVENTS.length} aksiyon
+          son 7 dk · {feed.length} aksiyon
         </div>
       </div>
 
       <ul className="divide-y divide-white/[0.04]">
-        {rotated.map((e, idx) => {
-          const Icon = e.icon;
-          return (
-            <motion.li
-              key={`${tick}-${e.title}-${idx}`}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.4, delay: idx * 0.05 }}
-              className="flex items-start gap-3 px-4 py-3 transition hover:bg-white/[0.02]"
-            >
-              <span
-                className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${ACCENT[e.color]}`}
+        <AnimatePresence initial={false}>
+          {feed.map((e) => {
+            const Icon = e.icon;
+            return (
+              <motion.li
+                key={e.id}
+                layout
+                initial={{ opacity: 0, y: -24, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="flex items-start gap-3 px-4 py-3 transition hover:bg-white/[0.02]"
               >
-                <Icon className="h-4 w-4" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{e.title}</span>
-                  <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
+                <span
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg border ${ACCENT[e.color]}`}
+                >
+                  <Icon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{e.title}</span>
+                    <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-400" />
+                  </div>
+                  <div className="mt-0.5 text-xs text-white/55">
+                    {e.detail}
+                  </div>
                 </div>
-                <div className="mt-0.5 text-xs text-white/55">{e.detail}</div>
-              </div>
-              <div className="shrink-0 font-mono text-[10px] text-white/35">
-                {e.ago}
-              </div>
-            </motion.li>
-          );
-        })}
+                <div className="shrink-0 font-mono text-[10px] text-white/35">
+                  {e.ago}
+                </div>
+              </motion.li>
+            );
+          })}
+        </AnimatePresence>
       </ul>
     </div>
   );

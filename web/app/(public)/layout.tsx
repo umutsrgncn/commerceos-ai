@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { CookieBanner } from "@/components/layout/cookie-banner";
+import { CommerceOSLogo } from "@/components/brand/logo";
 import { getSettings } from "@/lib/queries/settings";
 import { readTheme } from "@/lib/theme";
 
@@ -19,7 +20,11 @@ export default async function PublicLayout({
     >
       <header className="border-b border-[color:var(--color-border)]">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-3">
-          <Link href="/" className="text-sm font-semibold tracking-tight">
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-sm font-semibold tracking-tight"
+          >
+            <CommerceOSLogo size={24} />
             {settings.companyName ?? "CommerceOS"}
           </Link>
           <nav className="flex items-center gap-3 text-xs text-[color:var(--color-muted)]">

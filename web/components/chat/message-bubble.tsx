@@ -1,6 +1,7 @@
-import { CheckCircle2, Loader2, Sparkles, User, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, User, XCircle } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ChatMessage } from "@/types/chat";
+import { CommerceOSLogo } from "@/components/brand/logo";
 import { ChartBlock } from "./chart-block";
 import { MarkdownText } from "./markdown";
 
@@ -22,14 +23,12 @@ export function MessageBubble({
     <div className={cn("flex gap-3", isUser && "flex-row-reverse")}>
       <div
         className={cn(
-          "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-semibold",
-          isUser
-            ? "bg-[color:var(--color-fg)]/[0.08] text-[color:var(--color-fg)]"
-            : "bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white"
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+          isUser && "bg-[color:var(--color-fg)]/[0.08] text-[color:var(--color-fg)]",
         )}
         aria-hidden
       >
-        {isUser ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+        {isUser ? <User className="h-4 w-4" /> : <CommerceOSLogo size={32} />}
       </div>
 
       <div className="flex max-w-2xl flex-col gap-2">

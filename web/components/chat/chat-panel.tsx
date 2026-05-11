@@ -6,13 +6,13 @@ import {
   MessageSquare,
   Package,
   Send,
-  Sparkles,
   Square,
   TrendingUp,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { CommerceOSLogo } from "@/components/brand/logo";
 import { cn } from "@/lib/cn";
 import type {
   AgentEvent,
@@ -215,9 +215,7 @@ export function ChatPanel() {
     <div className="flex h-[calc(100vh-7rem)] flex-col gap-4">
       <div className="flex items-center justify-between rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-5 py-3">
         <div className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-sm">
-            <Sparkles className="h-4 w-4" />
-          </span>
+          <CommerceOSLogo size={36} />
           <div>
             <div className="flex items-center gap-2">
               <span className="font-semibold">Asistan</span>
@@ -314,8 +312,8 @@ function EmptyState({ onPick }: { onPick: (text: string) => void }) {
   return (
     <div className="mx-auto flex h-full max-w-3xl flex-col items-center justify-center gap-8 text-center">
       <div className="space-y-3">
-        <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/20">
-          <Sparkles className="h-7 w-7" />
+        <div className="mx-auto flex h-16 w-16 items-center justify-center">
+          <CommerceOSLogo size={64} />
         </div>
         <h3 className="text-xl font-semibold tracking-tight">
           CommerceOS Asistan

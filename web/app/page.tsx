@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Activity,
   AlertTriangle,
   ArrowRight,
   Banknote,
@@ -27,11 +26,10 @@ import {
   TrendingUp,
   UserCircle,
   Users,
-  Wrench,
-  Zap,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CommerceOSLogo } from "@/components/brand/logo";
 import {
   OtopilotCard,
   OtopilotHeroBanner,
@@ -46,7 +44,6 @@ import {
 import { MacbookScroll } from "@/components/aceternity/macbook-scroll";
 import { Spotlight } from "@/components/aceternity/spotlight";
 import { TextGenerateEffect } from "@/components/aceternity/text-generate";
-import { InfiniteMovingCards } from "@/components/aceternity/infinite-moving-cards";
 import { MovingBorderButton } from "@/components/aceternity/moving-border";
 
 export const metadata = {
@@ -105,9 +102,7 @@ export default function HomePage() {
         <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-black/70 backdrop-blur-xl">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
             <Link href="/" className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/30">
-                <Sparkles className="h-4 w-4" />
-              </span>
+              <CommerceOSLogo size={36} />
               <span className="text-base font-semibold tracking-tight">
                 CommerceOS
               </span>
@@ -115,7 +110,6 @@ export default function HomePage() {
             <nav className="hidden items-center gap-6 text-sm text-white/60 md:flex">
               <a href="#ai" className="hover:text-white transition">AI</a>
               <a href="#modules" className="hover:text-white transition">Modüller</a>
-              <a href="#workflow" className="hover:text-white transition">Nasıl çalışır</a>
               <a href="#team" className="hover:text-white transition">Ekip</a>
             </nav>
             <div className="flex items-center gap-2">
@@ -258,30 +252,74 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ─── Tech strip — InfiniteMovingCards ─── */}
-        <section className="relative border-y border-white/[0.06] bg-white/[0.01] py-10">
-          <p className="mb-4 text-center text-xs uppercase tracking-wider text-white/40">
-            Kullandığımız teknoloji yığını + AI özellikleri
-          </p>
-          <div className="flex justify-center">
-            <InfiniteMovingCards
-              speed="slow"
-              direction="left"
-              items={[
-                { quote: "Müşteri yorumuna AI Türkçe cevap, 14 saniyede.", name: "Yorum Otomasyonu", title: "Gemini · marka diliyle" },
-                { quote: "Sipariş onaylanınca GİB e-fatura otomatik kesilir.", name: "E-Fatura", title: "GİB entegratör · 12s" },
-                { quote: "Stok kritiğe düşünce tedarikçiye Türkçe mail.", name: "Stok Otomasyon", title: "AI compose · 50 adet" },
-                { quote: "Havale geldiğinde AI siparişle eşleştirir.", name: "Banka", title: "Semantic match · %97" },
-                { quote: "Müşteri segmenti AI ile: VIP, sadık, risky.", name: "Segmentasyon", title: "13 sipariş → VIP" },
-                { quote: "Yavaş ürüne -%20 fiyat önerisi gerekçeli.", name: "Fiyat Önerisi", title: "Rekabet + maliyet" },
-                { quote: "Son 7 gün vs baseline anomali tespiti.", name: "Anomali", title: "+%169 iade alarm" },
-                { quote: "Veritabanı'na Türkçe sor, AI çekip cevaplar.", name: "AI Asistan", title: "Function calling" },
-                { quote: "Fişin fotoğrafından AI otomatik gider girişi.", name: "Fiş OCR", title: "Gemini Vision" },
-                { quote: "Ürün açıklaması: başlık + tag → SEO copy.", name: "Açıklama AI", title: "Streaming" },
-                { quote: "Ürün görseli: prompt → 3 stil varyant.", name: "Görsel AI", title: "Higgsfield + Gemini" },
-                { quote: "Kampanya yazımı: segment + ton → e-posta.", name: "Kampanya AI", title: "142 müşteri / 1 dk" },
-              ]}
-            />
+        {/* ─── Tech yığını — bento grid ─── */}
+        <section className="relative border-y border-white/[0.06] bg-gradient-to-b from-white/[0.01] to-transparent py-14">
+          <div className="mx-auto max-w-6xl px-6">
+            <p className="text-center text-xs uppercase tracking-wider text-white/40">
+              Üzerine inşa edildi
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+              <TechCell
+                title="Next.js 15"
+                desc="App Router · RSC · server actions"
+                accent="from-white/15 to-white/[0.02]"
+                logo={
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
+                    <path d="M11.572 0c-.176 0-.31.001-.358.007a19.76 19.76 0 0 1-.364.033C7.443.346 4.25 2.185 2.228 5.012a11.875 11.875 0 0 0-2.119 5.243c-.096.659-.108.854-.108 1.747s.012 1.089.108 1.748c.652 4.506 3.86 8.292 8.209 9.695.779.25 1.6.422 2.534.525.363.04 1.935.04 2.299 0 1.611-.178 2.977-.577 4.323-1.264.207-.106.247-.134.219-.158-.02-.013-.9-1.193-1.955-2.62l-1.919-2.592-2.404-3.558a338.739 338.739 0 0 0-2.422-3.556c-.009-.002-.018 1.579-.023 3.51-.007 3.38-.01 3.515-.052 3.595a.426.426 0 0 1-.206.214c-.075.037-.14.044-.495.044H7.81l-.108-.068a.438.438 0 0 1-.157-.171l-.05-.106.006-4.703.007-4.705.072-.092a.645.645 0 0 1 .174-.143c.096-.047.134-.051.54-.051.478 0 .558.018.682.154.035.038 1.337 1.999 2.895 4.361a10760.433 10760.433 0 0 0 4.735 7.17l1.9 2.879.096-.063a12.317 12.317 0 0 0 2.466-2.163 11.944 11.944 0 0 0 2.824-6.134c.096-.66.108-.854.108-1.748 0-.893-.012-1.088-.108-1.747-.652-4.506-3.859-8.292-8.208-9.695a12.597 12.597 0 0 0-2.499-.523A33.119 33.119 0 0 0 11.573 0zm4.069 7.217c.347 0 .408.005.486.047a.473.473 0 0 1 .237.277c.018.06.023 1.365.018 4.304l-.006 4.218-.744-1.14-.746-1.14v-3.066c0-1.982.01-3.097.023-3.15a.478.478 0 0 1 .233-.296c.096-.05.13-.054.5-.054z"/>
+                  </svg>
+                }
+              />
+              <TechCell
+                title="Gemini AI"
+                desc="Streaming · vision · tool use"
+                accent="from-fuchsia-500/20 to-indigo-500/10"
+                logo={
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none">
+                    <path
+                      d="M12 0 C12 6.627 17.373 12 24 12 C17.373 12 12 17.373 12 24 C12 17.373 6.627 12 0 12 C6.627 12 12 6.627 12 0 Z"
+                      fill="url(#g-gem)"
+                    />
+                    <defs>
+                      <linearGradient id="g-gem" x1="0" y1="0" x2="24" y2="24">
+                        <stop offset="0%" stopColor="#d946ef" />
+                        <stop offset="100%" stopColor="#6366f1" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                }
+              />
+              <TechCell
+                title="PostgreSQL"
+                desc="Prisma ORM · migrations · types"
+                accent="from-blue-500/20 to-cyan-500/10"
+                logo={
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
+                    <path d="M5.214 11.346c0 .85.69 1.54 1.54 1.54h.027c.85 0 1.54-.69 1.54-1.54v-1.04c0-.85-.69-1.54-1.54-1.54H6.755c-.851 0-1.541.69-1.541 1.54v1.04zM12 23.43c-3.66 0-6.787-2.246-8.094-5.434a12.93 12.93 0 0 1-.835-4.706c0-3.49 1.371-6.65 3.601-8.984A12.357 12.357 0 0 1 12 .57c6.557 0 11.876 5.32 11.876 11.876S18.557 23.43 12 23.43"/>
+                  </svg>
+                }
+                fg="text-blue-300"
+              />
+              <TechCell
+                title="iyzico"
+                desc="3DS · sandbox + üretim · Türkiye"
+                accent="from-rose-500/15 to-pink-500/10"
+                logo={
+                  <div className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-rose-500 to-pink-500 text-[9px] font-bold text-white">
+                    iyz
+                  </div>
+                }
+              />
+              <TechCell
+                title="GİB E-Fatura"
+                desc="Entegratör · e-arşiv · UBL XML"
+                accent="from-emerald-500/15 to-teal-500/10"
+                logo={
+                  <div className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 text-[9px] font-bold text-white">
+                    GİB
+                  </div>
+                }
+              />
+            </div>
           </div>
         </section>
 
@@ -311,49 +349,20 @@ export default function HomePage() {
 
           {/* Live feed + intro side-by-side */}
           <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1.3fr]">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5">
-              <div className="flex items-center gap-2">
-                <PulseBadge />
-                <span className="text-xs text-white/55">
-                  Demo akışı — gerçek panelde de aynı kart akar
-                </span>
-              </div>
-              <h3 className="mt-3 text-xl font-semibold tracking-tight">
-                Olay → AI → Aksiyon
-              </h3>
-              <p className="mt-2 text-sm text-white/60">
-                Otopilot her olayı yakalar, Gemini ile karar verir, sonra
-                doğrudan veritabanı/GİB/iyzico/SMTP'ye yazar. Bütçe ve güven
-                eşiği sen belirlersin.
-              </p>
-              <ul className="mt-4 space-y-2 text-xs text-white/65">
-                <li className="flex items-start gap-1.5">
-                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fuchsia-400" />
-                  Her aksiyon log'lanır — geri alınabilir
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fuchsia-400" />
-                  Güven eşik altıysa admin onayı bekler
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="mt-1 h-1 w-1 shrink-0 rounded-full bg-fuchsia-400" />
-                  Aylık bütçe limiti — aşılırsa duraklar
-                </li>
-              </ul>
-            </div>
+            <PipelineCard />
             <OtopilotLiveFeed />
           </div>
 
           {/* 7 detailed scenario cards — animated stagger */}
           <div className="mt-12 mb-8 text-center">
             <h3 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-              7 senaryo,{" "}
+              Otopilot{" "}
               <span className="bg-gradient-to-br from-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">
-                somut örnek
+                gerçek örnekler
               </span>
             </h3>
             <p className="mt-2 text-sm text-white/55">
-              Slogan değil — gerçek AI girdi/çıktı örnekleri.
+              Slogan değil — AI'nın girdi/çıktısını birebir göster.
             </p>
           </div>
 
@@ -863,43 +872,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ─── How it works ─── */}
-        <section id="workflow" className="mx-auto max-w-6xl px-6 py-20">
-          <div className="mb-14 text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
-              <Activity className="h-3 w-3" />
-              Nasıl çalışır
-            </span>
-            <h2 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">
-              3 adımda{" "}
-              <span className="bg-gradient-to-br from-indigo-300 to-cyan-300 bg-clip-text text-transparent">
-                otomasyona geç
-              </span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Step
-              n={1}
-              icon={Database}
-              title="Mağaza bağla"
-              body="Ürün, müşteri, sipariş, banka, GİB entegratör — sırayla bağlanır. Demo seed datayla başlayabilirsin."
-            />
-            <Step
-              n={2}
-              icon={Zap}
-              title="Otopilot ayarla"
-              body="7 kabiliyeti tek tek aç/kapat. Bütçe limiti, güven eşiği belirle. Risksiz testi için sandbox modu."
-            />
-            <Step
-              n={3}
-              icon={Sparkles}
-              title="AI yönetir"
-              body="Yorum cevabı, fatura, stok, havale — günlük operasyon AI'da. Sen sadece dashboard'ı izlersin."
-            />
-          </div>
-        </section>
-
         {/* ─── Modules grid ─── */}
         <section id="modules" className="mx-auto max-w-6xl px-6 py-20">
           <div className="mb-12 text-center">
@@ -1053,9 +1025,7 @@ export default function HomePage() {
         <footer className="border-t border-white/[0.06] bg-black">
           <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
             <div className="flex items-center gap-2">
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white">
-                <Sparkles className="h-3.5 w-3.5" />
-              </span>
+              <CommerceOSLogo size={28} />
               <span className="text-sm font-semibold">CommerceOS</span>
               <span className="text-xs text-white/40">
                 © {new Date().getFullYear()} fatal exception team
@@ -1120,35 +1090,6 @@ function GridPattern() {
   );
 }
 
-function Step({
-  n,
-  icon: Icon,
-  title,
-  body,
-}: {
-  n: number;
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  body: string;
-}) {
-  return (
-    <div className="relative rounded-2xl border border-white/[0.08] bg-white/[0.02] p-6">
-      <div className="flex items-start gap-4">
-        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-500/30 to-fuchsia-500/30 text-fuchsia-300">
-          <Icon className="h-5 w-5" />
-        </span>
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-white/40">
-            Adım {n}
-          </div>
-          <h3 className="mt-1 text-lg font-semibold">{title}</h3>
-          <p className="mt-1.5 text-sm leading-relaxed text-white/60">{body}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function Pill({
   icon: Icon,
   text,
@@ -1161,6 +1102,131 @@ function Pill({
       <Icon className="h-3 w-3" />
       {text}
     </span>
+  );
+}
+
+function PipelineCard() {
+  const steps = [
+    {
+      label: "Olay",
+      title: "Trigger",
+      desc: "Yorum / sipariş / havale / stok düşüşü",
+      tone: "from-fuchsia-500 to-pink-500",
+      dotColor: "bg-fuchsia-400",
+    },
+    {
+      label: "Karar",
+      title: "Gemini AI",
+      desc: "Güven skoru hesaplar, eşik altında onay bekler",
+      tone: "from-indigo-500 to-purple-500",
+      dotColor: "bg-indigo-400",
+    },
+    {
+      label: "Yazım",
+      title: "Türkçe çıktı",
+      desc: "Mail / cevap / fatura draft / SQL update",
+      tone: "from-cyan-500 to-blue-500",
+      dotColor: "bg-cyan-400",
+    },
+    {
+      label: "Aksiyon",
+      title: "DB · GİB · SMTP",
+      desc: "Doğrudan sisteme yazar, audit log'a düşer",
+      tone: "from-emerald-500 to-teal-500",
+      dotColor: "bg-emerald-400",
+    },
+  ];
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-white/[0.03] to-transparent p-6">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-fuchsia-500/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-indigo-500/15 blur-3xl" />
+
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          <PulseBadge />
+          <span className="text-xs text-white/55">İç akış</span>
+        </div>
+        <h3 className="mt-3 text-xl font-semibold tracking-tight">
+          Otopilot{" "}
+          <span className="bg-gradient-to-br from-fuchsia-300 to-indigo-300 bg-clip-text text-transparent">
+            pipeline'ı
+          </span>
+        </h3>
+
+        <ol className="relative mt-5">
+          {/* Connecting line */}
+          <div className="absolute left-[15px] top-0 bottom-0 w-px bg-gradient-to-b from-fuchsia-500/40 via-indigo-500/40 to-emerald-500/40" />
+          {steps.map((s) => (
+            <li key={s.label} className="relative mb-4 last:mb-0 pl-10">
+              <span
+                className={`absolute left-0 top-0.5 grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br ${s.tone} text-[10px] font-bold uppercase tracking-wider text-white shadow-lg`}
+              >
+                <span
+                  className={`absolute h-9 w-9 rounded-full ${s.dotColor} opacity-30 blur-md`}
+                />
+                <span className="relative">{s.label[0]}</span>
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-white/40">
+                  {s.label}
+                </span>
+                <span className="font-semibold">{s.title}</span>
+              </div>
+              <p className="mt-0.5 text-xs leading-relaxed text-white/55">
+                {s.desc}
+              </p>
+            </li>
+          ))}
+        </ol>
+
+        <div className="mt-5 flex flex-wrap gap-1.5 border-t border-white/[0.06] pt-4 text-[10px] text-white/55">
+          <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5">
+            Audit log
+          </span>
+          <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5">
+            Geri alınabilir
+          </span>
+          <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5">
+            Bütçe limiti
+          </span>
+          <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5">
+            Güven eşiği
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TechCell({
+  title,
+  desc,
+  logo,
+  accent,
+  fg,
+}: {
+  title: string;
+  desc: string;
+  logo: React.ReactNode;
+  accent: string;
+  fg?: string;
+}) {
+  return (
+    <div
+      className={`group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br ${accent} p-4 transition hover:border-white/20`}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.05),transparent_70%)]" />
+      <div className="relative flex items-start gap-3">
+        <span className={`shrink-0 ${fg ?? "text-white/90"}`}>{logo}</span>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold leading-tight">{title}</div>
+          <div className="mt-1 text-[10px] leading-snug text-white/55">
+            {desc}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1273,25 +1339,27 @@ function DbChatShowcase() {
             </span>
           </h3>
           <p className="mt-3 text-sm text-white/70 sm:text-base">
-            Gemini function-calling agent siparişe, müşteriye, stoğa, faturaya,
-            yorumlara erişebilir.{" "}
-            <strong className="text-white">Türkçe sor</strong>, AI veriyi
-            çekip cevap yazar.
+            Asistan PostgreSQL veritabanına{" "}
+            <strong className="text-white">read-only kullanıcı</strong> ile
+            doğrudan SQL atar — sipariş, müşteri, stok, fatura, yorum tablolarına
+            erişip Türkçe yanıt yazar. Mock değil, gerçek veri.
           </p>
           <div className="mt-4 flex flex-wrap gap-1.5 text-[10px] text-white/55">
             {[
-              "list_orders",
-              "find_customer",
-              "low_stock",
-              "revenue_period",
-              "top_products",
-              "anomaly_scan",
+              "Order",
+              "Customer",
+              "Product",
+              "Inventory",
+              "Invoice",
+              "Review",
+              "BankTransaction",
+              "Refund",
             ].map((t) => (
               <span
                 key={t}
-                className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2 py-0.5 font-mono"
+                className="rounded-md border border-cyan-500/20 bg-cyan-500/[0.06] px-2 py-0.5 font-mono text-cyan-200"
               >
-                {t}()
+                {t}
               </span>
             ))}
           </div>
@@ -1304,7 +1372,15 @@ function DbChatShowcase() {
           />
           <ChatBubble
             side="ai"
-            tools={["top_products(days=7)", "revenue_by_product(...)"]}
+            sql={`SELECT p.name, SUM(oi.quantity) qty, SUM(oi.total) revenue
+FROM "OrderItem" oi
+JOIN "Product" p ON p.id = oi."productId"
+JOIN "Order" o ON o.id = oi."orderId"
+WHERE o."createdAt" >= NOW() - INTERVAL '7 days'
+  AND o.status NOT IN ('CANCELLED', 'REFUNDED')
+GROUP BY p.name
+ORDER BY revenue DESC
+LIMIT 3;`}
             text="Bu hafta en çok satanlar:&#10;&#10;1. Pamuk Basic Tişört · 47 adet · ₺11.703&#10;2. Eşofman Altı Gri · 38 adet · ₺18.962&#10;3. Spor Sweatshirt · 29 adet · ₺14.490&#10;&#10;Toplam ciro: ₺45.155 — geçen haftadan %18 yüksek."
           />
           <ChatBubble
@@ -1313,7 +1389,10 @@ function DbChatShowcase() {
           />
           <ChatBubble
             side="ai"
-            tools={["product_stock(sku=PT-ESOFMAN-ALTI-GRI-193)"]}
+            sql={`SELECT i.quantity, p.name
+FROM "Inventory" i
+JOIN "Product" p ON p.id = i."productId"
+WHERE p.sku = 'PT-ESOFMAN-ALTI-GRI-193';`}
             text="PT-ESOFMAN-ALTI-GRI-193: 3 adet stok kaldı (kritik). Tedarikçinizde 5 iş günü teslim. Otopilot'tan onaylarsan AI tedarikçiye sipariş maili yazabilir."
           />
         </div>
@@ -1325,11 +1404,11 @@ function DbChatShowcase() {
 function ChatBubble({
   side,
   text,
-  tools,
+  sql,
 }: {
   side: "user" | "ai";
   text: string;
-  tools?: string[];
+  sql?: string;
 }) {
   const isUser = side === "user";
   return (
@@ -1341,17 +1420,15 @@ function ChatBubble({
             : "max-w-[92%] rounded-2xl rounded-bl-md border border-cyan-500/25 bg-gradient-to-br from-cyan-500/[0.08] to-indigo-500/[0.06] px-3.5 py-2.5 text-sm"
         }
       >
-        {!isUser && tools && (
-          <div className="mb-1.5 flex flex-wrap gap-1">
-            {tools.map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center gap-1 rounded bg-cyan-500/20 px-1.5 py-0.5 font-mono text-[9px] text-cyan-200"
-              >
-                <Wrench className="h-2.5 w-2.5" />
-                {t}
-              </span>
-            ))}
+        {!isUser && sql && (
+          <div className="mb-2 rounded-lg border border-cyan-500/20 bg-black/40 p-2">
+            <div className="mb-1 flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-wider text-cyan-300/80">
+              <Database className="h-2.5 w-2.5" />
+              SQL · read-only kullanıcı
+            </div>
+            <code className="block whitespace-pre-wrap break-all font-mono text-[10px] leading-relaxed text-cyan-100/90">
+              {sql}
+            </code>
           </div>
         )}
         <div className="whitespace-pre-wrap leading-relaxed text-white/90">

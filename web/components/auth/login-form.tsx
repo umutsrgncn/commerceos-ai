@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { Sparkles } from "lucide-react";
 
 import { signInAction, type AuthActionState } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+const DEMO_EMAIL = "demo@commerceos.dev";
+const DEMO_PASSWORD = "demo1234";
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -41,6 +45,20 @@ export function LoginForm() {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Hackathon demo banner */}
+        <div className="flex items-start gap-2 rounded-lg border border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/10 to-indigo-500/5 p-3">
+          <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-fuchsia-500" />
+          <div className="space-y-0.5">
+            <p className="text-xs font-medium">
+              Hackathon demo · hazır hesap
+            </p>
+            <p className="text-[11px] text-[color:var(--color-muted)]">
+              Demo bilgileri formda dolu — direkt{" "}
+              <strong>Giriş yap</strong>&apos;a basabilirsin.
+            </p>
+          </div>
+        </div>
+
         <form action={formAction} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email">E-posta</Label>
@@ -50,6 +68,7 @@ export function LoginForm() {
               type="email"
               autoComplete="email"
               required
+              defaultValue={DEMO_EMAIL}
               placeholder="ornek@firma.com"
             />
             {state?.fieldErrors?.email && (
@@ -73,6 +92,7 @@ export function LoginForm() {
               type="password"
               autoComplete="current-password"
               required
+              defaultValue={DEMO_PASSWORD}
             />
             {state?.fieldErrors?.password && (
               <p className="text-xs text-red-500">
