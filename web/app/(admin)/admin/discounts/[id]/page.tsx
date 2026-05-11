@@ -38,7 +38,7 @@ export default async function EditDiscountPage({
       </div>
 
       <div>
-        <h1 className="font-mono text-2xl font-semibold tracking-tight">
+        <h1 className="font-mono text-xl sm:text-2xl font-semibold tracking-tight">
           {discount.code}
         </h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">

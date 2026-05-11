@@ -19,7 +19,7 @@ export default async function NewProductPage() {
         </Link>
       </div>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Yeni ürün</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yeni ürün</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Temel bilgileri gir, AI&apos;dan açıklama isteyebilirsin.
         </p>

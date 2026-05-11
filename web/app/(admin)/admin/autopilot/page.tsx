@@ -116,7 +116,7 @@ export default async function AutoPilotPage() {
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
                 Otopilot
               </h1>
               <span

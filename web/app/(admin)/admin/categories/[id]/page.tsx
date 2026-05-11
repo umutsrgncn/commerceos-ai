@@ -82,7 +82,7 @@ export default async function CategoryEditPage({
           <span>›</span>
           <span className="font-mono">{category.slug}</span>
         </div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{category.name}</h1>
+        <h1 className="mt-1 text-xl sm:text-2xl font-semibold tracking-tight">{category.name}</h1>
         {category.description && (
           <p className="mt-1 max-w-2xl text-sm text-[color:var(--color-muted)]">
             {category.description}

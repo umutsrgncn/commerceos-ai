@@ -55,7 +55,7 @@ export default async function ReviewsPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Yorumlar</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yorumlar</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Tüm ürünlere gelen yorumları yönet — yayınla/taslağa al, AI ile
           cevap önerisi al.

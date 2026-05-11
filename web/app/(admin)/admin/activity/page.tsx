@@ -366,7 +366,7 @@ export default async function ActivityPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Etkinlik akışı</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Etkinlik akışı</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Yöneticilerin son işlemleri — denetim ve hızlı geri sarma için.
         </p>

@@ -38,24 +38,57 @@ type ScanResult = {
 };
 
 const STORAGE_KEY = "commerceos:anomaly-dismissed-v1";
+const CACHE_KEY = "commerceos:anomaly-cache-v1";
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 saat
+
+type CachedScan = {
+  ts: number; // timestamp
+  data: ScanResult;
+};
 
 export function AnomalyBanner() {
   const [pending, setPending] = useState(false);
   const [data, setData] = useState<ScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [cachedAt, setCachedAt] = useState<number | null>(null);
 
-  // Dismiss state localStorage'dan yükle
+  // Dismiss state + cache localStorage'dan yükle
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setDismissed(new Set(JSON.parse(raw)));
-    } catch {}
+      const dis = localStorage.getItem(STORAGE_KEY);
+      if (dis) setDismissed(new Set(JSON.parse(dis)));
+
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed: CachedScan = JSON.parse(cached);
+        const age = Date.now() - parsed.ts;
+        if (age < CACHE_TTL_MS) {
+          // Cache hala taze → onu kullan, AI çağrısı yapma
+          setData(parsed.data);
+          setCachedAt(parsed.ts);
+          return; // ilk mount scan'i atla
+        }
+      }
+      // Cache yoksa veya bayatladı → ilk taramayı yap
+      scan();
+    } catch {
+      scan();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function persistDismissed(next: Set<string>) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
+    } catch {}
+  }
+
+  function persistCache(scanData: ScanResult) {
+    try {
+      const payload: CachedScan = { ts: Date.now(), data: scanData };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
+      setCachedAt(payload.ts);
     } catch {}
   }
 
@@ -80,18 +113,13 @@ export function AnomalyBanner() {
       }
       const json = (await r.json()) as ScanResult;
       setData(json);
+      persistCache(json);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Bağlantı hatası");
     } finally {
       setPending(false);
     }
   }
-
-  // İlk mount'ta otomatik tara
-  useEffect(() => {
-    scan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const visible = data?.anomalies.filter((a) => !dismissed.has(a.metric)) ?? [];
   const allClear = data && visible.length === 0;
@@ -128,14 +156,20 @@ export function AnomalyBanner() {
   if (allClear) {
     return (
       <Card className="border-emerald-500/30 bg-emerald-500/[0.03]">
-        <CardContent className="flex items-center gap-3 p-4 text-sm">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <span>Anormallik yok — son 7 gün önceki 4 hafta ile uyumlu.</span>
+        <CardContent className="flex flex-wrap items-center gap-3 p-4 text-sm">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+          <span className="flex-1 min-w-0">
+            Anormallik yok — son 7 gün önceki 4 hafta ile uyumlu.
+            {cachedAt && (
+              <span className="ml-1 text-[10px] text-[color:var(--color-muted)]">
+                ({formatCacheAge(cachedAt)})
+              </span>
+            )}
+          </span>
           <Button
             size="sm"
             variant="ghost"
             onClick={scan}
-            className="ml-auto"
             disabled={pending}
           >
             <RefreshCw className={cn("h-3.5 w-3.5", pending && "animate-spin")} />
@@ -162,6 +196,11 @@ export function AnomalyBanner() {
             </CardTitle>
             <CardDescription>
               {data.summary || "Son 7 gün önceki 4 haftaya kıyasla anormal."}
+              {cachedAt && (
+                <span className="ml-1 text-[10px] text-[color:var(--color-muted)]">
+                  · {formatCacheAge(cachedAt)}
+                </span>
+              )}
             </CardDescription>
           </div>
           <Button
@@ -263,4 +302,11 @@ function AnomalyCard({
       </div>
     </div>
   );
+}
+
+function formatCacheAge(ts: number): string {
+  const age = Date.now() - ts;
+  if (age < 60_000) return "şimdi tarandı";
+  if (age < 3600_000) return `${Math.floor(age / 60_000)} dk önce`;
+  return `${Math.floor(age / 3600_000)} saat önce`;
 }

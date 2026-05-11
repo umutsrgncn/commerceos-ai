@@ -14,7 +14,7 @@ export default function NewCustomerPage() {
         <ArrowLeft className="inline h-4 w-4" /> Müşteriler
       </Link>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Yeni müşteri</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yeni müşteri</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           İletişim bilgileri ve adres — sipariş açtığında otomatik bağlanır.
         </p>

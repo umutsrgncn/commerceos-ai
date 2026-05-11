@@ -26,7 +26,7 @@ export default async function SupplierDetailPage({
       </Link>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
           {supplier.name}
         </h1>
         {supplier.contactPerson && (

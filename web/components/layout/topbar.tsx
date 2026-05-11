@@ -12,11 +12,9 @@ export function Topbar({
   theme: Theme;
 }) {
   return (
-    <header className="sticky top-0 z-30 grid h-16 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-[color:var(--color-border)] bg-[color:var(--color-bg)]/80 px-6 backdrop-blur-xl">
-      {/* Sol spacer — search'ün ortalanması için */}
-      <div />
-
-      <div className="relative w-full max-w-md justify-self-center">
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-2 sm:gap-3 border-b border-[color:var(--color-border)] bg-[color:var(--color-bg)]/80 px-3 sm:px-6 backdrop-blur-xl">
+      {/* Search (md+) */}
+      <div className="relative hidden md:block flex-1 max-w-md mx-auto">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--color-muted)]" />
         <input
           placeholder="Ara…"
@@ -27,10 +25,11 @@ export function Topbar({
         </kbd>
       </div>
 
-      <div className="flex items-center justify-self-end gap-1">
+      {/* Sağ menü — her zaman görünür */}
+      <div className="flex items-center gap-1 ml-auto">
         <NotificationBell />
         <ThemeToggle initial={theme} />
-        <span className="mx-1 h-5 w-px bg-[color:var(--color-border)]" />
+        <span className="mx-1 hidden h-5 w-px bg-[color:var(--color-border)] sm:block" />
         <UserMenu user={user} />
       </div>
     </header>

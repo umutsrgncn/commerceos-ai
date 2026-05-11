@@ -24,7 +24,7 @@ export default function NewDiscountPage() {
       </Link>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Yeni indirim kodu</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yeni indirim kodu</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Tip seçince ilgili değer alanı görünür. Sağdaki <strong>AI ile öner</strong> panelinden
           tek tıkla kod, oran ve süre öneri al.

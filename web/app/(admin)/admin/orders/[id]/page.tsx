@@ -45,10 +45,10 @@ export default async function OrderDetailPage({
         <ArrowLeft className="inline h-4 w-4" /> Siparişler
       </Link>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="font-mono text-2xl font-semibold tracking-tight">
+            <h1 className="font-mono text-xl sm:text-2xl font-semibold tracking-tight">
               {order.orderNumber}
             </h1>
             <OrderStatusBadge status={order.status} />

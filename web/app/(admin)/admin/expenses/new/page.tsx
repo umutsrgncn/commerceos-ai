@@ -14,7 +14,7 @@ export default function NewExpensePage() {
         <ArrowLeft className="inline h-4 w-4" /> Giderler
       </Link>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Yeni gider</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yeni gider</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Tarih, kategori, tutar ve kısa açıklama yeterli.
         </p>

@@ -16,7 +16,7 @@ export default function NewSupplierPage() {
       </Link>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
           Yeni tedarikçi
         </h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">

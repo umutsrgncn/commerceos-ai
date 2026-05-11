@@ -67,7 +67,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
           Hoş geldin, {name}.
         </h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
@@ -125,37 +125,38 @@ export default async function DashboardPage() {
                 Henüz sipariş yok.
               </div>
             ) : (
-              <table className="w-full text-sm">
-                <tbody>
-                  {recent.map((o) => (
-                    <tr
-                      key={o.id}
-                      className="border-t border-[color:var(--color-border)] hover:bg-[color:var(--color-fg)]/[0.025]"
-                    >
-                      <td className="px-6 py-3">
-                        <Link
-                          href={`/admin/orders/${o.id}`}
-                          className="font-mono text-xs font-medium hover:underline"
-                        >
-                          {o.orderNumber}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-[color:var(--color-muted)]">
+              <ul className="divide-y divide-[color:var(--color-border)]">
+                {recent.map((o) => (
+                  <li
+                    key={o.id}
+                    className="flex items-center gap-2 px-3 py-3 sm:px-4 hover:bg-[color:var(--color-fg)]/[0.025]"
+                  >
+                    {/* Sol: order no + müşteri */}
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/admin/orders/${o.id}`}
+                        className="font-mono text-xs font-medium hover:underline"
+                      >
+                        {o.orderNumber}
+                      </Link>
+                      <div className="truncate text-xs text-[color:var(--color-muted)]">
                         {o.customer.name}
-                      </td>
-                      <td className="px-4 py-3">
-                        <OrderStatusBadge status={o.status} />
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
+                        <span className="hidden sm:inline">
+                          {" · "}
+                          {formatRelativeTime(o.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Sağ: durum + tutar */}
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="text-sm font-semibold tabular-nums">
                         {formatMoney(o.total, o.currency)}
-                      </td>
-                      <td className="px-6 py-3 text-right text-xs text-[color:var(--color-muted)]">
-                        {formatRelativeTime(o.createdAt)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </span>
+                      <OrderStatusBadge status={o.status} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </CardContent>
         </Card>

@@ -38,7 +38,7 @@ export default async function EditExpensePage({
       </div>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
           Gider düzenle
         </h1>
       </div>

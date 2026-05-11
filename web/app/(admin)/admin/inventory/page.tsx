@@ -48,7 +48,7 @@ export default async function InventoryPage({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Envanter</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Envanter</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Stok ekle, çıkar, düşük stok durumlarını izle.
         </p>

@@ -17,12 +17,12 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start gap-4 rounded-xl border border-[color:var(--color-border)] bg-gradient-to-br from-indigo-500/[0.06] via-fuchsia-500/[0.04] to-emerald-500/[0.04] px-6 py-5">
+      <div className="flex items-start gap-4 rounded-xl border border-[color:var(--color-border)] bg-gradient-to-br from-indigo-500/[0.06] via-fuchsia-500/[0.04] to-emerald-500/[0.04] px-4 py-4 sm:px-6 sm:py-5">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-md">
           <SettingsIcon className="h-5 w-5" />
         </span>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mağaza ayarları</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Mağaza ayarları</h1>
           <p className="mt-1 max-w-2xl text-sm text-[color:var(--color-muted)]">
             Şirket bilgisi e-fatura ve fişlerde görünür. GİB e-fatura
             entegrasyonu test modunda otomatik çalışır; üretime almak için

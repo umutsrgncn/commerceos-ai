@@ -103,7 +103,7 @@ export default async function InvoiceDetailPage({
             </span>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="font-mono text-2xl font-semibold tracking-tight">
+                <h1 className="font-mono text-xl sm:text-2xl font-semibold tracking-tight">
                   {invoice.invoiceNumber}
                 </h1>
                 <Badge variant={STATUS_VARIANT[invoice.status] ?? "neutral"}>

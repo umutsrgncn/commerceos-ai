@@ -46,7 +46,7 @@ export default async function CategoriesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Kategoriler</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Kategoriler</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Ürün kataloğunu hiyerarşik yapıyla düzenle. Düğüm üstüne gel ve
           düzenle / sil ikonlarını kullan, ya da ada tıkla detay sayfasına git.

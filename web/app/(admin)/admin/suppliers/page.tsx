@@ -14,13 +14,13 @@ export default async function SuppliersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
         <div className="flex items-start gap-4">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-md">
             <Building2 className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
               Tedarikçiler
             </h1>
             <p className="mt-1 max-w-xl text-sm text-[color:var(--color-muted)]">

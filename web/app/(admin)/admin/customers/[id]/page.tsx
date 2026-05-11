@@ -99,7 +99,7 @@ export default async function CustomerDetailPage({
             {initials}
           </span>
           <div className="flex-1 sm:pb-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
               {customer.name}
             </h1>
             <div className="mt-2 flex flex-wrap gap-3 text-sm text-[color:var(--color-muted)]">

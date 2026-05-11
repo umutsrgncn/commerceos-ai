@@ -62,7 +62,7 @@ export default async function EditProductPage({
       </div>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{product.name}</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           SKU <span className="font-mono">{product.sku}</span>
         </p>

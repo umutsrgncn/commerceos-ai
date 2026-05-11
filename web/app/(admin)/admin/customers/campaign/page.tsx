@@ -36,12 +36,12 @@ export default async function CustomerCampaignPage() {
         <ArrowLeft className="inline h-4 w-4" /> Müşteriler
       </Link>
 
-      <div className="flex items-start gap-4 rounded-xl border border-[color:var(--color-border)] bg-gradient-to-br from-fuchsia-500/[0.06] via-indigo-500/[0.04] to-emerald-500/[0.04] px-6 py-5">
+      <div className="flex items-start gap-4 rounded-xl border border-[color:var(--color-border)] bg-gradient-to-br from-fuchsia-500/[0.06] via-indigo-500/[0.04] to-emerald-500/[0.04] px-4 py-4 sm:px-6 sm:py-5">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-fuchsia-500 to-indigo-500 text-white shadow-md">
           <Mail className="h-5 w-5" />
         </span>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">
             E-posta kampanyası
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-[color:var(--color-muted)]">

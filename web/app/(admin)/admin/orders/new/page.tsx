@@ -26,7 +26,7 @@ export default async function NewOrderPage() {
         >
           <ArrowLeft className="inline h-4 w-4" /> Siparişler
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">Yeni sipariş</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yeni sipariş</h1>
         <div className="rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.025] p-6 text-sm text-[color:var(--color-muted)]">
           {customers.length === 0 && (
             <p>
@@ -60,7 +60,7 @@ export default async function NewOrderPage() {
         <ArrowLeft className="inline h-4 w-4" /> Siparişler
       </Link>
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Yeni sipariş</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">Yeni sipariş</h1>
         <p className="mt-1 text-sm text-[color:var(--color-muted)]">
           Müşteri seç, ürünleri ekle. Toplam canlı hesaplanır.
         </p>
