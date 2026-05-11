@@ -213,6 +213,7 @@ export async function listShopCategories() {
       id: true,
       slug: true,
       name: true,
+      imageUrl: true,
       _count: { select: { products: { where: PUBLIC_STATUS } } },
     },
   });
@@ -220,6 +221,7 @@ export async function listShopCategories() {
     id: c.id,
     slug: c.slug,
     name: c.name,
+    imageUrl: c.imageUrl,
     productCount: c._count.products,
   }));
 }
@@ -227,7 +229,7 @@ export async function listShopCategories() {
 export async function getShopCategoryBySlug(slug: string) {
   return db.category.findUnique({
     where: { slug },
-    select: { id: true, slug: true, name: true, description: true },
+    select: { id: true, slug: true, name: true, description: true, imageUrl: true },
   });
 }
 

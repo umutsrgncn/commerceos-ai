@@ -1,55 +1,59 @@
 /**
- * Shop (müşteri tarafı) tema override'ları.
- * data-shop="true" attribute taşıyan her shadow subtree'de aktif olur —
- * admin paneline sızmaz.
+ * Shop (müşteri tarafı) — Sofistike palet.
  *
- * Görsel dil: "Editoryal sakin"
- *   • Arka plan: warm bone (~#FAF8F4)
- *   • Aksan: deep emerald (~#0E5E3E)
- *   • Display: DM Serif Display (italic mümkün)
- *   • Body: Inter
+ * Dil:
+ *   Arka plan  : ivory (warm off-white)
+ *   Yüzey      : pure white
+ *   Metin      : charcoal (deep warm black)
+ *   Aksan 1    : forest green (deep, bold, premium)
+ *   Aksan 2    : cognac / warm honey (rare, hero highlight)
+ *   Kategori   : muted natural tones (sage, dusty rose, navy, taupe, plum)
+ *
+ * data-shop="true" scope'unda aktif. Admin paneline sızmaz.
  */
 
 [data-shop="true"] {
-  /* Renk tokens — Tailwind v4 var'larını override eder */
-  --color-bg: oklch(0.97 0.012 80);          /* bone */
-  --color-surface: oklch(1 0 0);             /* card */
-  --color-fg: oklch(0.18 0.01 60);           /* warm near-black */
-  --color-muted: oklch(0.52 0.015 70);       /* warm gray */
-  --color-border: oklch(0.88 0.01 70);
-  --color-accent: oklch(0.42 0.09 160);      /* deep emerald */
-  --color-accent-soft: oklch(0.93 0.025 160);
+  /* Ana renk tokens */
+  --color-bg: oklch(0.975 0.008 80);          /* ivory */
+  --color-surface: oklch(1 0 0);              /* pure white */
+  --color-fg: oklch(0.16 0.012 60);           /* charcoal */
+  --color-muted: oklch(0.50 0.015 70);        /* warm gray */
+  --color-border: oklch(0.87 0.01 70);
+  --color-accent: oklch(0.35 0.08 155);       /* deep forest green */
+  --color-accent-soft: oklch(0.94 0.02 155);
   --color-accent-fg: oklch(0.98 0 0);
-  --color-warn: oklch(0.62 0.13 50);
+  --color-cognac: oklch(0.62 0.11 60);        /* warm cognac/honey — hero accent */
+  --color-warn: oklch(0.58 0.13 50);
   --color-danger: oklch(0.50 0.18 22);
 
-  /* Kategori bazlı vurgu renkleri — section'larda kullanılır */
-  --cat-tisort: oklch(0.62 0.18 22);        /* coral */
-  --cat-pantolon: oklch(0.42 0.12 265);     /* indigo */
-  --cat-ayakkabi: oklch(0.68 0.14 75);      /* ochre */
-  --cat-canta: oklch(0.42 0.13 340);        /* plum */
-  --cat-aksesuar: oklch(0.65 0.15 15);      /* rose */
-  --cat-ev: oklch(0.55 0.13 45);             /* terracotta */
-  --cat-bebek: oklch(0.65 0.12 145);        /* sage */
-  --cat-hediye: oklch(0.58 0.14 295);       /* lavender */
+  /* Kategori — MUTED, sofistike tonlar (canlı değil) */
+  --cat-tisort: oklch(0.42 0.04 30);          /* taupe */
+  --cat-pantolon: oklch(0.35 0.06 240);       /* deep navy */
+  --cat-ayakkabi: oklch(0.45 0.07 60);        /* cognac brown */
+  --cat-canta: oklch(0.38 0.07 20);           /* deep rust */
+  --cat-aksesuar: oklch(0.50 0.04 350);       /* dusty plum */
+  --cat-ev: oklch(0.55 0.05 40);              /* terracotta soft */
+  --cat-bebek: oklch(0.62 0.05 145);          /* sage */
+  --cat-hediye: oklch(0.45 0.05 290);         /* muted lavender */
 
-  /* Shop-only fontlar */
+  /* Fontlar */
   --font-display: var(--font-shop-display, "DM Serif Display", Georgia, serif);
   --font-sans: var(--font-shop-sans, "Inter", ui-sans-serif, system-ui);
 }
 
 [data-shop="true"][data-theme="dark"],
 :root[data-theme="dark"] [data-shop="true"] {
-  --color-bg: oklch(0.13 0.015 60);
-  --color-surface: oklch(0.17 0.015 60);
-  --color-fg: oklch(0.95 0.01 80);
-  --color-muted: oklch(0.65 0.02 70);
-  --color-border: oklch(0.25 0.01 60);
-  --color-accent: oklch(0.66 0.12 160);
-  --color-accent-soft: oklch(0.25 0.04 160);
+  --color-bg: oklch(0.12 0.012 60);
+  --color-surface: oklch(0.16 0.012 60);
+  --color-fg: oklch(0.95 0.008 80);
+  --color-muted: oklch(0.65 0.015 70);
+  --color-border: oklch(0.24 0.01 60);
+  --color-accent: oklch(0.62 0.09 155);
+  --color-accent-soft: oklch(0.22 0.04 155);
+  --color-cognac: oklch(0.70 0.10 60);
 }
 
-/* Shop için kullanılan utility'ler */
+/* Utility'ler */
 [data-shop="true"] .font-display {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
@@ -74,11 +78,11 @@
   transform: scaleX(1);
 }
 
-/* Subtle grain — ürün card hover'da background'a katsam ister */
+/* Subtle grain */
 [data-shop="true"] .grain-bg {
   background-image:
-    radial-gradient(at 0% 0%, oklch(0.42 0.09 160 / 0.05) 0%, transparent 50%),
-    radial-gradient(at 100% 100%, oklch(0.62 0.13 50 / 0.04) 0%, transparent 50%);
+    radial-gradient(at 30% 20%, oklch(0.35 0.08 155 / 0.04) 0%, transparent 50%),
+    radial-gradient(at 70% 80%, oklch(0.62 0.11 60 / 0.05) 0%, transparent 50%);
 }
 
 /* Reveal on scroll */

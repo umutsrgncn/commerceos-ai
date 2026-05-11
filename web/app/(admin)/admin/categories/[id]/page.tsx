@@ -123,6 +123,7 @@ export default async function CategoryEditPage({
                 name: category.name,
                 slug: category.slug,
                 description: category.description,
+                imageUrl: category.imageUrl,
                 parentId: category.parentId,
               }}
               parents={parents}

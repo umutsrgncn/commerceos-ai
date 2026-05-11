@@ -32,6 +32,7 @@ export async function createCategoryAction(
     name,
     slug: formData.get("slug") || slugify(name),
     description: formData.get("description") || null,
+    imageUrl: formData.get("imageUrl") || null,
     parentId: formData.get("parentId") || null,
   });
 
@@ -45,10 +46,12 @@ export async function createCategoryAction(
         name: parsed.data.name,
         slug: parsed.data.slug,
         description: parsed.data.description ?? null,
+        imageUrl: parsed.data.imageUrl ?? null,
         parentId: parsed.data.parentId ?? null,
       },
     });
     revalidatePath("/admin/categories");
+    revalidatePath("/shop");
     return null;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -72,6 +75,7 @@ export async function updateCategoryAction(
     name: formData.get("name") ?? undefined,
     slug: formData.get("slug") ?? undefined,
     description: formData.get("description") ?? undefined,
+    imageUrl: formData.get("imageUrl") ?? undefined,
     parentId: formData.get("parentId") || null,
   });
 
@@ -98,6 +102,7 @@ export async function updateCategoryAction(
       data: { ...rest, parentId },
     });
     revalidatePath("/admin/categories");
+    revalidatePath("/shop");
     return null;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

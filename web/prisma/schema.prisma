@@ -97,6 +97,7 @@ model Category {
   name        String
   slug        String   @unique
   description String?
+  imageUrl    String? // shop homepage tile + kategori sayfası banner için
   parentId    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

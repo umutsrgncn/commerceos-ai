@@ -19,6 +19,7 @@ type Initial = {
   name: string;
   slug: string;
   description: string | null;
+  imageUrl: string | null;
   parentId: string | null;
 };
 
@@ -94,6 +95,30 @@ export function EditCategoryForm({
           rows={3}
           defaultValue={initial.description ?? ""}
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="imageUrl">Kategori görseli (URL veya yol)</Label>
+        <div className="flex gap-3">
+          {initial.imageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={initial.imageUrl}
+              alt={initial.name}
+              className="h-16 w-16 shrink-0 rounded-md border border-[color:var(--color-border)] object-cover"
+            />
+          )}
+          <Input
+            id="imageUrl"
+            name="imageUrl"
+            defaultValue={initial.imageUrl ?? ""}
+            placeholder="/categories/tisort.jpg veya https://..."
+          />
+        </div>
+        <FieldError messages={state?.fieldErrors?.imageUrl} />
+        <p className="text-xs text-[color:var(--color-muted)]">
+          Shop ana sayfada bu görsel kullanılır. Yerel: <code>/categories/&lt;slug&gt;.jpg</code>.
+        </p>
       </div>
 
       {state?.error && (
