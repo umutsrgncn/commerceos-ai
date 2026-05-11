@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Heart, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { ThemeToggle } from "./theme-toggle";
 
 const NAV = [
   { href: "/shop/c/tisort", label: "Tişört" },
@@ -78,7 +79,7 @@ export function ShopHeader() {
           ))}
         </nav>
 
-        {/* Sağ — arama + hesap + sepet */}
+        {/* Sağ — arama + tema + hesap + sepet */}
         <div className="flex items-center gap-1.5">
           <Link
             href="/shop/search"
@@ -87,6 +88,7 @@ export function ShopHeader() {
           >
             <Search className="h-4 w-4" />
           </Link>
+          <ThemeToggle className="hidden sm:grid" />
           <Link
             href="/shop/account/wishlist"
             className="hidden h-9 w-9 place-items-center rounded-md hover:bg-[color:var(--color-fg)]/[0.05] sm:grid"
@@ -165,6 +167,10 @@ export function ShopHeader() {
               >
                 Siparişlerim
               </Link>
+              <div className="flex items-center justify-between rounded-md px-3 py-2.5 text-sm text-[color:var(--color-muted)]">
+                <span>Tema</span>
+                <ThemeToggle />
+              </div>
             </div>
           </div>
         </div>

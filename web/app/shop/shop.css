@@ -1,59 +1,77 @@
 /**
- * Shop (müşteri tarafı) — Sofistike palet.
+ * Shop (müşteri tarafı) — Soft & Sofistike palet.
  *
- * Dil:
- *   Arka plan  : ivory (warm off-white)
- *   Yüzey      : pure white
- *   Metin      : charcoal (deep warm black)
- *   Aksan 1    : forest green (deep, bold, premium)
- *   Aksan 2    : cognac / warm honey (rare, hero highlight)
- *   Kategori   : muted natural tones (sage, dusty rose, navy, taupe, plum)
+ * Felsefe:
+ *   • Düşük chroma — gözü yormayan, premium hava
+ *   • Sıcak temel (warm grays, ivory)
+ *   • Tek aksan: sage / muted forest — sakin, doğal
+ *   • Kategori tonları muted, terracotta-leaning natural
  *
- * data-shop="true" scope'unda aktif. Admin paneline sızmaz.
+ * data-shop="true" scope'unda aktif.
+ * Dark mode: html veya data-shop wrapper'da data-theme="dark" attribute'u.
  */
 
 [data-shop="true"] {
-  /* Ana renk tokens */
-  --color-bg: oklch(0.975 0.008 80);          /* ivory */
-  --color-surface: oklch(1 0 0);              /* pure white */
-  --color-fg: oklch(0.16 0.012 60);           /* charcoal */
-  --color-muted: oklch(0.50 0.015 70);        /* warm gray */
-  --color-border: oklch(0.87 0.01 70);
-  --color-accent: oklch(0.35 0.08 155);       /* deep forest green */
-  --color-accent-soft: oklch(0.94 0.02 155);
+  /* ── Ana renk tokens (LIGHT) ── */
+  --color-bg: oklch(0.98 0.006 80);            /* warm ivory, çok hafif */
+  --color-surface: oklch(0.995 0.003 80);      /* off-white card */
+  --color-fg: oklch(0.22 0.01 60);             /* soft warm charcoal */
+  --color-muted: oklch(0.55 0.008 70);         /* warm gray, soft */
+  --color-border: oklch(0.90 0.006 70);        /* gentle line */
+  --color-accent: oklch(0.48 0.055 158);       /* soft sage — düşük chroma */
+  --color-accent-soft: oklch(0.95 0.018 158);  /* whisper sage bg */
   --color-accent-fg: oklch(0.98 0 0);
-  --color-cognac: oklch(0.62 0.11 60);        /* warm cognac/honey — hero accent */
-  --color-warn: oklch(0.58 0.13 50);
-  --color-danger: oklch(0.50 0.18 22);
+  --color-cognac: oklch(0.68 0.07 70);         /* warm sand, soft */
+  --color-warn: oklch(0.62 0.10 50);
+  --color-danger: oklch(0.55 0.14 22);
 
-  /* Kategori — MUTED, sofistike tonlar (canlı değil) */
-  --cat-tisort: oklch(0.42 0.04 30);          /* taupe */
-  --cat-pantolon: oklch(0.35 0.06 240);       /* deep navy */
-  --cat-ayakkabi: oklch(0.45 0.07 60);        /* cognac brown */
-  --cat-canta: oklch(0.38 0.07 20);           /* deep rust */
-  --cat-aksesuar: oklch(0.50 0.04 350);       /* dusty plum */
-  --cat-ev: oklch(0.55 0.05 40);              /* terracotta soft */
-  --cat-bebek: oklch(0.62 0.05 145);          /* sage */
-  --cat-hediye: oklch(0.45 0.05 290);         /* muted lavender */
+  /* Kategori — muted natural, hepsinin chroma düşük */
+  --cat-tisort: oklch(0.45 0.035 30);          /* taupe */
+  --cat-pantolon: oklch(0.40 0.045 240);       /* slate blue */
+  --cat-ayakkabi: oklch(0.50 0.055 60);        /* warm brown */
+  --cat-canta: oklch(0.42 0.055 20);           /* clay */
+  --cat-aksesuar: oklch(0.55 0.035 350);       /* dusty mauve */
+  --cat-ev: oklch(0.58 0.04 40);               /* soft terracotta */
+  --cat-bebek: oklch(0.65 0.04 145);           /* pale sage */
+  --cat-hediye: oklch(0.50 0.04 290);          /* muted lilac */
 
   /* Fontlar */
   --font-display: var(--font-shop-display, "DM Serif Display", Georgia, serif);
   --font-sans: var(--font-shop-sans, "Inter", ui-sans-serif, system-ui);
+
+  /* Gölge için warm tone */
+  --shop-shadow: 0 1px 3px oklch(0.22 0.01 60 / 0.04), 0 8px 24px oklch(0.22 0.01 60 / 0.05);
 }
 
+/* ── DARK mode ── */
 [data-shop="true"][data-theme="dark"],
 :root[data-theme="dark"] [data-shop="true"] {
-  --color-bg: oklch(0.12 0.012 60);
-  --color-surface: oklch(0.16 0.012 60);
-  --color-fg: oklch(0.95 0.008 80);
-  --color-muted: oklch(0.65 0.015 70);
-  --color-border: oklch(0.24 0.01 60);
-  --color-accent: oklch(0.62 0.09 155);
-  --color-accent-soft: oklch(0.22 0.04 155);
-  --color-cognac: oklch(0.70 0.10 60);
+  --color-bg: oklch(0.16 0.012 60);            /* warm graphite */
+  --color-surface: oklch(0.20 0.012 60);       /* lifted card */
+  --color-fg: oklch(0.94 0.008 80);            /* warm cream */
+  --color-muted: oklch(0.65 0.012 70);         /* faded warm */
+  --color-border: oklch(0.28 0.012 60);
+  --color-accent: oklch(0.72 0.07 158);        /* sage, brighter for dark */
+  --color-accent-soft: oklch(0.28 0.045 158);
+  --color-accent-fg: oklch(0.16 0.012 60);
+  --color-cognac: oklch(0.78 0.08 70);
+  --color-warn: oklch(0.72 0.10 50);
+  --color-danger: oklch(0.68 0.13 22);
+
+  --cat-tisort: oklch(0.68 0.035 30);
+  --cat-pantolon: oklch(0.65 0.055 240);
+  --cat-ayakkabi: oklch(0.72 0.07 60);
+  --cat-canta: oklch(0.65 0.065 20);
+  --cat-aksesuar: oklch(0.72 0.04 350);
+  --cat-ev: oklch(0.74 0.045 40);
+  --cat-bebek: oklch(0.78 0.045 145);
+  --cat-hediye: oklch(0.70 0.04 290);
+
+  --shop-shadow: 0 1px 3px oklch(0 0 0 / 0.3), 0 8px 32px oklch(0 0 0 / 0.4);
 }
 
-/* Utility'ler */
+/* ── Utility'ler ── */
+
 [data-shop="true"] .font-display {
   font-family: var(--font-display);
   letter-spacing: -0.02em;
@@ -78,14 +96,14 @@
   transform: scaleX(1);
 }
 
-/* Subtle grain */
 [data-shop="true"] .grain-bg {
   background-image:
-    radial-gradient(at 30% 20%, oklch(0.35 0.08 155 / 0.04) 0%, transparent 50%),
-    radial-gradient(at 70% 80%, oklch(0.62 0.11 60 / 0.05) 0%, transparent 50%);
+    radial-gradient(at 30% 20%, oklch(0.48 0.055 158 / 0.03) 0%, transparent 50%),
+    radial-gradient(at 70% 80%, oklch(0.68 0.07 70 / 0.04) 0%, transparent 50%);
 }
 
-/* Reveal on scroll */
+/* ── Animasyonlar ── */
+
 @keyframes shop-rise {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -94,7 +112,6 @@
   animation: shop-rise 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Marquee scroll */
 @keyframes scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
@@ -105,4 +122,9 @@
   [data-shop="true"] [class*="animate-[scroll"] {
     animation: none;
   }
+}
+
+/* Toggle FOUC önleme — script çalışana kadar transition kapalı */
+[data-shop="true"].theme-loading * {
+  transition: none !important;
 }
