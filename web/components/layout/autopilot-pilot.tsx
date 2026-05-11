@@ -50,7 +50,6 @@ import {
   demoStockDropAction,
   type DemoResult,
 } from "@/lib/actions/autopilot-demo";
-import { SmoothLoopVideo } from "@/components/ui/smooth-loop-video";
 import { cn } from "@/lib/cn";
 
 const POLL_INTERVAL_MS = 8000;
@@ -673,15 +672,19 @@ function DemoTriggers() {
 
   return (
     <div className="space-y-2 px-3 py-3 max-h-[60vh] themed-scroll overflow-y-auto">
-      {/* Mini teaser video — AI'nın yaptıklarının görsel anlatımı */}
-      <div className="relative overflow-hidden rounded-lg border border-fuchsia-500/20">
-        <SmoothLoopVideo className="h-24 w-full object-cover opacity-90">
-          <source src="/otopilot-loop.mp4" type="video/mp4" />
-        </SmoothLoopVideo>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-        <div className="absolute bottom-1.5 left-2 right-2 flex items-center gap-1.5 text-[10px] font-medium text-white">
-          <Sparkles className="h-3 w-3 text-fuchsia-300" />
-          <span className="drop-shadow">AI 7 farklı işi paralel yönetir</span>
+      {/* AI tagline banner — animasyonlu gradient */}
+      <div className="relative overflow-hidden rounded-lg border border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/[0.12] via-indigo-500/[0.08] to-emerald-500/[0.06] p-3">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(232,121,249,0.18),transparent_50%)]" />
+        <div className="relative flex items-center gap-2">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-indigo-500 text-white shadow-lg shadow-fuchsia-500/30">
+            <Sparkles className="h-3.5 w-3.5" />
+          </span>
+          <div className="flex-1 text-[11px] leading-tight">
+            <div className="font-semibold">AI 7 farklı işi paralel yönetir</div>
+            <div className="text-[10px] text-white/60">
+              Yorum · fatura · stok · havale · fiyat · segment · flag
+            </div>
+          </div>
         </div>
       </div>
 
