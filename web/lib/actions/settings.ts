@@ -159,3 +159,34 @@ export async function completeOnboardingAction(): Promise<{ ok: boolean }> {
   revalidatePath("/admin");
   return { ok: true };
 }
+
+/** Hızlı toggle — floating Otopilot UI için durdur/başlat. */
+export async function toggleAutoPilotAction(
+  enabled: boolean,
+): Promise<{ ok: boolean; enabled: boolean; error?: string }> {
+  await requireAdmin();
+  const wasEnabled = await db.systemSettings
+    .findUnique({
+      where: { id: SINGLETON_ID },
+      select: { autoPilotEnabled: true },
+    })
+    .then((s) => s?.autoPilotEnabled ?? false);
+
+  await db.systemSettings.upsert({
+    where: { id: SINGLETON_ID },
+    update: {
+      autoPilotEnabled: enabled,
+      autoPilotEnabledAt:
+        enabled && !wasEnabled ? new Date() : undefined,
+    },
+    create: {
+      id: SINGLETON_ID,
+      autoPilotEnabled: enabled,
+      autoPilotEnabledAt: enabled ? new Date() : null,
+    },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/settings");
+  return { ok: true, enabled };
+}

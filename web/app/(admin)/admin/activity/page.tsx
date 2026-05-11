@@ -64,33 +64,41 @@ const ACTION_META: Record<
 > = {
   // ─── Ürünler ───
   "product.create": {
-    label: (m) => `Yeni ürün eklendi: ${(m.name as string) ?? "?"}`,
+    label: (m) => `Yeni ürün eklendi: ${((m.name as string | undefined) ?? "—")}`,
     icon: PackagePlus,
     variant: "create",
     href: (id) => `/admin/products/${id}`,
   },
   "product.update": {
-    label: (m) => `Ürün güncellendi: ${(m.name as string) ?? "?"}`,
+    label: (m) => `Ürün güncellendi: ${((m.name as string | undefined) ?? "—")}`,
     icon: Edit3,
     variant: "update",
     href: (id) => `/admin/products/${id}`,
   },
   "product.delete": {
-    label: (m) => `Ürün silindi: ${(m.name as string) ?? "?"}`,
+    label: (m) => `Ürün silindi: ${((m.name as string | undefined) ?? "—")}`,
     icon: Trash2,
     variant: "delete",
   },
 
   // ─── Siparişler ───
   "order.create": {
-    label: (m) => `Yeni sipariş açıldı: ${(m.orderNumber as string) ?? "?"}`,
+    label: (m) => {
+      const num = m.orderNumber as string | undefined;
+      return num ? `Yeni sipariş açıldı: ${num}` : "Yeni sipariş açıldı";
+    },
     icon: PackagePlus,
     variant: "create",
     href: (id) => `/admin/orders/${id}`,
   },
   "order.transition": {
-    label: (m) =>
-      `Sipariş durumu değişti: ${trStatus((m.from as string) ?? "?")} → ${trStatus((m.to as string) ?? "?")}`,
+    label: (m) => {
+      const from = typeof m.from === "string" ? trStatus(m.from) : "";
+      const to = typeof m.to === "string" ? trStatus(m.to) : "";
+      if (from && to) return `Sipariş: ${from} → ${to}`;
+      if (to) return `Sipariş durumu: ${to}`;
+      return "Sipariş durumu güncellendi";
+    },
     icon: RefreshCw,
     variant: "transition",
     href: (id) => `/admin/orders/${id}`,
@@ -107,7 +115,13 @@ const ACTION_META: Record<
 
   // ─── Yorum ───
   "review.create": {
-    label: (m) => `Yorum eklendi (${(m.rating as number) ?? "?"} ★)`,
+    label: (m) => {
+      const r = m.rating;
+      if (typeof r === "number" && r >= 1 && r <= 5) {
+        return `Yeni yorum: ${"★".repeat(r)}${"☆".repeat(5 - r)}`;
+      }
+      return "Yeni yorum eklendi";
+    },
     icon: Star,
     variant: "review",
     href: (id) => `/admin/products/${id}`,
@@ -137,7 +151,7 @@ const ACTION_META: Record<
   },
   "invoice.issued": {
     label: (m) => {
-      const num = (m.invoiceNumber as string) ?? "?";
+      const num = ((m.invoiceNumber as string | undefined) ?? "—");
       const mode = (m.mode as string) ?? "";
       const dt = (m.documentType as string) ?? "EFATURA";
       const docLabel = dt === "EARSIV" ? "E-arşiv" : "E-fatura";
@@ -148,14 +162,14 @@ const ACTION_META: Record<
     href: (id) => `/admin/orders/${id}`,
   },
   "invoice.failed": {
-    label: (m) => `E-fatura reddedildi: ${(m.invoiceNumber as string) ?? "?"}`,
+    label: (m) => `E-fatura reddedildi: ${((m.invoiceNumber as string | undefined) ?? "—")}`,
     icon: CircleAlert,
     variant: "delete",
     href: (id) => `/admin/orders/${id}`,
   },
   "invoice.reissued": {
     label: (m) => {
-      const num = (m.invoiceNumber as string) ?? "?";
+      const num = ((m.invoiceNumber as string | undefined) ?? "—");
       const mode = (m.mode as string) ?? "";
       return `Fatura yeniden gönderildi: ${num}${mode === "test" ? " (test)" : ""}`;
     },
@@ -165,7 +179,7 @@ const ACTION_META: Record<
   },
   "invoice.cancelled": {
     label: (m) => {
-      const num = (m.invoiceNumber as string) ?? "?";
+      const num = ((m.invoiceNumber as string | undefined) ?? "—");
       const reason = m.reason as string | null;
       return reason
         ? `Fatura iptal edildi: ${num} — ${reason}`
@@ -201,7 +215,7 @@ const ACTION_META: Record<
   },
   "order.shipped": {
     label: (m) => {
-      const num = (m.orderNumber as string) ?? "?";
+      const num = ((m.orderNumber as string | undefined) ?? "—");
       const carrier = (m.carrier as string) ?? "";
       return `Sipariş kargoya verildi: ${num}${carrier ? ` (${carrier})` : ""}`;
     },
@@ -210,7 +224,7 @@ const ACTION_META: Record<
     href: (id) => `/admin/orders/${id}`,
   },
   "order.delivered": {
-    label: (m) => `Sipariş teslim edildi: ${(m.orderNumber as string) ?? "?"}`,
+    label: (m) => `Sipariş teslim edildi: ${((m.orderNumber as string | undefined) ?? "—")}`,
     icon: PackagePlus,
     variant: "money",
     href: (id) => `/admin/orders/${id}`,
@@ -227,7 +241,7 @@ const ACTION_META: Record<
   },
   "autopilot.review_flagged": {
     label: (m) => {
-      const reason = (m.flagReason as string) ?? "?";
+      const reason = ((m.flagReason as string | undefined) ?? "—");
       return `Otopilot yorum flag'ledi: ${reason}`;
     },
     icon: Sparkles,
@@ -236,14 +250,14 @@ const ACTION_META: Record<
   },
   "autopilot.order_confirmed": {
     label: (m) =>
-      `Otopilot siparişi onayladı: ${(m.orderNumber as string) ?? "?"}`,
+      `Otopilot siparişi onayladı: ${((m.orderNumber as string | undefined) ?? "—")}`,
     icon: Sparkles,
     variant: "transition",
     href: (id) => `/admin/orders/${id}`,
   },
   "autopilot.customer_segmented": {
     label: (m) => {
-      const seg = (m.segment as string) ?? "?";
+      const seg = ((m.segment as string | undefined) ?? "—");
       const conf = m.confidence as number | undefined;
       return `Otopilot müşteri segmentledi: ${seg}${conf ? ` (%${conf})` : ""}`;
     },
@@ -263,7 +277,7 @@ const ACTION_META: Record<
   },
   "payment.link_created": {
     label: (m) => {
-      const num = (m.orderNumber as string) ?? "?";
+      const num = ((m.orderNumber as string | undefined) ?? "—");
       const mode = (m.mode as string) ?? "test";
       return `Ödeme linki oluşturuldu: ${num} (iyzico ${mode})`;
     },
@@ -281,13 +295,13 @@ const ACTION_META: Record<
     href: (id) => `/admin/orders/${id}`,
   },
   "payment.failed": {
-    label: (m) => `Ödeme başarısız: ${(m.reason as string) ?? "?"}`,
+    label: (m) => `Ödeme başarısız: ${((m.reason as string | undefined) ?? "—")}`,
     icon: CircleAlert,
     variant: "delete",
     href: (id) => `/admin/orders/${id}`,
   },
   "kvkk.deletion_requested": {
-    label: (m) => `Veri silme talebi: ${(m.email as string) ?? "?"}`,
+    label: (m) => `Veri silme talebi: ${((m.email as string | undefined) ?? "—")}`,
     icon: Shield,
     variant: "create",
     href: () => `/admin/data-requests`,
@@ -330,13 +344,13 @@ const ACTION_META: Record<
   },
   "user.invited": {
     label: (m) =>
-      `Yeni kullanıcı: ${(m.email as string) ?? "?"} (${(m.role as string) ?? "?"})`,
+      `Yeni kullanıcı: ${((m.email as string | undefined) ?? "—")} (${((m.role as string | undefined) ?? "—")})`,
     icon: PackagePlus,
     variant: "create",
     href: () => `/admin/users`,
   },
   "user.role_changed": {
-    label: (m) => `Kullanıcı rolü değişti → ${(m.newRole as string) ?? "?"}`,
+    label: (m) => `Kullanıcı rolü değişti → ${((m.newRole as string | undefined) ?? "—")}`,
     icon: Edit3,
     variant: "update",
     href: () => `/admin/users`,
@@ -349,7 +363,7 @@ const ACTION_META: Record<
   },
   "campaign.email_sent": {
     label: (m) => {
-      const segment = (m.segment as string) ?? "?";
+      const segment = ((m.segment as string | undefined) ?? "—");
       const sent = (m.sent as number) ?? 0;
       return `E-posta kampanyası gönderildi: ${segment} (${sent} kişi)`;
     },
@@ -359,9 +373,9 @@ const ACTION_META: Record<
   },
   "campaign.dead_stock_apply": {
     label: (m) => {
-      const code = (m.discountCode as string) ?? "?";
+      const code = ((m.discountCode as string | undefined) ?? "—");
       const pct = (m.discountPct as number) ?? 0;
-      const product = (m.productName as string) ?? "?";
+      const product = ((m.productName as string | undefined) ?? "—");
       return `Yavaş stok kampanyası başlatıldı: ${product} → ${code} (%${pct})`;
     },
     icon: Sparkles,
@@ -370,7 +384,7 @@ const ACTION_META: Record<
   },
   "supplier.create": {
     label: (m) => {
-      const name = (m.name as string) ?? "?";
+      const name = ((m.name as string | undefined) ?? "—");
       const cnt = (m.productCount as number) ?? 0;
       return `Tedarikçi eklendi: ${name}${cnt > 0 ? ` (${cnt} SKU)` : ""}`;
     },
@@ -389,7 +403,7 @@ const ACTION_META: Record<
   },
   "autopilot.invoice_issued": {
     label: (m) => {
-      const num = (m.invoiceNumber as string) ?? "?";
+      const num = ((m.invoiceNumber as string | undefined) ?? "—");
       const dt = (m.documentType as string) ?? "EFATURA";
       const docLabel = dt === "EARSIV" ? "E-arşiv" : "E-fatura";
       return `Otopilot ${docLabel} kesti: ${num}`;
@@ -400,9 +414,9 @@ const ACTION_META: Record<
   },
   "autopilot.stock_reorder": {
     label: (m) => {
-      const supplier = (m.supplierName as string) ?? "?";
+      const supplier = ((m.supplierName as string | undefined) ?? "—");
       const ordered = (m.orderedQty as number) ?? 0;
-      const product = (m.productName as string) ?? "?";
+      const product = ((m.productName as string | undefined) ?? "—");
       return `Otopilot tedarikçiye sipariş yazdı: ${supplier} → ${product} ${ordered} adet`;
     },
     icon: Sparkles,

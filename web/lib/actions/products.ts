@@ -21,8 +21,6 @@ export type ProductActionState = {
 async function requireSession() {
   return requireRole("MANAGER");
 }
-  return session;
-}
 
 export async function createProductAction(
   _prev: ProductActionState,

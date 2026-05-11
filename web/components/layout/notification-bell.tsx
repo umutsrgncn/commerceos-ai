@@ -17,6 +17,25 @@ import { cn } from "@/lib/cn";
 
 const READ_AT_KEY = "commerceos:notifications:lastReadAt";
 
+const STATUS_TR: Record<string, string> = {
+  PENDING: "Beklemede",
+  CONFIRMED: "Onaylandı",
+  SHIPPED: "Kargoda",
+  DELIVERED: "Teslim edildi",
+  CANCELLED: "İptal edildi",
+  REFUNDED: "İade edildi",
+};
+
+function statusLabel(code: unknown): string {
+  if (typeof code !== "string") return "";
+  return STATUS_TR[code] ?? code;
+}
+
+function ratingStars(rating: unknown): string {
+  if (typeof rating !== "number" || rating < 1 || rating > 5) return "yorum";
+  return "★".repeat(rating);
+}
+
 type Item = {
   id: string;
   action: string;
@@ -34,26 +53,51 @@ const ACTION_META: Record<
   { label: (m: Record<string, unknown>) => string; icon: LucideIcon; href?: (id: string) => string }
 > = {
   "product.create": {
-    label: (m) => `Ürün eklendi — ${(m.name as string) ?? "?"}`,
+    label: (m) => {
+      const name = m.name as string | undefined;
+      return name ? `Ürün eklendi: ${name}` : "Yeni ürün eklendi";
+    },
     icon: PackagePlus,
     href: (id) => `/admin/products/${id}`,
   },
   "product.delete": {
-    label: (m) => `Ürün silindi — ${(m.name as string) ?? "?"}`,
+    label: (m) => {
+      const name = m.name as string | undefined;
+      return name ? `Ürün silindi: ${name}` : "Bir ürün silindi";
+    },
     icon: Trash2,
   },
   "order.create": {
-    label: (m) => `Yeni sipariş — ${(m.orderNumber as string) ?? "?"}`,
+    label: (m) => {
+      const num = m.orderNumber as string | undefined;
+      return num ? `Yeni sipariş: ${num}` : "Yeni sipariş alındı";
+    },
     icon: PackagePlus,
     href: (id) => `/admin/orders/${id}`,
   },
   "order.transition": {
-    label: (m) => `Durum: ${(m.from as string) ?? "?"} → ${(m.to as string) ?? "?"}`,
+    label: (m) => {
+      const from = statusLabel(m.from);
+      const to = statusLabel(m.to);
+      if (from && to) return `Sipariş: ${from} → ${to}`;
+      if (to) return `Sipariş ${to.toLowerCase()}`;
+      return "Sipariş durumu güncellendi";
+    },
     icon: RefreshCw,
     href: (id) => `/admin/orders/${id}`,
   },
   "refund.create": {
-    label: (m) => `İade — ${((m.amount as number) ?? 0) / 100}₺`,
+    label: (m) => {
+      const amount = m.amount as number | undefined;
+      if (typeof amount === "number") {
+        return `İade işlendi: ${(amount / 100).toLocaleString("tr-TR", {
+          style: "currency",
+          currency: "TRY",
+          maximumFractionDigits: 0,
+        })}`;
+      }
+      return "Yeni iade talebi";
+    },
     icon: Coins,
     href: (id) => `/admin/orders/${id}`,
   },

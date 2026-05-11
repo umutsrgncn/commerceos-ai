@@ -10,7 +10,7 @@
  * - Yeni aksiyon geldiğinde: bottom-right toast (5sn)
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -20,13 +20,19 @@ import {
   ChevronUp,
   ExternalLink,
   Link2,
+  Loader2,
   MessageSquare,
   Package,
+  Pause,
+  Play,
+  Power,
   Receipt,
+  Settings,
   Sparkles,
   Users,
   X,
 } from "lucide-react";
+import { toggleAutoPilotAction } from "@/lib/actions/settings";
 import { cn } from "@/lib/cn";
 
 const POLL_INTERVAL_MS = 8000;
@@ -137,8 +143,17 @@ export function AutoPilotPilot({
   const [items, setItems] = useState<Item[]>([]);
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<Item | null>(null);
+  const [toggling, startToggle] = useTransition();
   const lastIdRef = useRef<string | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function toggle() {
+    const next = !enabled;
+    startToggle(async () => {
+      const r = await toggleAutoPilotAction(next);
+      if (r.ok) setEnabled(r.enabled);
+    });
+  }
 
   useEffect(() => {
     if (!enabled) return;
@@ -191,12 +206,10 @@ export function AutoPilotPilot({
     };
   }, [enabled]);
 
-  if (!enabled) return null;
-
   return (
     <>
       {/* Toast — yeni AI aksiyonu */}
-      {toast && (
+      {toast && enabled && (
         <div className="pointer-events-auto fixed bottom-24 right-6 z-50 w-80 animate-in slide-in-from-bottom-4 fade-in-50 duration-300">
           <ToastCard item={toast} onClose={() => setToast(null)} />
         </div>
@@ -206,18 +219,46 @@ export function AutoPilotPilot({
       <div className="pointer-events-auto fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
         {/* Expand panel */}
         {open && (
-          <div className="w-80 rounded-xl border border-fuchsia-500/30 bg-[color:var(--color-bg)] shadow-2xl backdrop-blur animate-in slide-in-from-bottom-2 fade-in-50 duration-200">
-            <div className="flex items-center justify-between gap-2 border-b border-[color:var(--color-border)] px-4 py-2.5">
-              <div className="flex items-center gap-2">
-                <span className="relative grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-indigo-500 text-white">
-                  <Sparkles className="h-3.5 w-3.5" />
+          <div
+            className={cn(
+              "w-80 rounded-xl border bg-[color:var(--color-bg)]/95 shadow-2xl backdrop-blur animate-in slide-in-from-bottom-2 fade-in-50 duration-200",
+              enabled
+                ? "border-fuchsia-500/30"
+                : "border-[color:var(--color-border)]",
+            )}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-[color:var(--color-border)] px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={cn(
+                    "relative grid h-8 w-8 place-items-center rounded-lg text-white shadow-sm",
+                    enabled
+                      ? "bg-gradient-to-br from-fuchsia-500 to-indigo-500"
+                      : "bg-[color:var(--color-fg)]/[0.15] text-[color:var(--color-muted)]",
+                  )}
+                >
+                  <Sparkles className="h-4 w-4" />
                 </span>
                 <div>
-                  <div className="text-sm font-semibold">Otopilot canlı</div>
+                  <div className="flex items-center gap-1.5 text-sm font-semibold">
+                    Otopilot
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                        enabled
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                          : "bg-[color:var(--color-fg)]/[0.08] text-[color:var(--color-muted)]",
+                      )}
+                    >
+                      {enabled ? "AKTİF" : "PASİF"}
+                    </span>
+                  </div>
                   <div className="text-[10px] text-[color:var(--color-muted)]">
-                    {items.length > 0
-                      ? `Son ${items.length} AI aksiyonu`
-                      : "Henüz aksiyon yok"}
+                    {enabled
+                      ? items.length > 0
+                        ? `Son ${items.length} AI aksiyonu`
+                        : "AI olay bekliyor"
+                      : "AI günlük operasyonu yönetmiyor"}
                   </div>
                 </div>
               </div>
@@ -231,46 +272,101 @@ export function AutoPilotPilot({
               </button>
             </div>
 
-            <ul className="max-h-80 divide-y divide-[color:var(--color-border)] themed-scroll overflow-y-auto">
-              {items.length === 0 ? (
-                <li className="px-4 py-6 text-center text-xs text-[color:var(--color-muted)]">
-                  Otopilot bekliyor — bir olay tetiklendiğinde burada görünür.
-                </li>
-              ) : (
-                items.map((item) => <FeedItem key={item.id} item={item} />)
-              )}
-            </ul>
+            {/* Toggle satırı */}
+            <div className="flex items-center gap-2 border-b border-[color:var(--color-border)] px-4 py-2.5">
+              <button
+                type="button"
+                onClick={toggle}
+                disabled={toggling}
+                className={cn(
+                  "flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50",
+                  enabled
+                    ? "bg-red-500/10 text-red-600 hover:bg-red-500/15 dark:text-red-400"
+                    : "bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/15 dark:text-emerald-400",
+                )}
+              >
+                {toggling ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : enabled ? (
+                  <Pause className="h-3.5 w-3.5" />
+                ) : (
+                  <Play className="h-3.5 w-3.5" />
+                )}
+                {enabled ? "Durdur" : "Başlat"}
+              </button>
+              <Link
+                href="/admin/settings"
+                className="rounded-lg p-2 text-[color:var(--color-muted)] hover:bg-[color:var(--color-fg)]/[0.06]"
+                title="Otopilot ayarları"
+              >
+                <Settings className="h-3.5 w-3.5" />
+              </Link>
+            </div>
 
-            <Link
-              href="/admin/autopilot"
-              className="flex items-center justify-center gap-1 border-t border-[color:var(--color-border)] px-4 py-2 text-xs text-fuchsia-600 hover:bg-fuchsia-500/[0.04] dark:text-fuchsia-400"
-            >
-              Tüm timeline'a git <ArrowUpRight className="h-3 w-3" />
-            </Link>
+            {enabled ? (
+              <>
+                <ul className="max-h-72 divide-y divide-[color:var(--color-border)] themed-scroll overflow-y-auto">
+                  {items.length === 0 ? (
+                    <li className="px-4 py-6 text-center text-xs text-[color:var(--color-muted)]">
+                      Otopilot bekliyor — bir olay tetiklendiğinde burada
+                      görünür.
+                    </li>
+                  ) : (
+                    items.map((item) => <FeedItem key={item.id} item={item} />)
+                  )}
+                </ul>
+                <Link
+                  href="/admin/autopilot"
+                  className="flex items-center justify-center gap-1 border-t border-[color:var(--color-border)] px-4 py-2 text-xs text-fuchsia-600 hover:bg-fuchsia-500/[0.04] dark:text-fuchsia-400"
+                >
+                  Tüm timeline'a git <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </>
+            ) : (
+              <div className="px-4 py-5 text-center text-xs text-[color:var(--color-muted)]">
+                Otopilot pasif. <strong>Başlat</strong>'a basınca AI günlük
+                operasyonu yönetmeye başlar.
+              </div>
+            )}
           </div>
         )}
 
-        {/* Pulse button */}
+        {/* Floating button */}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="group relative grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-fuchsia-500 to-indigo-500 text-white shadow-lg shadow-fuchsia-500/30 transition hover:scale-105 active:scale-95"
-          aria-label="Otopilot canlı feed"
-          title={open ? "Kapat" : "Otopilot canlı"}
+          className={cn(
+            "group relative grid h-12 w-12 place-items-center rounded-full text-white shadow-lg transition hover:scale-105 active:scale-95",
+            enabled
+              ? "bg-gradient-to-br from-fuchsia-500 to-indigo-500 shadow-fuchsia-500/30"
+              : "bg-[color:var(--color-fg)]/[0.85] shadow-black/20",
+          )}
+          aria-label={enabled ? "Otopilot canlı feed" : "Otopilot pasif"}
+          title={enabled ? "Otopilot AKTİF" : "Otopilot pasif"}
         >
-          {/* Pulse ring */}
-          <span className="absolute inset-0 rounded-full bg-fuchsia-500/40 animate-ping" />
-          <span className="absolute inset-0 rounded-full ring-2 ring-fuchsia-500/30" />
+          {enabled && (
+            <>
+              <span className="absolute inset-0 rounded-full bg-fuchsia-500/40 animate-ping" />
+              <span className="absolute inset-0 rounded-full ring-2 ring-fuchsia-500/30" />
+            </>
+          )}
           <span className="relative">
             {open ? (
               <ChevronDown className="h-5 w-5" />
-            ) : (
+            ) : enabled ? (
               <Sparkles className="h-5 w-5" />
+            ) : (
+              <Power className="h-5 w-5" />
             )}
           </span>
-          {/* AKTİF badge */}
-          <span className="absolute -top-1 -right-1 grid h-4 w-4 place-items-center rounded-full bg-emerald-500 text-[8px] font-bold text-white ring-2 ring-[color:var(--color-bg)]">
-            ●
+          {/* Status badge */}
+          <span
+            className={cn(
+              "absolute -top-1 -right-1 grid h-4 w-4 place-items-center rounded-full text-[8px] font-bold text-white ring-2 ring-[color:var(--color-bg)]",
+              enabled ? "bg-emerald-500" : "bg-[color:var(--color-muted)]",
+            )}
+          >
+            {enabled ? "●" : "○"}
           </span>
         </button>
       </div>
