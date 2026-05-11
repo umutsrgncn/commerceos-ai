@@ -12,6 +12,7 @@ import {
 } from "@/lib/schemas/expenses";
 import { formatMoney, formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { GenerateRecurringButton } from "./components/generate-recurring-button";
 
 export const metadata = { title: "Giderler — CommerceOS" };
 
@@ -52,12 +53,15 @@ export default async function ExpensesPage({
             {data.total} kayıt · toplam {formatMoney(data.sum, "TRY")}
           </p>
         </div>
-        <Link href="/admin/expenses/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            Yeni gider
-          </Button>
-        </Link>
+        <div className="flex items-end gap-2">
+          <GenerateRecurringButton />
+          <Link href="/admin/expenses/new">
+            <Button>
+              <Plus className="h-4 w-4" />
+              Yeni gider
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Kategori filtre */}

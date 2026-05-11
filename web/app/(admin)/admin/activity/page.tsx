@@ -186,6 +186,79 @@ const ACTION_META: Record<
     variant: "transition",
     href: () => `/admin/bank`,
   },
+  "invoice.bulk_issue": {
+    label: (m) => {
+      const att = (m.attempted as number) ?? 0;
+      const ok = (m.succeeded as number) ?? 0;
+      const fail = (m.failed as number) ?? 0;
+      return `Toplu e-fatura: ${att} sipariş, ${ok} kesildi${fail > 0 ? `, ${fail} hata` : ""}`;
+    },
+    icon: Receipt,
+    variant: "money",
+    href: () => `/admin/invoices`,
+  },
+  "order.shipped": {
+    label: (m) => {
+      const num = (m.orderNumber as string) ?? "?";
+      const carrier = (m.carrier as string) ?? "";
+      return `Sipariş kargoya verildi: ${num}${carrier ? ` (${carrier})` : ""}`;
+    },
+    icon: PackagePlus,
+    variant: "transition",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "order.delivered": {
+    label: (m) => `Sipariş teslim edildi: ${(m.orderNumber as string) ?? "?"}`,
+    icon: PackagePlus,
+    variant: "money",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "expense.recurring_generate": {
+    label: (m) => {
+      const g = (m.generated as number) ?? 0;
+      const s = (m.skipped as number) ?? 0;
+      return `Tekrarlayan giderler üretildi: ${g} yeni, ${s} atlandı`;
+    },
+    icon: RefreshCw,
+    variant: "money",
+    href: () => `/admin/expenses`,
+  },
+  "autopilot.review_flagged": {
+    label: (m) => {
+      const reason = (m.flagReason as string) ?? "?";
+      return `Otopilot yorum flag'ledi: ${reason}`;
+    },
+    icon: Sparkles,
+    variant: "delete",
+    href: () => `/admin/reviews`,
+  },
+  "autopilot.order_confirmed": {
+    label: (m) =>
+      `Otopilot siparişi onayladı: ${(m.orderNumber as string) ?? "?"}`,
+    icon: Sparkles,
+    variant: "transition",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "autopilot.customer_segmented": {
+    label: (m) => {
+      const seg = (m.segment as string) ?? "?";
+      const conf = m.confidence as number | undefined;
+      return `Otopilot müşteri segmentledi: ${seg}${conf ? ` (%${conf})` : ""}`;
+    },
+    icon: Sparkles,
+    variant: "transition",
+    href: (id) => `/admin/customers/${id}`,
+  },
+  "autopilot.price_scan": {
+    label: (m) => {
+      const sc = (m.scanned as number) ?? 0;
+      const sg = (m.suggested as number) ?? 0;
+      return `Otopilot fiyat tarayıcısı: ${sc} ürün, ${sg} öneri`;
+    },
+    icon: Sparkles,
+    variant: "money",
+    href: () => `/admin/autopilot`,
+  },
   "campaign.dead_stock_apply": {
     label: (m) => {
       const code = (m.discountCode as string) ?? "?";

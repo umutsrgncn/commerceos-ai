@@ -309,6 +309,47 @@ export async function cancelInvoiceAction(
   return { ok: true };
 }
 
+/** Birden fazla siparişe toplu fatura kes — UI'dan checkbox ile seçilir. */
+export async function bulkIssueInvoicesAction(input: {
+  orderIds: string[];
+  documentType?: DocumentType;
+}): Promise<{
+  ok: boolean;
+  succeeded: number;
+  failed: number;
+  results: { orderId: string; ok: boolean; invoiceNumber?: string; error?: string }[];
+}> {
+  await requireSession();
+
+  const docType: DocumentType = input.documentType ?? "EFATURA";
+  const results: { orderId: string; ok: boolean; invoiceNumber?: string; error?: string }[] = [];
+  let succeeded = 0;
+  let failed = 0;
+
+  for (const orderId of input.orderIds) {
+    const r = await issueInvoiceAction(orderId, docType);
+    if (r.ok) {
+      succeeded++;
+      results.push({ orderId, ok: true, invoiceNumber: r.invoiceNumber });
+    } else {
+      failed++;
+      results.push({ orderId, ok: false, error: r.error });
+    }
+  }
+
+  await recordActivity({
+    action: "invoice.bulk_issue",
+    metadata: {
+      attempted: input.orderIds.length,
+      succeeded,
+      failed,
+      documentType: docType,
+    },
+  });
+
+  return { ok: true, succeeded, failed, results };
+}
+
 export async function deleteInvoiceAction(formData: FormData) {
   await requireSession();
   const id = formData.get("id");

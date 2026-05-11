@@ -14,6 +14,8 @@ import { OrderStatusBadge } from "../components/order-status-badge";
 import { DraftMessagePanel } from "../components/draft-message-panel";
 import { RefundPanel } from "../components/refund-panel";
 import { IssueInvoiceButton } from "../components/issue-invoice-button";
+import { ShippingCard } from "../components/shipping-card";
+import type { Carrier } from "@/lib/actions/shipping";
 
 export const metadata = { title: "Sipariş — CommerceOS" };
 
@@ -187,6 +189,16 @@ export default async function OrderDetailPage({
               />
             </CardContent>
           </Card>
+
+          {/* Kargo */}
+          <ShippingCard
+            orderId={order.id}
+            status={order.status}
+            carrier={(order.carrier as Carrier | null) ?? null}
+            trackingNumber={order.trackingNumber ?? null}
+            shippedAt={order.shippedAt ?? null}
+            deliveredAt={order.deliveredAt ?? null}
+          />
 
           <Card>
             <CardHeader>

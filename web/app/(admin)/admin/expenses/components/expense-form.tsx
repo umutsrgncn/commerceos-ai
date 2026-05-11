@@ -514,6 +514,26 @@ export function ExpenseForm(props: Props) {
                 </p>
               )}
             </div>
+
+            {/* Tekrarlama */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="recurringRule">Tekrarla (opsiyonel)</Label>
+              <Select
+                id="recurringRule"
+                name="recurringRule"
+                defaultValue=""
+              >
+                <option value="">Tek seferlik</option>
+                <option value="MONTHLY">Aylık (kira/personel)</option>
+                <option value="WEEKLY">Haftalık</option>
+                <option value="QUARTERLY">3 aylık</option>
+                <option value="YEARLY">Yıllık</option>
+              </Select>
+              <p className="text-[10px] text-[color:var(--color-muted)]">
+                Tekrarlayan gider seçilirse, &quot;Tekrarlananları üret&quot;
+                butonuyla yeni dönem otomatik oluşturulur.
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>

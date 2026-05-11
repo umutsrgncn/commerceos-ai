@@ -9,6 +9,7 @@ import { ORDER_STATUSES, statusLabel } from "@/lib/orders/workflow";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { OrderStatusBadge } from "./components/order-status-badge";
+import { BulkInvoiceBar } from "./components/bulk-invoice-bar";
 
 export const metadata = { title: "Siparişler — CommerceOS" };
 
@@ -77,6 +78,7 @@ export default async function OrdersPage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[color:var(--color-border)] text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
+                    <th className="px-3 py-3 w-8" />
                     <th className="px-4 py-3 text-left font-medium">Sipariş</th>
                     <th className="px-4 py-3 text-left font-medium">Müşteri</th>
                     <th className="px-4 py-3 text-left font-medium">Durum</th>
@@ -92,6 +94,15 @@ export default async function OrdersPage({
                       key={o.id}
                       className="border-b border-[color:var(--color-border)] last:border-b-0 hover:bg-[color:var(--color-fg)]/[0.025]"
                     >
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          name="bulkOrder"
+                          value={o.id}
+                          className="h-4 w-4 accent-fuchsia-500"
+                          aria-label={`${o.orderNumber} seç`}
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         <Link
                           href={`/admin/orders/${o.id}`}
@@ -134,6 +145,9 @@ export default async function OrdersPage({
           )}
         </CardContent>
       </Card>
+
+      {/* Toplu fatura kesme floating bar */}
+      <BulkInvoiceBar />
     </div>
   );
 }

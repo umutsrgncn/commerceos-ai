@@ -44,6 +44,15 @@ const amountField = z
     return Math.round(num * 100);
   });
 
+export const RECURRING_RULES = ["MONTHLY", "WEEKLY", "QUARTERLY", "YEARLY"] as const;
+export type RecurringRule = (typeof RECURRING_RULES)[number];
+export const RECURRING_LABELS: Record<RecurringRule, string> = {
+  MONTHLY: "Aylık",
+  WEEKLY: "Haftalık",
+  QUARTERLY: "3 aylık",
+  YEARLY: "Yıllık",
+};
+
 export const expenseCreateSchema = z.object({
   date: z
     .string()
@@ -55,6 +64,7 @@ export const expenseCreateSchema = z.object({
   description: z.string().min(2, "Açıklama en az 2 karakter").max(500),
   vendor: z.string().max(160).optional().nullable(),
   reference: z.string().max(80).optional().nullable(),
+  recurringRule: z.enum(RECURRING_RULES).optional().nullable(),
 });
 
 export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
