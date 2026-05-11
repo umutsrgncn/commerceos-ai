@@ -167,29 +167,18 @@ export async function demoBankPaymentAction(): Promise<DemoResult> {
     };
   }
 
-  // Banka hesabı (varsa kullan, yoksa ilkini al)
-  const account = await db.bankAccount.findFirst({
-    where: { isActive: true },
-  });
-  if (!account) {
-    return {
-      ok: false,
-      error: "Aktif banka hesabı yok. /admin/bank'tan ekle.",
-    };
-  }
-
   // Sahte havale: müşteri adını + sipariş numarasını açıklamaya yaz
   const description = `${order.customer.name} - ${order.orderNumber} havale`;
   const created = await db.bankTransaction.create({
     data: {
-      bankAccountId: account.id,
+      bankName: "Demo Bank",
       transactionDate: new Date(),
       amountMinor: order.total,
       currency: order.currency,
       direction: "IN",
       description,
-      counterpartyName: order.customer.name,
-      reference: order.orderNumber,
+      reference: `${order.orderNumber}-${Date.now()}`,
+      source: "MANUAL",
       status: "UNMATCHED",
     },
   });
