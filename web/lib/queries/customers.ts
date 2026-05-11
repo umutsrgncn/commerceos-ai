@@ -70,6 +70,9 @@ export async function getCustomerById(id: string) {
           createdAt: true,
         },
       },
+      addresses: {
+        orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+      },
     },
   });
 }

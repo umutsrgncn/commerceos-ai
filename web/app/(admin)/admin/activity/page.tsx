@@ -316,6 +316,18 @@ const ACTION_META: Record<
     variant: "update",
     href: () => `/admin/settings/kvkk`,
   },
+  "customer.address_added": {
+    label: () => `Müşteri adresi eklendi`,
+    icon: PackagePlus,
+    variant: "create",
+    href: (id) => `/admin/customers/${id}`,
+  },
+  "customer.address_removed": {
+    label: () => `Müşteri adresi silindi`,
+    icon: Trash2,
+    variant: "delete",
+    href: (id) => `/admin/customers/${id}`,
+  },
   "campaign.email_sent": {
     label: (m) => {
       const segment = (m.segment as string) ?? "?";

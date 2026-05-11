@@ -205,9 +205,35 @@ model Customer {
 
   orders          Order[]
   emails          CustomerEmail[]
+  addresses       CustomerAddress[]
   deletionRequests DataDeletionRequest[]
 
   @@index([aiSegment])
+}
+
+model CustomerAddress {
+  id          String   @id @default(cuid())
+  customerId  String
+  label       String? // 'Ev', 'İş', vb.
+  fullName    String
+  phone       String?
+  line1       String
+  line2       String?
+  city        String
+  district    String?
+  postalCode  String?
+  country     String   @default("TR")
+  // Fatura adresi mi (kurumsal alanlar)?
+  isCompany   Boolean  @default(false)
+  taxId       String? // VKN / TCKN (fatura için)
+  taxOffice   String? // vergi dairesi
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, isDefault])
 }
 
 model CustomerEmail {
@@ -239,6 +265,10 @@ model Order {
   total       Int
   currency    String      @default("TRY")
   notes       String?
+  // Adres snapshot (sipariş anında dondurulur — müşteri sonra adres değişirse etkilenmez)
+  shippingAddress Json? // { fullName, phone, line1, line2, city, district, postalCode, country }
+  billingAddress  Json? // aynı şekil + isCompany, taxId, taxOffice
+  billingSameAsShipping Boolean @default(false)
   // Kargo entegrasyonu (mock — Aras/Yurtiçi/MNG)
   carrier        String? // 'ARAS' | 'YURTICI' | 'MNG' | 'PTT' | 'OTHER'
   trackingNumber String? @unique // kargo takip no

@@ -16,6 +16,7 @@ import { RefundPanel } from "../components/refund-panel";
 import { IssueInvoiceButton } from "../components/issue-invoice-button";
 import { ShippingCard } from "../components/shipping-card";
 import { PaymentCard } from "../components/payment-card";
+import { AddressCard } from "../components/address-card";
 import { listPaymentsForOrder } from "@/lib/queries/payments";
 import { getSettings } from "@/lib/queries/settings";
 import type { Carrier } from "@/lib/shipping/constants";
@@ -194,6 +195,13 @@ export default async function OrderDetailPage({
               />
             </CardContent>
           </Card>
+
+          {/* Adresler (teslimat + fatura) */}
+          <AddressCard
+            shipping={(order.shippingAddress ?? null) as Parameters<typeof AddressCard>[0]["shipping"]}
+            billing={(order.billingAddress ?? null) as Parameters<typeof AddressCard>[0]["billing"]}
+            sameAsShipping={order.billingSameAsShipping}
+          />
 
           {/* Online ödeme (iyzico) */}
           <PaymentCard

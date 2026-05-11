@@ -35,11 +35,56 @@ function parseItems(formData: FormData) {
   return items;
 }
 
+function parseShippingAddress(formData: FormData) {
+  const fullName = String(formData.get("ship.fullName") ?? "").trim();
+  if (!fullName) return null;
+  return {
+    fullName,
+    phone: (formData.get("ship.phone") as string) || null,
+    line1: (formData.get("ship.line1") as string) || "",
+    line2: (formData.get("ship.line2") as string) || null,
+    city: (formData.get("ship.city") as string) || "",
+    district: (formData.get("ship.district") as string) || null,
+    postalCode: (formData.get("ship.postalCode") as string) || null,
+    country: (formData.get("ship.country") as string) || "TR",
+  };
+}
+
+function parseBillingAddress(formData: FormData) {
+  const fullName = String(formData.get("bill.fullName") ?? "").trim();
+  if (!fullName) return null;
+  return {
+    fullName,
+    phone: (formData.get("bill.phone") as string) || null,
+    line1: (formData.get("bill.line1") as string) || "",
+    line2: (formData.get("bill.line2") as string) || null,
+    city: (formData.get("bill.city") as string) || "",
+    district: (formData.get("bill.district") as string) || null,
+    postalCode: (formData.get("bill.postalCode") as string) || null,
+    country: (formData.get("bill.country") as string) || "TR",
+    isCompany: formData.get("bill.isCompany") === "on",
+    taxId: (formData.get("bill.taxId") as string) || null,
+    taxOffice: (formData.get("bill.taxOffice") as string) || null,
+  };
+}
+
 export async function createOrderAction(
   _prev: OrderActionState,
   formData: FormData
 ): Promise<OrderActionState> {
   const session = await requireSession();
+
+  const billingSameAsShipping = formData.get("billingSameAsShipping") === "on";
+  const ship = parseShippingAddress(formData);
+  const billRaw = parseBillingAddress(formData);
+  const bill = billingSameAsShipping && ship
+    ? {
+        ...ship,
+        isCompany: false,
+        taxId: null,
+        taxOffice: null,
+      }
+    : billRaw;
 
   const raw = {
     customerId: formData.get("customerId"),
@@ -47,6 +92,9 @@ export async function createOrderAction(
     taxRate: formData.get("taxRate") ?? 0,
     shipping: formData.get("shipping") ?? 0,
     notes: formData.get("notes") || null,
+    shippingAddress: ship,
+    billingAddress: bill,
+    billingSameAsShipping,
   };
 
   const parsed = orderCreateSchema.safeParse(raw);
@@ -58,7 +106,16 @@ export async function createOrderAction(
     };
   }
 
-  const { customerId, items, taxRate, shipping, notes } = parsed.data;
+  const {
+    customerId,
+    items,
+    taxRate,
+    shipping,
+    notes,
+    shippingAddress,
+    billingAddress,
+    billingSameAsShipping: billSameAs,
+  } = parsed.data;
 
   const products = await db.product.findMany({
     where: { id: { in: items.map((i) => i.productId) } },
@@ -108,6 +165,13 @@ export async function createOrderAction(
             total,
             currency,
             notes: notes ?? null,
+            shippingAddress: shippingAddress
+              ? (shippingAddress as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
+            billingAddress: billingAddress
+              ? (billingAddress as Prisma.InputJsonValue)
+              : Prisma.JsonNull,
+            billingSameAsShipping: billSameAs,
             items: { create: orderItems },
           },
           select: { id: true, orderNumber: true },

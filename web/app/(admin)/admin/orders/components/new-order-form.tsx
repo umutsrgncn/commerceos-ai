@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
-import { Plus, Trash2 } from "lucide-react";
+import { MapPin, Plus, Receipt, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,36 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createOrderAction, type OrderActionState } from "@/lib/actions/orders";
 import { formatMoney } from "@/lib/format";
+import {
+  AddressFields,
+  EMPTY_ADDRESS,
+  type AddressDraft,
+} from "./address-fields";
 
-export type CustomerOption = { id: string; name: string; email: string };
+type SavedAddress = {
+  id: string;
+  label: string | null;
+  fullName: string;
+  phone: string | null;
+  line1: string;
+  line2: string | null;
+  city: string;
+  district: string | null;
+  postalCode: string | null;
+  country: string;
+  isCompany: boolean;
+  taxId: string | null;
+  taxOffice: string | null;
+  isDefault: boolean;
+};
+
+export type CustomerOption = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string | null;
+  addresses?: SavedAddress[];
+};
 export type ProductOption = {
   id: string;
   name: string;
@@ -40,6 +68,33 @@ export function NewOrderForm({
   const [lines, setLines] = useState<Line[]>([{ productId: "", quantity: 1 }]);
   const [taxRate, setTaxRate] = useState("0");
   const [shipping, setShipping] = useState("0");
+  const [customerId, setCustomerId] = useState("");
+  const [shipAddr, setShipAddr] = useState<AddressDraft>(EMPTY_ADDRESS);
+  const [billAddr, setBillAddr] = useState<AddressDraft>(EMPTY_ADDRESS);
+  const [billSame, setBillSame] = useState(true);
+
+  const customerMap = useMemo(
+    () => new Map(customers.map((c) => [c.id, c])),
+    [customers],
+  );
+  const selectedCustomer = customerId ? customerMap.get(customerId) : null;
+
+  // Müşteri seçilince varsayılan adresi shipping'e yükle
+  useEffect(() => {
+    if (!selectedCustomer) return;
+    const saved = selectedCustomer.addresses?.[0];
+    if (!saved) return;
+    setShipAddr({
+      fullName: saved.fullName ?? selectedCustomer.name,
+      phone: saved.phone ?? selectedCustomer.phone ?? "",
+      line1: saved.line1,
+      line2: saved.line2 ?? "",
+      city: saved.city,
+      district: saved.district ?? "",
+      postalCode: saved.postalCode ?? "",
+      country: saved.country,
+    });
+  }, [selectedCustomer]);
 
   const productMap = useMemo(
     () => new Map(products.map((p) => [p.id, p])),
@@ -94,7 +149,13 @@ export function NewOrderForm({
           <CardContent>
             <div className="space-y-1.5">
               <Label htmlFor="customerId">Sipariş kime?</Label>
-              <Select id="customerId" name="customerId" required defaultValue="">
+              <Select
+                id="customerId"
+                name="customerId"
+                required
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+              >
                 <option value="" disabled>
                   Müşteri seç…
                 </option>
@@ -187,6 +248,74 @@ export function NewOrderForm({
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-emerald-500" />
+              Teslimat adresi
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selectedCustomer && (selectedCustomer.addresses?.length ?? 0) > 1 && (
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                <span className="self-center text-xs text-[color:var(--color-muted)]">
+                  Kayıtlı adresler:
+                </span>
+                {selectedCustomer.addresses!.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() =>
+                      setShipAddr({
+                        fullName: a.fullName,
+                        phone: a.phone ?? "",
+                        line1: a.line1,
+                        line2: a.line2 ?? "",
+                        city: a.city,
+                        district: a.district ?? "",
+                        postalCode: a.postalCode ?? "",
+                        country: a.country,
+                      })
+                    }
+                    className="rounded-md border border-[color:var(--color-border)] px-2 py-0.5 text-xs hover:border-emerald-500/40 hover:bg-emerald-500/[0.04]"
+                  >
+                    {a.label ?? a.city} {a.isDefault && "★"}
+                  </button>
+                ))}
+              </div>
+            )}
+            <AddressFields prefix="ship" value={shipAddr} onChange={setShipAddr} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-indigo-500" />
+              Fatura adresi
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="billingSameAsShipping"
+                checked={billSame}
+                onChange={(e) => setBillSame(e.target.checked)}
+                className="h-4 w-4 accent-fuchsia-500"
+              />
+              Fatura adresi teslimat ile aynı
+            </label>
+            <AddressFields
+              prefix="bill"
+              value={billAddr}
+              onChange={setBillAddr}
+              showCompanyFields
+              disabled={billSame}
+            />
           </CardContent>
         </Card>
 

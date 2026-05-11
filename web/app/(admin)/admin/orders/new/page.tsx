@@ -11,7 +11,16 @@ export default async function NewOrderPage() {
   const [customers, products] = await Promise.all([
     db.customer.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true, email: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        addresses: {
+          orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+          take: 5,
+        },
+      },
       take: 200,
     }),
     listAvailableProductsForOrder(),

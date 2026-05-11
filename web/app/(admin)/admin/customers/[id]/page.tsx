@@ -26,6 +26,7 @@ import { statusLabel, statusVariant } from "@/lib/orders/workflow";
 import { cn } from "@/lib/cn";
 import { CustomerForm } from "../components/customer-form";
 import { SegmentPanel } from "../components/segment-panel";
+import { AddressesPanel } from "./components/addresses-panel";
 
 export const metadata = { title: "Müşteri — CommerceOS" };
 
@@ -174,17 +175,24 @@ export default async function CustomerDetailPage({
           />
         </div>
 
-        <Card className="h-fit lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-base">AI ile segmentasyon</CardTitle>
-            <CardDescription>
-              Sipariş geçmişine bakıp segment + aksiyon önerir
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SegmentPanel customerId={customer.id} />
-          </CardContent>
-        </Card>
+        <div className="space-y-4 lg:col-span-1">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="text-base">AI ile segmentasyon</CardTitle>
+              <CardDescription>
+                Sipariş geçmişine bakıp segment + aksiyon önerir
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SegmentPanel customerId={customer.id} />
+            </CardContent>
+          </Card>
+
+          <AddressesPanel
+            customerId={customer.id}
+            addresses={customer.addresses}
+          />
+        </div>
       </div>
 
       {/* Sipariş timeline */}
