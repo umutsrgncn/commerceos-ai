@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   AlertTriangle,
   CalendarDays,
@@ -266,87 +266,282 @@ function BalanceChart({
   daily: ForecastDay[];
   warningDates: Set<string>;
 }) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
+  const stats = useMemo(() => {
+    if (daily.length === 0) return { min: 0, max: 0, avg: 0 };
+    const vals = daily.map((d) => d.balance_minor);
+    const min = Math.min(...vals, 0);
+    const max = Math.max(...vals, 0);
+    const avg = Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
+    return { min, max, avg };
+  }, [daily]);
+
   if (daily.length === 0) return null;
-  const minB = Math.min(...daily.map((d) => d.balance_minor), 0);
-  const maxB = Math.max(...daily.map((d) => d.balance_minor), 0);
-  const range = Math.max(1, maxB - minB);
 
-  const W = 600;
-  const H = 120;
-  const PAD = 4;
-  const stepX = (W - PAD * 2) / Math.max(1, daily.length - 1);
+  const W = 800;
+  const H = 220;
+  const PAD_L = 64;
+  const PAD_R = 12;
+  const PAD_T = 16;
+  const PAD_B = 30;
+  const innerW = W - PAD_L - PAD_R;
+  const innerH = H - PAD_T - PAD_B;
+  const range = Math.max(1, stats.max - stats.min);
 
-  const points = daily.map((d, i) => {
-    const x = PAD + i * stepX;
-    const y = PAD + ((maxB - d.balance_minor) / range) * (H - PAD * 2);
-    return { x, y, d };
-  });
+  function xAt(i: number): number {
+    return PAD_L + (i / Math.max(1, daily.length - 1)) * innerW;
+  }
+  function yAt(v: number): number {
+    return PAD_T + ((stats.max - v) / range) * innerH;
+  }
 
-  const path = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+  const pathD = daily
+    .map((d, i) => `${i === 0 ? "M" : "L"} ${xAt(i).toFixed(1)} ${yAt(d.balance_minor).toFixed(1)}`)
     .join(" ");
+  const zeroY = yAt(0);
+  const avgY = yAt(stats.avg);
+  // Area = line down to zero line (negatif kısımlar zero line altında görünür)
+  const lastX = xAt(daily.length - 1);
+  const firstX = xAt(0);
+  const areaD = `${pathD} L ${lastX.toFixed(1)} ${zeroY.toFixed(1)} L ${firstX.toFixed(1)} ${zeroY.toFixed(1)} Z`;
 
-  // Zero line
-  const zeroY = PAD + (maxB / range) * (H - PAD * 2);
+  // Y-axis tick'leri: 0 zorunlu, min, max, ortalama
+  const yTicks = Array.from(
+    new Set([stats.min, stats.min / 2, 0, stats.max / 2, stats.max].filter((v) => v !== 0 || stats.min < 0)),
+  ).sort((a, b) => b - a);
+
+  // X-axis ~5 tarih
+  const xTickCount = Math.min(5, daily.length);
+  const xTicks: number[] = [];
+  for (let k = 0; k < xTickCount; k++) {
+    const idx = Math.round(((daily.length - 1) * k) / Math.max(1, xTickCount - 1));
+    if (!xTicks.includes(idx)) xTicks.push(idx);
+  }
+
+  function fmtCompact(v: number): string {
+    const tl = v / 100;
+    const sign = tl < 0 ? "-" : "";
+    const abs = Math.abs(tl);
+    if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M ₺`;
+    if (abs >= 1_000) return `${sign}${Math.round(abs / 1_000)}K ₺`;
+    return `${sign}${Math.round(abs)} ₺`;
+  }
+
+  const hover = hoverIdx != null ? daily[hoverIdx] : null;
+  const hoverX = hoverIdx != null ? xAt(hoverIdx) : 0;
 
   return (
-    <div className="rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.015] p-3">
-      <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
-        <span>Günlük bakiye projeksiyonu</span>
-        <span>{daily.length} gün</span>
+    <div className="relative rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.015] p-4">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+          Günlük bakiye projeksiyonu
+        </span>
+        <div className="flex items-center gap-3 text-[10px] text-[color:var(--color-muted)]">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-1 w-3 rounded-sm bg-gradient-to-r from-indigo-500 to-emerald-500" />
+            bakiye
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-px w-3 border-t-2 border-dashed border-amber-500" />
+            ortalama
+          </span>
+          {stats.min < 0 && (
+            <span className="inline-flex items-center gap-1">
+              <span className="h-px w-3 border-t-2 border-dotted border-red-500" />
+              sıfır
+            </span>
+          )}
+        </div>
       </div>
+
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="h-32 w-full"
-        preserveAspectRatio="none"
+        className="block h-56 w-full overflow-visible"
+        onMouseLeave={() => setHoverIdx(null)}
+        onMouseMove={(e) => {
+          const rect = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
+          const xPx = e.clientX - rect.left;
+          const xUser = (xPx / rect.width) * W;
+          let best = 0;
+          let bestDist = Infinity;
+          for (let i = 0; i < daily.length; i++) {
+            const d = Math.abs(xAt(i) - xUser);
+            if (d < bestDist) {
+              bestDist = d;
+              best = i;
+            }
+          }
+          setHoverIdx(best);
+        }}
       >
-        {minB < 0 && zeroY > 0 && zeroY < H && (
+        <defs>
+          <linearGradient id="bal-area-pos" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgb(16 185 129 / 0.35)" />
+            <stop offset="100%" stopColor="rgb(16 185 129 / 0)" />
+          </linearGradient>
+          <linearGradient id="bal-area-neg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="rgb(239 68 68 / 0)" />
+            <stop offset="100%" stopColor="rgb(239 68 68 / 0.35)" />
+          </linearGradient>
+          <linearGradient id="bal-line" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="rgb(99 102 241)" />
+            <stop offset="100%" stopColor="rgb(16 185 129)" />
+          </linearGradient>
+          {/* Clip path for positive/negative split */}
+          <clipPath id="clip-positive">
+            <rect x={PAD_L} y={PAD_T} width={innerW} height={Math.max(0, zeroY - PAD_T)} />
+          </clipPath>
+          <clipPath id="clip-negative">
+            <rect x={PAD_L} y={zeroY} width={innerW} height={Math.max(0, H - PAD_B - zeroY)} />
+          </clipPath>
+        </defs>
+
+        {/* Y-axis grid + labels */}
+        {yTicks.map((v, i) => (
+          <g key={`yt-${i}`}>
+            <line
+              x1={PAD_L}
+              x2={W - PAD_R}
+              y1={yAt(v)}
+              y2={yAt(v)}
+              stroke="currentColor"
+              strokeWidth={0.5}
+              className="text-[color:var(--color-border)]"
+              strokeDasharray={Math.abs(v) < 0.001 ? "0" : "2 4"}
+            />
+            <text
+              x={PAD_L - 8}
+              y={yAt(v) + 4}
+              textAnchor="end"
+              className="fill-[color:var(--color-muted)] text-[10px] tabular-nums"
+            >
+              {fmtCompact(v)}
+            </text>
+          </g>
+        ))}
+
+        {/* X-axis tarih label'ları */}
+        {xTicks.map((i) => (
+          <text
+            key={`xt-${i}`}
+            x={xAt(i)}
+            y={H - 10}
+            textAnchor="middle"
+            className="fill-[color:var(--color-muted)] text-[10px]"
+          >
+            {formatDate(daily[i].date)}
+          </text>
+        ))}
+
+        {/* Area pozitif kısım */}
+        <path d={areaD} fill="url(#bal-area-pos)" clipPath="url(#clip-positive)" />
+        {/* Area negatif kısım */}
+        {stats.min < 0 && (
+          <path d={areaD} fill="url(#bal-area-neg)" clipPath="url(#clip-negative)" />
+        )}
+
+        {/* Zero line (negatif varsa belirgin) */}
+        {stats.min < 0 && (
           <line
-            x1={PAD}
+            x1={PAD_L}
+            x2={W - PAD_R}
             y1={zeroY}
-            x2={W - PAD}
             y2={zeroY}
-            stroke="currentColor"
-            strokeWidth={0.5}
-            strokeDasharray="2 2"
-            className="text-red-500/40"
+            stroke="rgb(239 68 68)"
+            strokeWidth={1.5}
+            strokeDasharray="6 4"
+            opacity="0.6"
           />
         )}
-        <path
-          d={`${path} L ${(W - PAD).toFixed(1)} ${H - PAD} L ${PAD} ${H - PAD} Z`}
-          fill="currentColor"
-          className="text-indigo-500/15"
+
+        {/* Avg line */}
+        <line
+          x1={PAD_L}
+          x2={W - PAD_R}
+          y1={avgY}
+          y2={avgY}
+          stroke="rgb(245 158 11)"
+          strokeWidth={1.2}
+          strokeDasharray="4 4"
+          opacity="0.7"
         />
+
+        {/* Line */}
         <path
-          d={path}
-          stroke="currentColor"
-          strokeWidth={1.5}
+          d={pathD}
           fill="none"
-          className="text-indigo-500"
+          stroke="url(#bal-line)"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
-        {points.map((p, i) => {
-          const isWarn = warningDates.has(p.d.date);
+
+        {/* Data dots — sadece uyarı günleri belirgin */}
+        {daily.map((d, i) => {
+          const isWarn = warningDates.has(d.date);
+          const isHover = hoverIdx === i;
+          if (!isWarn && !isHover) return null;
           return (
             <circle
               key={i}
-              cx={p.x}
-              cy={p.y}
-              r={isWarn ? 3 : 1.5}
-              fill="currentColor"
-              className={isWarn ? "text-red-500" : "text-indigo-500/60"}
-            >
-              <title>
-                {formatDate(p.d.date)}: {formatTry(p.d.balance_minor)}
-                {p.d.note ? ` — ${p.d.note}` : ""}
-              </title>
-            </circle>
+              cx={xAt(i)}
+              cy={yAt(d.balance_minor)}
+              r={isHover ? 6 : 4}
+              className={
+                isWarn
+                  ? "fill-red-500 stroke-[color:var(--color-bg)]"
+                  : "fill-indigo-500 stroke-[color:var(--color-bg)]"
+              }
+              strokeWidth={2}
+            />
           );
         })}
+
+        {/* Hover dikey çizgi */}
+        {hoverIdx != null && (
+          <line
+            x1={hoverX}
+            x2={hoverX}
+            y1={PAD_T}
+            y2={H - PAD_B}
+            stroke="currentColor"
+            strokeWidth={1}
+            className="text-[color:var(--color-fg)]/30"
+          />
+        )}
       </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-[color:var(--color-muted)]">
-        <span>{formatDate(daily[0]?.date ?? "")}</span>
-        <span>{formatDate(daily[daily.length - 1]?.date ?? "")}</span>
-      </div>
+
+      {/* Hover info kartı */}
+      {hover && hoverIdx != null && (
+        <div
+          className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-xs shadow-lg shadow-black/10"
+          style={{
+            left: `calc(${((hoverX / W) * 100).toFixed(2)}% )`,
+            top: 0,
+          }}
+        >
+          <div className="font-semibold">
+            {new Date(hover.date).toLocaleDateString("tr-TR", {
+              day: "numeric",
+              month: "long",
+            })}
+          </div>
+          <div className="mt-0.5 font-mono tabular-nums">
+            <span className={hover.balance_minor < 0 ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"}>
+              {formatTry(hover.balance_minor)}
+            </span>
+            <span className="ml-2 text-[10px] text-[color:var(--color-muted)]">
+              +{formatTry(hover.in_minor)} / −{formatTry(hover.out_minor)}
+            </span>
+          </div>
+          {hover.note && (
+            <div className="mt-1 max-w-xs text-[10px] text-[color:var(--color-muted)]">
+              {hover.note}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

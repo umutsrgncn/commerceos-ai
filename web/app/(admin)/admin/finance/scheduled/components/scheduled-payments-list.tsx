@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Pencil, Plus, Power, Trash2, X } from "lucide-react";
+import { CalendarClock, Pencil, Plus, Power, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Modal } from "@/components/ui/modal";
 import {
   createScheduledPaymentAction,
   deleteScheduledPaymentAction,
@@ -53,83 +54,115 @@ type Item = {
 
 export function ScheduledPaymentsList({ items }: { items: Item[] }) {
   const [editing, setEditing] = useState<Item | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const isOpen = creating || editing != null;
+
+  // Hash "#new-payment" — hem mount'ta hem değişiklikte modali aç
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    function check() {
+      if (window.location.hash === "#new-payment") {
+        setEditing(null);
+        setCreating(true);
+        history.replaceState(null, "", window.location.pathname);
+      }
+    }
+    check();
+    window.addEventListener("hashchange", check);
+    return () => window.removeEventListener("hashchange", check);
+  }, []);
+
+  function closeModal() {
+    setCreating(false);
+    setEditing(null);
+  }
 
   return (
-    <Card id="new-payment" className="overflow-hidden">
-      <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 bg-[color:var(--color-fg)]/[0.02] border-b border-[color:var(--color-border)]">
-        <div>
-          <CardTitle>Kayıtlı ödemeler</CardTitle>
-          <CardDescription>
-            {items.length} kayıt —{" "}
-            <span className="font-medium text-emerald-600 dark:text-emerald-400">
-              {items.filter((i) => i.active).length} aktif
-            </span>
-          </CardDescription>
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => {
-            setEditing(null);
-            setShowCreate(true);
-          }}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Yeni ekle
-        </Button>
-      </CardHeader>
-      <CardContent className="p-0">
-        {items.length === 0 ? (
-          <div className="px-6 py-12 text-center text-sm text-[color:var(--color-muted)]">
-            Henüz kayıtlı ödeme yok. <strong>Yeni ekle</strong> butonuyla ekle.
+    <>
+      <Card id="new-payment" className="overflow-hidden">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 bg-[color:var(--color-fg)]/[0.02] border-b border-[color:var(--color-border)]">
+          <div>
+            <CardTitle>Kayıtlı ödemeler</CardTitle>
+            <CardDescription>
+              {items.length} kayıt —{" "}
+              <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                {items.filter((i) => i.active).length} aktif
+              </span>
+            </CardDescription>
           </div>
-        ) : (
-          <ul className="divide-y divide-[color:var(--color-border)]">
-            {items.map((it) => (
-              <ListRow
-                key={it.id}
-                item={it}
-                onEdit={() => {
-                  setShowCreate(false);
-                  setEditing(it);
-                }}
-              />
-            ))}
-          </ul>
-        )}
-
-        {(showCreate || editing) && (
-          <div className="border-t-2 border-indigo-500/40 bg-gradient-to-br from-indigo-500/[0.06] via-fuchsia-500/[0.02] to-transparent p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-semibold">
-                <span className="grid h-6 w-6 place-items-center rounded-md bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
-                  {editing ? <Pencil className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                </span>
-                {editing ? `Düzenle: ${editing.name}` : "Yeni ödeme"}
-              </h3>
-              <button
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              setEditing(null);
+              setCreating(true);
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Yeni ekle
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {items.length === 0 ? (
+            <div className="px-6 py-16 text-center">
+              <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-indigo-500/10 text-indigo-500">
+                <CalendarClock className="h-6 w-6" />
+              </div>
+              <p className="text-sm font-medium">Henüz kayıtlı ödeme yok</p>
+              <p className="mt-1 text-xs text-[color:var(--color-muted)]">
+                Sağ üstteki <strong>Yeni ekle</strong> butonuyla ilk ödemeni gir.
+              </p>
+              <Button
                 type="button"
+                size="sm"
+                className="mt-4"
                 onClick={() => {
-                  setShowCreate(false);
                   setEditing(null);
+                  setCreating(true);
                 }}
-                className="grid h-7 w-7 place-items-center rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] text-[color:var(--color-muted)] hover:text-[color:var(--color-fg)]"
               >
-                <X className="h-4 w-4" />
-              </button>
+                <Plus className="h-3.5 w-3.5" />
+                İlk ödemeyi ekle
+              </Button>
             </div>
-            <PaymentForm
-              initial={editing}
-              onDone={() => {
-                setShowCreate(false);
-                setEditing(null);
-              }}
-            />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          ) : (
+            <ul className="divide-y divide-[color:var(--color-border)]">
+              {items.map((it) => (
+                <ListRow
+                  key={it.id}
+                  item={it}
+                  onEdit={() => {
+                    setCreating(false);
+                    setEditing(it);
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Modal
+        open={isOpen}
+        onClose={closeModal}
+        title={editing ? `Düzenle: ${editing.name}` : "Yeni planlı ödeme"}
+        description={
+          editing
+            ? "Tutar, vade veya tekrar kuralını güncelleyebilirsin."
+            : "Maaş, kira, vergi gibi düzenli ödemeleri kaydet — AI nakit akışında kullanır."
+        }
+        icon={editing ? <Pencil className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+        tone="indigo"
+        size="lg"
+      >
+        <PaymentForm
+          // key ile reset — başka kayıt açılınca form sıfırlansın
+          key={editing?.id ?? "create"}
+          initial={editing}
+          onDone={closeModal}
+        />
+      </Modal>
+    </>
   );
 }
 

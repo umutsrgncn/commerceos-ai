@@ -204,21 +204,76 @@ async def suggest_discount(req: DiscountSuggestRequest) -> DiscountSuggestRespon
     return _parse_discount(text)
 
 
-# ─── 3) Finance insight (anomali + öneri) ───────────────────────────────────
+# ─── 3) Finance insight (structured + charts) ───────────────────────────────
 
-INSIGHT_SYSTEM = """Sen bir e-ticaret CFO danışmanısın. Türkçe yazıyorsun.
+import re
+import logging
 
-Sana mağazanın son N gün finansal verisi verilecek (gelir, gider, kâr,
-kategori bazında gider, hedef vs gerçekleşen). Yöneticiye 3-5 maddelik
-aksiyon listesi çıkar.
+from pydantic import BaseModel as _BM
 
-Kurallar:
-- Her madde 1-2 cümle: önce gözlem, sonra somut öneri.
-- Sayıları kullan ama UYDURMA — verilen JSON'daki sayılarla kal.
-- Para tutarları kuruş cinsinden gelir; cevabında 100'e böl ve TR locale
-  ile yaz: '1.234,50 ₺'.
-- 'Aksiyon alın hemen' gibi pazarlama klişelerinden kaçın.
-- Madde işareti (•) kullan, başka başlık yok."""
+log = logging.getLogger(__name__)
+
+
+INSIGHT_SYSTEM = """Sen DENEYİMLİ, AÇIK SÖZLÜ bir CFO danışmanısın. Türkçe.
+Yumuşatma, mağaza sahibine gerçeği söyle.
+
+Sana mağazanın N gün finansal özeti verilecek (gelir, gider, kâr, kategori
+bazında gider, hedef). Sen STRUCTURED JSON döneceksin — düz metin YOK,
+markdown YOK. Frontend bu JSON'u render edecek.
+
+ÇIKTI: SADECE JSON, başka metin yasak:
+{
+  "summary": "<2-3 cümle DÜRÜST teşhis. 'Kâr marjınız %X, sektör ortalaması %Y — Z kategorisinde dikkat.'>",
+  "key_findings": [
+    {
+      "title": "<5-9 kelime, kısa ve direkt>",
+      "severity": "high" | "medium" | "low",
+      "detail": "<1-2 cümle açıklama + tutar/yüzde>"
+    }
+    // 3-5 finding
+  ],
+  "actions": [
+    {
+      "title": "<3-7 kelime, emir kipi. 'X harcamasını yarıya indir'>",
+      "description": "<2-3 cümle: ne, kim, ne zaman, beklenen etki>",
+      "category": "CUT" | "GROW" | "FIX",
+      "impact_minor_monthly": <int kuruş, pozitif etki>,
+      "urgency": "high" | "medium" | "low"
+    }
+    // 3-5 aksiyon
+  ],
+  "charts": [
+    {
+      "type": "bar" | "line",
+      "title": "<TR>",
+      "labels": [<str>, ...],
+      "values": [<num>, ...],  // TL (kuruş değil) veya adet/%
+      "unit": "₺" | "adet" | "%"
+    }
+    // 1-3 chart. EN AZ 1: kategori bazında gider bar chart'ı.
+  ]
+}
+
+KURALLAR:
+1. ⚠️ KURUŞ: SQL'den gelen tutarlar kuruş. Chart values'a TL olarak yaz.
+   Örnek: 1267000 (kuruş) → 12670 (TL). Frontend ₺ ile gösterir.
+2. 🚫 Yasaklı yumuşak diller (Turnaround'daki aynı kurallar):
+   "Optimize edilmeli", "gözden geçirilebilir", "değerlendirilmeli" → kullanma.
+   Yerine direkt rakam: "X TL'den Y TL'ye düşür".
+3. Sayıları UYDURMA — verilen JSON'dan kullan. Kategori bazında gider
+   chart'ı zorunlu — verilen by_category dizisini bar olarak çiz.
+4. Severity dağılımı: en az 1 high, en az 1 medium veya low.
+5. Action category: CUT = gider azalt, GROW = gelir artır, FIX = bug fix
+6. impact_minor_monthly KURUŞ — örnek: aylık 12.000 TL tasarruf → 1200000.
+7. Eğer kâr marjı %5'in altındaysa summary'de "marjın çok düşük, X kategori
+   yiyiciliği" direkt söyle.
+
+İYİ ÖRNEK key_finding:
+{"title": "Personel maliyeti gelirin %40'ı", "severity": "high",
+ "detail": "Son 30 günde personel 13.686 TL — net gelir 12.929 TL. Bu oran %50+, sürdürülebilir değil."}
+
+KÖTÜ (KULLANMA):
+{"title": "Maliyetler yüksek", "severity": "medium", "detail": "Giderlere bakılabilir."}"""
 
 
 class InsightRequest(BaseModel):
@@ -231,11 +286,59 @@ class InsightRequest(BaseModel):
     goal_progress_pct: float | None = None
 
 
-@router.post("/insight/stream")
-async def finance_insight_stream(req: InsightRequest):
-    """Streaming değil tekil response — InsightResponse string olarak."""
-    from fastapi.responses import StreamingResponse
+class InsightFinding(_BM):
+    title: str
+    severity: str
+    detail: str
 
+
+class InsightAction(_BM):
+    title: str
+    description: str
+    category: str  # CUT | GROW | FIX
+    impact_minor_monthly: int
+    urgency: str
+
+
+class InsightChart(_BM):
+    type: str  # bar | line
+    title: str
+    labels: list[str]
+    values: list[float]
+    unit: str = "₺"
+
+
+class InsightResponse(_BM):
+    summary: str
+    key_findings: list[InsightFinding]
+    actions: list[InsightAction]
+    charts: list[InsightChart]
+
+
+def _extract_json(text: str) -> dict | None:
+    text = text.strip()
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    fenced = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if fenced:
+        try:
+            return json.loads(fenced.group(1))
+        except json.JSONDecodeError:
+            pass
+    brace = re.search(r"\{.*\}", text, re.DOTALL)
+    if brace:
+        try:
+            return json.loads(brace.group(0))
+        except json.JSONDecodeError:
+            pass
+    return None
+
+
+@router.post("/insight", response_model=InsightResponse)
+async def finance_insight(req: InsightRequest) -> InsightResponse:
+    """Structured JSON: summary + key_findings + actions + charts."""
     payload = json.dumps(
         {
             "period_label": req.period_label,
@@ -255,15 +358,98 @@ async def finance_insight_stream(req: InsightRequest):
         ensure_ascii=False,
         indent=2,
     )
-    prompt = (
-        f"Veri:\n{payload}\n\n"
-        "Aksiyon önerilerini yaz. Madde madde, • ile."
+    prompt = f"VERİ:\n{payload}\n\nJSON çıktı ver."
+
+    text = await gemini.generate(
+        prompt, system=INSIGHT_SYSTEM, temperature=0.4
     )
+    data = _extract_json(text)
 
-    async def gen():
-        async for chunk in gemini.stream_chat(
-            prompt, system=INSIGHT_SYSTEM, temperature=0.4
-        ):
-            yield chunk
+    if not data or "summary" not in data:
+        log.warning("Insight parse failed, returning fallback")
+        # Fallback: minimum yapı, in_categori'den manuel bar oluştur
+        bar_labels = [c.get("category", "") for c in req.by_category[:8]]
+        bar_values = [
+            round(int(c.get("amount") or 0) / 100, 2)
+            for c in req.by_category[:8]
+        ]
+        return InsightResponse(
+            summary="AI yanıtı parse edilemedi. Manuel rapor.",
+            key_findings=[],
+            actions=[],
+            charts=[
+                InsightChart(
+                    type="bar",
+                    title="Kategori bazında gider",
+                    labels=bar_labels,
+                    values=bar_values,
+                    unit="₺",
+                )
+            ],
+        )
 
-    return StreamingResponse(gen(), media_type="text/plain; charset=utf-8")
+    findings: list[InsightFinding] = []
+    for f in (data.get("key_findings") or [])[:6]:
+        try:
+            findings.append(
+                InsightFinding(
+                    title=str(f.get("title", ""))[:200],
+                    severity=str(f.get("severity") or "low").lower(),
+                    detail=str(f.get("detail", ""))[:400],
+                )
+            )
+        except (ValueError, TypeError):
+            continue
+
+    actions: list[InsightAction] = []
+    for a in (data.get("actions") or [])[:6]:
+        try:
+            actions.append(
+                InsightAction(
+                    title=str(a.get("title", ""))[:200],
+                    description=str(a.get("description", ""))[:400],
+                    category=str(a.get("category") or "FIX").upper(),
+                    impact_minor_monthly=int(a.get("impact_minor_monthly") or 0),
+                    urgency=str(a.get("urgency") or "medium").lower(),
+                )
+            )
+        except (ValueError, TypeError):
+            continue
+
+    charts: list[InsightChart] = []
+    for c in (data.get("charts") or [])[:4]:
+        try:
+            labels = [str(x) for x in (c.get("labels") or [])]
+            vals_raw = c.get("values") or []
+            values = [float(v) if isinstance(v, (int, float)) else 0.0 for v in vals_raw]
+            if labels and values and len(labels) == len(values):
+                charts.append(
+                    InsightChart(
+                        type=str(c.get("type") or "bar").lower(),
+                        title=str(c.get("title", ""))[:120],
+                        labels=labels[:20],
+                        values=values[:20],
+                        unit=str(c.get("unit") or "₺"),
+                    )
+                )
+        except (ValueError, TypeError):
+            continue
+
+    # Garantili kategori chart'ı eğer hiç chart yoksa
+    if not charts and req.by_category:
+        charts.append(
+            InsightChart(
+                type="bar",
+                title="Kategori bazında gider",
+                labels=[c.get("category", "") for c in req.by_category[:8]],
+                values=[round(int(c.get("amount") or 0) / 100, 2) for c in req.by_category[:8]],
+                unit="₺",
+            )
+        )
+
+    return InsightResponse(
+        summary=str(data.get("summary") or ""),
+        key_findings=findings,
+        actions=actions,
+        charts=charts,
+    )

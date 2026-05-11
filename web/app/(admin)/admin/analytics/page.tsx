@@ -118,7 +118,9 @@ export default async function AnalyticsPage({
         <Card>
           <CardHeader>
             <CardTitle>En çok satan ürünler</CardTitle>
-            <CardDescription>Ciro bazında ilk 8</CardDescription>
+            <CardDescription>
+              Ciro bazında ilk {Math.min(8, topProducts.length)}
+            </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             {topProducts.length === 0 ? (
@@ -126,30 +128,63 @@ export default async function AnalyticsPage({
                 Bu dönemde satış yok.
               </div>
             ) : (
-              <ul className="divide-y divide-[color:var(--color-border)]">
-                {topProducts.map((p, i) => (
-                  <li
-                    key={p.productId}
-                    className="flex items-center gap-3 px-6 py-3"
-                  >
-                    <span className="grid h-6 w-6 place-items-center rounded-full bg-[color:var(--color-fg)]/[0.05] text-xs font-mono">
-                      {i + 1}
-                    </span>
-                    <Link
-                      href={`/admin/products/${p.productId}`}
-                      className="flex-1 truncate text-sm font-medium hover:underline"
-                    >
-                      {p.name}
-                    </Link>
-                    <span className="text-xs text-[color:var(--color-muted)]">
-                      {p.units} adet
-                    </span>
-                    <span className="w-24 text-right text-sm tabular-nums font-medium">
-                      {formatMoney(p.revenue, "TRY")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              (() => {
+                const maxRev = Math.max(1, ...topProducts.map((p) => p.revenue));
+                return (
+                  <ul className="divide-y divide-[color:var(--color-border)]">
+                    {topProducts.map((p, i) => {
+                      const pct = (p.revenue / maxRev) * 100;
+                      const isTop = i === 0;
+                      return (
+                        <li
+                          key={p.productId}
+                          className="px-6 py-3 hover:bg-[color:var(--color-fg)]/[0.02]"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={cn(
+                                "grid h-7 w-7 place-items-center rounded-full text-[11px] font-bold tabular-nums",
+                                isTop
+                                  ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm shadow-amber-500/40"
+                                  : i === 1
+                                    ? "bg-gradient-to-br from-slate-300 to-slate-400 text-white"
+                                    : i === 2
+                                      ? "bg-gradient-to-br from-amber-700 to-orange-800 text-white"
+                                      : "bg-[color:var(--color-fg)]/[0.06] text-[color:var(--color-muted)]",
+                              )}
+                            >
+                              {i + 1}
+                            </span>
+                            <Link
+                              href={`/admin/products/${p.productId}`}
+                              className="flex-1 truncate text-sm font-medium hover:underline"
+                            >
+                              {p.name}
+                            </Link>
+                            <span className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+                              {p.units} adet
+                            </span>
+                            <span className="w-24 text-right text-sm font-mono tabular-nums font-semibold">
+                              {formatMoney(p.revenue, "TRY")}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 ml-10 h-1.5 overflow-hidden rounded-full bg-[color:var(--color-fg)]/[0.04]">
+                            <div
+                              className={cn(
+                                "h-full rounded-full",
+                                isTop
+                                  ? "bg-gradient-to-r from-amber-400 to-orange-500"
+                                  : "bg-gradient-to-r from-indigo-400 to-fuchsia-500",
+                              )}
+                              style={{ width: `${Math.max(3, pct)}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                );
+              })()
             )}
           </CardContent>
         </Card>
@@ -165,24 +200,46 @@ export default async function AnalyticsPage({
                 Bu dönemde sipariş yok.
               </div>
             ) : (
-              <ul className="divide-y divide-[color:var(--color-border)]">
-                {statusBreakdown.map((s) => (
-                  <li
-                    key={s.status}
-                    className="flex items-center gap-3 px-6 py-3"
-                  >
-                    <Badge variant={statusVariant(s.status)}>
-                      {statusLabel(s.status)}
-                    </Badge>
-                    <span className="flex-1 text-sm text-[color:var(--color-muted)]">
-                      {s.count} sipariş
-                    </span>
-                    <span className="w-24 text-right text-sm tabular-nums">
-                      {formatMoney(s.revenue, "TRY")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              (() => {
+                const totalCount = statusBreakdown.reduce(
+                  (s, x) => s + x.count,
+                  0,
+                );
+                return (
+                  <ul className="divide-y divide-[color:var(--color-border)]">
+                    {statusBreakdown.map((s) => {
+                      const pct = totalCount > 0 ? (s.count / totalCount) * 100 : 0;
+                      return (
+                        <li
+                          key={s.status}
+                          className="px-6 py-3 hover:bg-[color:var(--color-fg)]/[0.02]"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Badge variant={statusVariant(s.status)}>
+                              {statusLabel(s.status)}
+                            </Badge>
+                            <span className="flex-1 text-xs text-[color:var(--color-muted)]">
+                              {s.count} sipariş ·{" "}
+                              <span className="font-medium text-[color:var(--color-fg)]">
+                                %{pct.toFixed(0)}
+                              </span>
+                            </span>
+                            <span className="w-24 text-right text-sm font-mono tabular-nums">
+                              {formatMoney(s.revenue, "TRY")}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[color:var(--color-fg)]/[0.04]">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-indigo-400 to-fuchsia-500"
+                              style={{ width: `${Math.max(3, pct)}%` }}
+                            />
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                );
+              })()
             )}
           </CardContent>
         </Card>

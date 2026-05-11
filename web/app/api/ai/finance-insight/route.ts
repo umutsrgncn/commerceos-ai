@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
 const AI_BASE = process.env.AI_SERVICE_URL ?? "http://localhost:8000";
@@ -8,27 +9,25 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
-    return new Response("Unauthorized", { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await req.json();
 
-  const upstream = await fetch(`${AI_BASE}/finance/insight/stream`, {
+  const upstream = await fetch(`${AI_BASE}/finance/insight`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
 
-  if (!upstream.ok || !upstream.body) {
-    return new Response("AI servisine erişilemedi", {
-      status: upstream.status || 502,
-    });
+  if (!upstream.ok) {
+    const t = await upstream.text().catch(() => "");
+    return NextResponse.json(
+      { error: `AI servisi ${upstream.status}: ${t.slice(0, 200)}` },
+      { status: 502 },
+    );
   }
 
-  return new Response(upstream.body, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
-  });
+  const data = await upstream.json();
+  return NextResponse.json(data);
 }

@@ -813,7 +813,14 @@ async function seedExpenses(adminId: string | null) {
 
 async function seedScheduledPayments() {
   const items = [
-    { name: "Personel maaşları", amount: 4800000, category: "PAYROLL", dueDay: 5, vendor: "Personel", notes: "Aylık net — 6 kişi" },
+    // Personel — kişi başına ayrı kayıt (CFO görünürlüğü için)
+    { name: "Maaş — Ali Yılmaz", amount: 1850000, category: "PAYROLL", dueDay: 5, vendor: "Ali Yılmaz", notes: "Operasyon müdürü" },
+    { name: "Maaş — Ayşe Demir", amount: 1250000, category: "PAYROLL", dueDay: 5, vendor: "Ayşe Demir", notes: "Satış sorumlusu" },
+    { name: "Maaş — Mehmet Kaya", amount: 900000, category: "PAYROLL", dueDay: 5, vendor: "Mehmet Kaya", notes: "Depo görevlisi" },
+    { name: "Maaş — Zeynep Aydın", amount: 850000, category: "PAYROLL", dueDay: 5, vendor: "Zeynep Aydın", notes: "Müşteri hizmetleri" },
+    { name: "Maaş — Burak Şen", amount: 750000, category: "PAYROLL", dueDay: 5, vendor: "Burak Şen", notes: "Kargo & paketleme" },
+    { name: "Maaş — Elif Korkmaz", amount: 700000, category: "PAYROLL", dueDay: 5, vendor: "Elif Korkmaz", notes: "Sosyal medya" },
+    // Diğer sabit giderler
     { name: "Dükkan kirası", amount: 1750000, category: "RENT", dueDay: 1, vendor: "Mülk sahibi", notes: "Levent şube" },
     { name: "KDV beyanı", amount: 350000, category: "TAXES", dueDay: 26, vendor: "GİB", notes: "Aylık KDV" },
     { name: "SGK primi", amount: 720000, category: "TAXES", dueDay: 23, vendor: "SGK", notes: "Personel SGK" },
