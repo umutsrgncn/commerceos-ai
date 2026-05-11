@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { recordActivity } from "@/lib/activity";
 import { getSettings } from "@/lib/queries/settings";
+import { SEGMENTS, type Segment } from "@/lib/email/constants";
 
 const AI_BASE = process.env.AI_SERVICE_URL ?? "http://localhost:8000";
 
@@ -14,17 +15,6 @@ async function requireSession() {
   if (!s?.user) throw new Error("UNAUTHORIZED");
   return s;
 }
-
-export const SEGMENTS = ["sadık", "VIP", "yeni", "risky", "all"] as const;
-export type Segment = (typeof SEGMENTS)[number];
-
-export const SEGMENT_LABELS: Record<Segment, string> = {
-  "sadık": "Sadık müşteriler",
-  VIP: "VIP",
-  yeni: "Yeni müşteriler",
-  risky: "Geri kazanım hedefi",
-  all: "Tüm müşteriler",
-};
 
 export type DraftResult =
   | { ok: true; subject: string; body: string }

@@ -3,11 +3,7 @@ import { ArrowLeft, Mail } from "lucide-react";
 
 import { db } from "@/lib/db";
 import { CampaignClient } from "./components/campaign-client";
-import {
-  SEGMENTS,
-  SEGMENT_LABELS,
-  type Segment,
-} from "@/lib/actions/email-campaign";
+import { SEGMENTS, type Segment } from "@/lib/email/constants";
 
 export const metadata = { title: "E-Posta Kampanyası — CommerceOS" };
 

@@ -14,9 +14,11 @@ import { Select } from "@/components/ui/select";
 import {
   CARRIERS,
   CARRIER_LABELS,
+  type Carrier,
+} from "@/lib/shipping/constants";
+import {
   markDeliveredAction,
   shipOrderAction,
-  type Carrier,
 } from "@/lib/actions/shipping";
 
 const CARRIER_COLORS: Record<Carrier, string> = {

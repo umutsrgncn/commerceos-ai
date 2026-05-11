@@ -15,7 +15,7 @@ import { DraftMessagePanel } from "../components/draft-message-panel";
 import { RefundPanel } from "../components/refund-panel";
 import { IssueInvoiceButton } from "../components/issue-invoice-button";
 import { ShippingCard } from "../components/shipping-card";
-import type { Carrier } from "@/lib/actions/shipping";
+import type { Carrier } from "@/lib/shipping/constants";
 
 export const metadata = { title: "Sipariş — CommerceOS" };
 

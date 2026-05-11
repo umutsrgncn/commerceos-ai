@@ -63,7 +63,35 @@ export function BulkInvoiceBar() {
     });
   }
 
-  if (selectedIds.length === 0) return null;
+  // Sadece feedback'in göründüğü mod (clearSelection sonrası)
+  if (selectedIds.length === 0) {
+    if (!feedback) return null;
+    return (
+      <div className="fixed bottom-6 left-1/2 z-40 w-[min(640px,92vw)] -translate-x-1/2 animate-in slide-in-from-bottom-4 duration-200">
+        <div
+          className={
+            "flex items-center gap-2 rounded-xl border px-4 py-3 shadow-2xl backdrop-blur " +
+            (feedback.failed === 0
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+              : "border-amber-500/30 bg-amber-500/[0.04] text-amber-700 dark:text-amber-400")
+          }
+        >
+          <CheckCircle2 className="h-4 w-4" />
+          <span className="text-sm">
+            {feedback.succeeded} fatura kesildi
+            {feedback.failed > 0 ? `, ${feedback.failed} başarısız` : ""}.
+          </span>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            className="ml-auto rounded p-1 hover:bg-[color:var(--color-fg)]/[0.06]"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed bottom-6 left-1/2 z-40 w-[min(640px,92vw)] -translate-x-1/2 animate-in slide-in-from-bottom-4 duration-200">

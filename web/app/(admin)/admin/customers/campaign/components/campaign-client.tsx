@@ -24,10 +24,12 @@ import {
 import {
   draftCampaignAction,
   sendCampaignAction,
+} from "@/lib/actions/email-campaign";
+import {
   SEGMENTS,
   SEGMENT_LABELS,
   type Segment,
-} from "@/lib/actions/email-campaign";
+} from "@/lib/email/constants";
 import { cn } from "@/lib/cn";
 
 const SEGMENT_TONE: Record<Segment, string> = {

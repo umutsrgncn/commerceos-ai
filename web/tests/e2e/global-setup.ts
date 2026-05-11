@@ -13,16 +13,28 @@ import bcrypt from "bcryptjs";
 export default async function globalSetup() {
   console.log("[e2e] global setup başlıyor...");
 
-  // 1) Otopilot OFF
+  // 1) Otopilot OFF + onboarding completed (modal block etmesin)
   await setAutoPilotEnabled(false);
-  console.log("[e2e] Otopilot kapatıldı");
+  const db = getDb();
+  await db.systemSettings.upsert({
+    where: { id: "default" },
+    update: {
+      autoPilotEnabled: false,
+      onboardingCompletedAt: new Date(),
+    },
+    create: {
+      id: "default",
+      autoPilotEnabled: false,
+      onboardingCompletedAt: new Date(),
+    },
+  });
+  console.log("[e2e] Otopilot kapalı, onboarding tamamlandı");
 
   // 2) Eski E2E_ verilerini temizle
   await cleanupE2eData();
   console.log("[e2e] Eski test verileri temizlendi");
 
   // 3) Test admin
-  const db = getDb();
   const existing = await db.user.findUnique({
     where: { email: TEST_ADMIN.email },
   });

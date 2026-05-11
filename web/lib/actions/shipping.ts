@@ -5,29 +5,13 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { recordActivity } from "@/lib/activity";
+import type { Carrier } from "@/lib/shipping/constants";
 
 async function requireSession() {
   const s = await auth();
   if (!s?.user) throw new Error("UNAUTHORIZED");
   return s;
 }
-
-export const CARRIERS = [
-  "ARAS",
-  "YURTICI",
-  "MNG",
-  "PTT",
-  "OTHER",
-] as const;
-export type Carrier = (typeof CARRIERS)[number];
-
-export const CARRIER_LABELS: Record<Carrier, string> = {
-  ARAS: "Aras Kargo",
-  YURTICI: "Yurtiçi Kargo",
-  MNG: "MNG Kargo",
-  PTT: "PTT Kargo",
-  OTHER: "Diğer",
-};
 
 /** Mock kargo "API" — gerçek entegrasyonda her firma kendi RPC formatını
  *  kullanır. Burada sadece tracking number üretip return ediyoruz. */
@@ -137,11 +121,3 @@ export async function markDeliveredAction(
   return { ok: true };
 }
 
-/** Mock takip linki — gerçek prodda kargo firmasının URL'ine yönlendirilir. */
-export function getTrackingUrl(carrier: Carrier | null, tracking: string | null): string | null {
-  if (!carrier || !tracking) return null;
-  // Mock — gerçek URL'ler:
-  // ARAS:    https://kargotakip.araskargo.com.tr/?code=
-  // YURTICI: https://www.yurticikargo.com/tr/online-servisler/gonderi-sorgulama?code=
-  return `https://example.com/track/${carrier.toLowerCase()}/${tracking}`;
-}

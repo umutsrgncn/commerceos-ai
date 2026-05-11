@@ -66,6 +66,9 @@ export async function cleanupE2eData() {
   await db.autoPilotAction.deleteMany({
     where: { triggerSummary: { startsWith: E2E_PREFIX } },
   });
+  await db.customerEmail.deleteMany({
+    where: { campaignTag: { startsWith: "e2e_" } },
+  });
   await db.invoice.deleteMany({
     where: { order: { notes: { startsWith: E2E_PREFIX } } },
   });
