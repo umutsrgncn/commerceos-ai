@@ -108,9 +108,12 @@ export async function createReviewAction(
     metadata: { reviewId: created.id, rating: parsed.data.rating },
   });
 
-  // Otopilot: yorum cevabı yaz (eğer aktif)
+  // Otopilot: önce analiz et (negatif flag), sonra cevap yaz
   try {
-    const { autoReplyToReview } = await import("@/lib/autopilot/core");
+    const { autoAnalyzeReview, autoReplyToReview } = await import(
+      "@/lib/autopilot/core"
+    );
+    await autoAnalyzeReview(created.id);
     await autoReplyToReview(created.id);
   } catch {
     // sessizce devam — otopilot opsiyonel

@@ -21,6 +21,7 @@ import {
 import { formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { DemoButtons } from "./components/demo-buttons";
+import { ApprovalQueue } from "./components/approval-queue";
 
 export const metadata = { title: "Otopilot — CommerceOS" };
 
@@ -90,10 +91,11 @@ const STATUS_META: Record<
 };
 
 export default async function AutoPilotPage() {
-  const [settings, stats, actions] = await Promise.all([
+  const [settings, stats, actions, pending] = await Promise.all([
     getSettings(),
     getAutoPilotStats(),
     listAutoPilotActions({ pageSize: 50 }),
+    listAutoPilotActions({ pageSize: 50, status: "SKIPPED" }),
   ]);
 
   const enabled = settings.autoPilotEnabled;
@@ -174,6 +176,22 @@ export default async function AutoPilotPage() {
           tone={stats.failed > 0 ? "danger" : "neutral"}
         />
       </div>
+
+      {/* Approval queue — manuel onay bekleyen AI önerileri */}
+      <ApprovalQueue
+        pending={pending.items.map((a) => ({
+          id: a.id,
+          type: a.type,
+          decision: a.decision,
+          reasoning: a.reasoning,
+          confidence: a.confidence,
+          triggerSummary: a.triggerSummary,
+          metadata: a.metadata,
+          createdAt: a.createdAt,
+        }))}
+        enabled={enabled}
+        autoSuggestPriceOn={settings.autoPilotAutoSuggestPrice}
+      />
 
       {/* Demo simulator */}
       <Card className="border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/[0.04] to-indigo-500/[0.03]">

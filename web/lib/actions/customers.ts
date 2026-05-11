@@ -66,6 +66,14 @@ export async function createCustomerAction(
       },
     });
 
+    // Otopilot: yeni müşteriyi AI ile segmente et (otopilot ON ise)
+    try {
+      const { autoSegmentCustomer } = await import("@/lib/autopilot/core");
+      await autoSegmentCustomer(created.id);
+    } catch {
+      // sessizce devam
+    }
+
     revalidatePath("/admin/customers");
     redirect(`/admin/customers/${created.id}`);
   } catch (err) {

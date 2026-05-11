@@ -148,7 +148,14 @@ export async function tryAiMatch(bankTxId: string): Promise<boolean> {
     const confidence: number = data.confidence ?? 0;
     const reasoning: string = data.reasoning ?? "";
 
-    if (orderId && confidence >= AUTO_MATCH_THRESHOLD) {
+    // Otopilot ON + autoMatchBank ise threshold settings'ten alınır,
+    // değilse default 85% (AUTO_MATCH_THRESHOLD).
+    const { getBankMatchThreshold, autoConfirmOrder } = await import(
+      "@/lib/autopilot/core"
+    );
+    const dynamicThreshold = await getBankMatchThreshold();
+
+    if (orderId && confidence >= dynamicThreshold) {
       await db.bankTransaction.update({
         where: { id: bankTxId },
         data: {
@@ -170,8 +177,17 @@ export async function tryAiMatch(bankTxId: string): Promise<boolean> {
           confidence,
           reasoning,
           auto: true,
+          threshold: dynamicThreshold,
         },
       });
+
+      // Otopilot autoConfirmOrders ON ise siparişi CONFIRMED'a al
+      try {
+        await autoConfirmOrder(bankTxId, orderId);
+      } catch {
+        // sessizce devam
+      }
+
       return true;
     } else if (orderId) {
       // Önerildi ama threshold altı — önerilen orderId'yi sakla, status UNMATCHED kal

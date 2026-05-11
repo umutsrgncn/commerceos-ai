@@ -21,27 +21,30 @@ type AutoPilotSettings = {
   enabled: boolean;
   threshold: number; // 0-100
   autoReplyReviews: boolean;
+  autoAnalyzeReviews: boolean;
   autoIssueInvoices: boolean;
+  autoMatchBank: boolean;
+  autoConfirmOrders: boolean;
   autoReorderStock: boolean;
+  autoSuggestPrice: boolean;
+  autoSegmentCustomers: boolean;
 };
 
 async function getAutoPilotSettings(): Promise<AutoPilotSettings> {
   const s = await db.systemSettings.findUnique({
     where: { id: "default" },
-    select: {
-      autoPilotEnabled: true,
-      autoPilotConfidenceThreshold: true,
-      autoPilotAutoReplyReviews: true,
-      autoPilotAutoIssueInvoices: true,
-      autoPilotAutoReorderStock: true,
-    },
   });
   return {
     enabled: s?.autoPilotEnabled ?? false,
     threshold: s?.autoPilotConfidenceThreshold ?? 75,
     autoReplyReviews: s?.autoPilotAutoReplyReviews ?? true,
+    autoAnalyzeReviews: s?.autoPilotAutoAnalyzeReviews ?? true,
     autoIssueInvoices: s?.autoPilotAutoIssueInvoices ?? true,
+    autoMatchBank: s?.autoPilotAutoMatchBank ?? true,
+    autoConfirmOrders: s?.autoPilotAutoConfirmOrders ?? false,
     autoReorderStock: s?.autoPilotAutoReorderStock ?? true,
+    autoSuggestPrice: s?.autoPilotAutoSuggestPrice ?? false,
+    autoSegmentCustomers: s?.autoPilotAutoSegmentCustomers ?? true,
   };
 }
 
@@ -367,12 +370,348 @@ export async function autoReorderStockIfLow(productId: string): Promise<void> {
   });
 }
 
-// ─── 4) Banka eşleştirme threshold düşürücü ─────────────────────────────────
+// ─── 4) Banka eşleştirme threshold ──────────────────────────────────────────
 
-/** Otopilot ON iken bank match threshold'u kullanıcının ayarladığı eşiğe
- *  düşürülür. Çağıran kod (bank.ts tryAiMatch) bu fonksiyonu kullanabilir. */
+/** Otopilot AÇIK + autoMatchBank ON iken eşik kullanıcının ayarladığı seviyeye
+ *  düşer. Aksi halde 85% sabit. */
 export async function getBankMatchThreshold(): Promise<number> {
   const cfg = await getAutoPilotSettings();
-  if (!cfg.enabled) return 85; // default
+  if (!cfg.enabled || !cfg.autoMatchBank) return 85;
   return cfg.threshold;
+}
+
+// ─── 5) Yeni yorum geldiğinde negatif analiz/flag ───────────────────────────
+
+export async function autoAnalyzeReview(reviewId: string): Promise<void> {
+  const cfg = await getAutoPilotSettings();
+  if (!cfg.enabled || !cfg.autoAnalyzeReviews) return;
+
+  const review = await db.productReview.findUnique({
+    where: { id: reviewId },
+    include: { product: { select: { name: true } } },
+  });
+  if (!review) return;
+  if (review.aiFlagged) return; // zaten flag'lı
+
+  const triggerSummary = `${review.product.name} — ${review.rating}/5 yorum`;
+
+  try {
+    const res = await fetch(`${AI_BASE}/reviews/analyze`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reviews: [
+          {
+            id: review.id,
+            rating: review.rating,
+            body: review.body,
+            createdAt: review.createdAt.toISOString(),
+          },
+        ],
+      }),
+    });
+    if (!res.ok) {
+      await logAction({
+        type: "REVIEW_REPLY",
+        triggerSource: `review:${reviewId}`,
+        triggerSummary,
+        decision: "Analiz başarısız",
+        status: "FAILED",
+        errorMessage: `AI ${res.status}`,
+      });
+      return;
+    }
+
+    const data = await res.json();
+    // Analyze endpoint summary + sentiment + themes döndürür
+    const sentiment: string =
+      data.sentiment?.negative >= 50
+        ? "negative"
+        : data.sentiment?.positive >= 60
+          ? "positive"
+          : "neutral";
+    const themes: string[] = data.themes ?? [];
+
+    // Sadece negatif veya 3 yıldız altı → flag'la
+    const shouldFlag =
+      sentiment === "negative" || review.rating <= 2 ||
+      themes.some((t) => /şikayet|kargo|iade|sorun/i.test(t));
+
+    if (!shouldFlag) {
+      await logAction({
+        type: "REVIEW_REPLY",
+        triggerSource: `review:${reviewId}`,
+        triggerSummary,
+        decision: "Yorum analiz edildi, flag gerekmedi",
+        status: "EXECUTED",
+        reasoning: `Sentiment: ${sentiment}, themes: ${themes.join(", ")}`,
+      });
+      return;
+    }
+
+    const flagReason = themes[0] ?? (sentiment === "negative" ? "olumsuz" : "şikayet");
+
+    await db.productReview.update({
+      where: { id: reviewId },
+      data: {
+        aiFlagged: true,
+        aiFlagReason: flagReason,
+        aiFlagSentiment: sentiment,
+      },
+    });
+
+    await logAction({
+      type: "REVIEW_REPLY",
+      triggerSource: `review:${reviewId}`,
+      triggerSummary,
+      decision: `Yorum flag'landı: ${flagReason}`,
+      reasoning: data.summary ?? `Sentiment: ${sentiment}`,
+      confidence: 88,
+      status: "EXECUTED",
+      resultRef: `review:${reviewId}`,
+      metadata: { sentiment, themes, flagReason },
+    });
+
+    await recordActivity({
+      action: "autopilot.review_flagged",
+      entityType: "review",
+      entityId: reviewId,
+      metadata: { sentiment, flagReason },
+    });
+  } catch (err) {
+    await logAction({
+      type: "REVIEW_REPLY",
+      triggerSource: `review:${reviewId}`,
+      triggerSummary,
+      decision: "Sistem hatası",
+      status: "FAILED",
+      errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+  }
+}
+
+// ─── 6) Havale eşleşince siparişi CONFIRMED'a al ────────────────────────────
+
+export async function autoConfirmOrder(
+  bankTxId: string,
+  orderId: string,
+): Promise<void> {
+  const cfg = await getAutoPilotSettings();
+  if (!cfg.enabled || !cfg.autoConfirmOrders) return;
+
+  const order = await db.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, orderNumber: true, status: true, total: true },
+  });
+  if (!order) return;
+  if (order.status !== "PENDING") return; // sadece PENDING'i CONFIRMED'a al
+
+  const triggerSummary = `Havale eşleşti — ${order.orderNumber} CONFIRMED'a alınacak`;
+
+  try {
+    await db.order.update({
+      where: { id: orderId },
+      data: { status: "CONFIRMED" },
+    });
+
+    await logAction({
+      type: "ORDER_CONFIRM",
+      triggerSource: `bank:${bankTxId}`,
+      triggerSummary,
+      decision: `Sipariş ${order.orderNumber} CONFIRMED`,
+      reasoning:
+        "Havale tutarı sipariş toplamıyla eşleşti, otopilot otomatik onayladı.",
+      confidence: 90,
+      status: "EXECUTED",
+      resultRef: `order:${orderId}`,
+      metadata: { orderNumber: order.orderNumber, total: order.total },
+    });
+
+    await recordActivity({
+      action: "autopilot.order_confirmed",
+      entityType: "order",
+      entityId: orderId,
+      metadata: { orderNumber: order.orderNumber },
+    });
+
+    // Artık CONFIRMED olduğu için otomatik fatura kesimi de tetiklenebilir
+    await autoIssueInvoice(orderId);
+  } catch (err) {
+    await logAction({
+      type: "ORDER_CONFIRM",
+      triggerSource: `bank:${bankTxId}`,
+      triggerSummary,
+      decision: "Sistem hatası",
+      status: "FAILED",
+      errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+  }
+}
+
+// ─── 8) Haftalık fiyat önerisi tarayıcısı (manuel trigger) ──────────────────
+
+/** Otopilot autoSuggestPrice ON ise, eski güncellemesi olmayan ürünlerde
+ *  AI fiyat önerisi üretip AutoPilotAction'a SKIPPED status ile yazar.
+ *  Onayı kullanıcı approval queue'dan verir. */
+export async function runPriceSuggestionScan(input?: {
+  productLimit?: number;
+}): Promise<{ scanned: number; suggested: number; skipped: number }> {
+  const cfg = await getAutoPilotSettings();
+  if (!cfg.enabled || !cfg.autoSuggestPrice) {
+    return { scanned: 0, suggested: 0, skipped: 0 };
+  }
+
+  const limit = input?.productLimit ?? 10;
+  const products = await db.product.findMany({
+    where: {
+      status: "PUBLISHED",
+      costPrice: { not: null },
+      updatedAt: { lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+    },
+    orderBy: { updatedAt: "asc" },
+    take: limit,
+  });
+
+  let suggested = 0;
+  let skipped = 0;
+
+  for (const p of products) {
+    try {
+      const res = await fetch(`${AI_BASE}/pricing/suggest`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ product_id: p.id }),
+      });
+      if (!res.ok) {
+        skipped++;
+        continue;
+      }
+      const data = await res.json();
+      if (!data.ok || data.action === "hold") {
+        skipped++;
+        continue;
+      }
+
+      await logAction({
+        type: "STOCK_REORDER",
+        triggerSource: `product:${p.id}`,
+        triggerSummary: `${p.name} fiyat önerisi`,
+        decision: `${data.action === "increase" ? "↑" : "↓"} ${(data.suggested_price_minor / 100).toFixed(2)} TL`,
+        reasoning: data.reasoning ?? null,
+        confidence: data.confidence ?? 70,
+        status: "SKIPPED", // manuel onaya bırak
+        metadata: {
+          productId: p.id,
+          productName: p.name,
+          currentPriceMinor: data.current_price_minor,
+          suggestedPriceMinor: data.suggested_price_minor,
+          action: data.action,
+          forApproval: true,
+        },
+      });
+      suggested++;
+    } catch {
+      skipped++;
+    }
+  }
+
+  await recordActivity({
+    action: "autopilot.price_scan",
+    metadata: {
+      scanned: products.length,
+      suggested,
+      skipped,
+    },
+  });
+
+  return { scanned: products.length, suggested, skipped };
+}
+
+// ─── 7) Yeni müşteri eklenince AI segment ───────────────────────────────────
+
+export async function autoSegmentCustomer(customerId: string): Promise<void> {
+  const cfg = await getAutoPilotSettings();
+  if (!cfg.enabled || !cfg.autoSegmentCustomers) return;
+
+  const customer = await db.customer.findUnique({
+    where: { id: customerId },
+    select: { id: true, name: true, email: true, aiSegment: true },
+  });
+  if (!customer) return;
+  if (customer.aiSegment) return; // zaten segmentli
+
+  const triggerSummary = `${customer.name} segmentlenecek`;
+
+  try {
+    const res = await fetch(`${AI_BASE}/customers/segment-by-id`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customer_id: customerId }),
+    });
+    if (!res.ok) {
+      await logAction({
+        type: "REVIEW_REPLY",
+        triggerSource: `customer:${customerId}`,
+        triggerSummary,
+        decision: "Segment alınamadı",
+        status: "FAILED",
+        errorMessage: `AI ${res.status}`,
+      });
+      return;
+    }
+
+    const data = await res.json();
+    const segment: string = data.segment ?? "yeni";
+    const confidence: number = data.confidence ?? 70;
+
+    if (confidence < cfg.threshold) {
+      await logAction({
+        type: "REVIEW_REPLY",
+        triggerSource: `customer:${customerId}`,
+        triggerSummary,
+        decision: "Eşik altında — manuel onay öneriliyor",
+        confidence,
+        status: "SKIPPED",
+        metadata: { suggestedSegment: segment },
+      });
+      return;
+    }
+
+    await db.customer.update({
+      where: { id: customerId },
+      data: {
+        aiSegment: segment,
+        aiSegmentConfidence: confidence,
+        aiSegmentUpdatedAt: new Date(),
+      },
+    });
+
+    await logAction({
+      type: "REVIEW_REPLY",
+      triggerSource: `customer:${customerId}`,
+      triggerSummary,
+      decision: `Segment: ${segment}`,
+      reasoning: data.reasoning ?? null,
+      confidence,
+      status: "EXECUTED",
+      resultRef: `customer:${customerId}`,
+      metadata: { segment, actions: data.actions },
+    });
+
+    await recordActivity({
+      action: "autopilot.customer_segmented",
+      entityType: "customer",
+      entityId: customerId,
+      metadata: { segment, confidence },
+    });
+  } catch (err) {
+    await logAction({
+      type: "REVIEW_REPLY",
+      triggerSource: `customer:${customerId}`,
+      triggerSummary,
+      decision: "Sistem hatası",
+      status: "FAILED",
+      errorMessage: err instanceof Error ? err.message : "unknown",
+    });
+  }
 }

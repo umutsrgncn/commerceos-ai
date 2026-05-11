@@ -140,6 +140,10 @@ model ProductReview {
   reply       String?
   repliedAt   DateTime?
   isPublished Boolean   @default(true)
+  // AI flag (otopilot autoAnalyzeReviews kuralı)
+  aiFlagged     Boolean  @default(false)
+  aiFlagReason  String? // 'şikayet' | 'kargo sorunu' | 'ürün sorunu' | 'iade talebi' | vb.
+  aiFlagSentiment String? // 'positive' | 'neutral' | 'negative'
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -147,6 +151,7 @@ model ProductReview {
 
   @@index([productId, createdAt])
   @@index([rating])
+  @@index([aiFlagged, isPublished])
 }
 
 model Inventory {
@@ -191,10 +196,34 @@ model Customer {
   phone     String?
   address   Json?
   notes     String?
+  // AI segmentasyon (otopilot autoSegmentCustomers)
+  aiSegment            String? // 'sadık' | 'yeni' | 'risky' | 'VIP' | vb.
+  aiSegmentConfidence  Int? // 0-100
+  aiSegmentUpdatedAt   DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   orders Order[]
+  emails CustomerEmail[]
+
+  @@index([aiSegment])
+}
+
+model CustomerEmail {
+  id          String   @id @default(cuid())
+  customerId  String
+  subject     String
+  body        String   @db.Text
+  status      String   @default("SENT") // 'QUEUED' | 'SENT' | 'FAILED' (mock)
+  campaignTag String? // 'segment-loyalty', 'birthday', 'abandoned-cart', vb.
+  errorMessage String?
+  sentAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+  @@index([campaignTag, createdAt])
 }
 
 model Order {
@@ -209,6 +238,11 @@ model Order {
   total       Int
   currency    String      @default("TRY")
   notes       String?
+  // Kargo entegrasyonu (mock — Aras/Yurtiçi/MNG)
+  carrier        String? // 'ARAS' | 'YURTICI' | 'MNG' | 'PTT' | 'OTHER'
+  trackingNumber String? @unique // kargo takip no
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -288,11 +322,18 @@ model Expense {
   vendor      String?
   reference   String? // fatura numarası vb.
   userId      String?
+  // Tekrarlayan gider (kira, personel, abonelik)
+  recurringRule     String? // 'MONTHLY' | 'WEEKLY' | 'QUARTERLY' | 'YEARLY' | null
+  recurringParentId String? // ata expense (orijinal şablon) — turevler ona pointer
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
+  recurringParent  Expense?  @relation("ExpenseRecurring", fields: [recurringParentId], references: [id], onDelete: SetNull)
+  recurringChildren Expense[] @relation("ExpenseRecurring")
+
   @@index([date])
   @@index([category, date])
+  @@index([recurringRule, recurringParentId])
 }
 
 model SystemSettings {
@@ -337,6 +378,8 @@ model SystemSettings {
   // ─── Müşteri ───
   autoPilotAutoSegmentCustomers Boolean @default(true) // yeni müşteri AI segment
   autoPilotEnabledAt          DateTime?
+  // Onboarding wizard
+  onboardingCompletedAt       DateTime?
   updatedAt            DateTime @updatedAt
 }
 
