@@ -10,6 +10,8 @@ import {
   PackagePlus,
   Receipt,
   RefreshCw,
+  Shield,
+  ShieldCheck,
   Sparkles,
   Star,
   Trash2,
@@ -283,6 +285,36 @@ const ACTION_META: Record<
     icon: CircleAlert,
     variant: "delete",
     href: (id) => `/admin/orders/${id}`,
+  },
+  "kvkk.deletion_requested": {
+    label: (m) => `Veri silme talebi: ${(m.email as string) ?? "?"}`,
+    icon: Shield,
+    variant: "create",
+    href: () => `/admin/data-requests`,
+  },
+  "kvkk.deletion_approved": {
+    label: () => `Veri silme talebi onaylandı`,
+    icon: ShieldCheck,
+    variant: "transition",
+    href: () => `/admin/data-requests`,
+  },
+  "kvkk.deletion_rejected": {
+    label: () => `Veri silme talebi reddedildi`,
+    icon: Shield,
+    variant: "delete",
+    href: () => `/admin/data-requests`,
+  },
+  "kvkk.deletion_completed": {
+    label: () => `Veri silme tamamlandı`,
+    icon: ShieldCheck,
+    variant: "delete",
+    href: () => `/admin/data-requests`,
+  },
+  "kvkk.settings_updated": {
+    label: () => `KVKK ayarları güncellendi`,
+    icon: Shield,
+    variant: "update",
+    href: () => `/admin/settings/kvkk`,
   },
   "campaign.email_sent": {
     label: (m) => {

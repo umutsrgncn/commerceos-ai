@@ -1,7 +1,10 @@
+import Link from "next/link";
 import {
+  ArrowRight,
   Building2,
   Receipt,
   Settings as SettingsIcon,
+  Shield,
   Sparkles,
 } from "lucide-react";
 
@@ -64,6 +67,29 @@ export default async function SettingsPage() {
             gibSenderAlias: settings.gibSenderAlias,
           }}
         />
+      </Section>
+
+      <Section
+        icon={<Shield className="h-4 w-4 text-indigo-500" />}
+        title="KVKK Uyumluluğu"
+        description="Çerez bildirimi, aydınlatma metni, DPO bilgisi ve veri silme talepleri."
+      >
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/settings/kvkk"
+            className="group inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3.5 py-2 text-sm font-medium transition hover:border-indigo-500/40 hover:bg-indigo-500/[0.04]"
+          >
+            KVKK ayarlarını yönet
+            <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+          </Link>
+          <Link
+            href="/admin/data-requests"
+            className="group inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3.5 py-2 text-sm font-medium transition hover:border-red-500/40 hover:bg-red-500/[0.04]"
+          >
+            Veri silme talepleri
+            <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
+          </Link>
+        </div>
       </Section>
 
       <Section

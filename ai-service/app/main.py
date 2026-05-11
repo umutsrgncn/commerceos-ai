@@ -18,6 +18,7 @@ from app.routers import (
     health,
     images,
     insights,
+    kvkk,
     messages,
     pricing,
     products,
@@ -59,3 +60,4 @@ app.include_router(anomaly.router)
 app.include_router(pricing.router)
 app.include_router(campaigns.router)
 app.include_router(customer_campaign.router)
+app.include_router(kvkk.router)

@@ -203,8 +203,9 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orders Order[]
-  emails CustomerEmail[]
+  orders          Order[]
+  emails          CustomerEmail[]
+  deletionRequests DataDeletionRequest[]
 
   @@index([aiSegment])
 }
@@ -422,7 +423,40 @@ model SystemSettings {
   autoPilotEnabledAt          DateTime?
   // Onboarding wizard
   onboardingCompletedAt       DateTime?
+  // KVKK
+  privacyPolicyText           String?  @db.Text
+  privacyPolicyUpdatedAt      DateTime?
+  cookieBannerEnabled         Boolean  @default(true)
+  dataController              String?
+  dpoEmail                    String?
   updatedAt            DateTime @updatedAt
+}
+
+enum DataDeletionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model DataDeletionRequest {
+  id            String              @id @default(cuid())
+  customerId    String?
+  customerEmail String
+  customerName  String?
+  reason        String?             @db.Text
+  status        DataDeletionStatus  @default(PENDING)
+  reviewedBy    String? // admin user id
+  reviewNote    String?             @db.Text
+  reviewedAt    DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([customerEmail])
 }
 
 enum AutoPilotActionType {
