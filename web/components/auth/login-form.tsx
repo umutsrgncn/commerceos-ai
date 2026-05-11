@@ -16,8 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { GoogleButton } from "./google-button";
-
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -27,11 +25,7 @@ function SubmitButton() {
   );
 }
 
-export function LoginForm({
-  signInWithGoogle,
-}: {
-  signInWithGoogle: () => Promise<void>;
-}) {
+export function LoginForm() {
   const [state, formAction] = useActionState<AuthActionState, FormData>(
     signInAction,
     null
@@ -47,21 +41,6 @@ export function LoginForm({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <form action={signInWithGoogle}>
-          <GoogleButton />
-        </form>
-
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-[color:var(--color-border)]" />
-          </div>
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-[color:var(--color-bg)] px-2 text-[color:var(--color-muted)]">
-              veya e-posta ile
-            </span>
-          </div>
-        </div>
-
         <form action={formAction} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email">E-posta</Label>
