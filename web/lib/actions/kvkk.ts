@@ -7,6 +7,7 @@ import { z } from "zod";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { recordActivity } from "@/lib/activity";
+import { requireRole } from "@/lib/auth/permissions";
 
 const SINGLETON_ID = "default";
 
@@ -14,6 +15,10 @@ async function requireSession() {
   const s = await auth();
   if (!s?.user) throw new Error("UNAUTHORIZED");
   return s;
+}
+
+async function requireAdmin() {
+  return requireRole("ADMIN");
 }
 
 // ───────────────────────── Public: deletion request ─────────────────────────
@@ -77,7 +82,7 @@ export async function reviewDeletionRequestAction(
   decision: "approve" | "reject" | "complete",
   note?: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const session = await requireSession();
+  const session = await requireAdmin();
 
   const status =
     decision === "approve"
@@ -120,7 +125,7 @@ export async function updateKvkkSettingsAction(
   _prev: { ok: boolean; error?: string },
   formData: FormData,
 ): Promise<{ ok: boolean; error?: string }> {
-  await requireSession();
+  await requireAdmin();
 
   const parsed = KvkkSettingsSchema.safeParse({
     cookieBannerEnabled: formData.get("cookieBannerEnabled") === "on",
@@ -163,7 +168,7 @@ export async function updateKvkkSettingsAction(
 export async function generatePrivacyPolicyAction(): Promise<
   { ok: true; text: string } | { ok: false; error: string }
 > {
-  await requireSession();
+  await requireAdmin();
 
   const settings = await db.systemSettings.findUnique({
     where: { id: SINGLETON_ID },

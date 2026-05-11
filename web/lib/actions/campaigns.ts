@@ -2,16 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/auth/permissions";
 import { recordActivity } from "@/lib/activity";
 
 const AI_BASE = process.env.AI_SERVICE_URL ?? "http://localhost:8000";
 
 async function requireSession() {
-  const s = await auth();
-  if (!s?.user) throw new Error("UNAUTHORIZED");
-  return s;
+  return requireRole("MANAGER");
 }
 
 export type CampaignSuggestion = {

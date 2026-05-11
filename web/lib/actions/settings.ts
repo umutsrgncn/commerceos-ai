@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/auth/permissions";
 import { gibSettingsSchema, settingsUpdateSchema } from "@/lib/schemas/settings";
 
 export type SettingsActionState = {
@@ -15,11 +15,7 @@ export type SettingsActionState = {
 const SINGLETON_ID = "default";
 
 async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user) throw new Error("UNAUTHORIZED");
-  // Role gating could go here (ADMIN/MANAGER); for the demo any authed
-  // user can edit settings. Toughen with `if (session.user.role !== 'ADMIN')`.
-  return session;
+  return requireRole("ADMIN");
 }
 
 export async function updateSettingsAction(

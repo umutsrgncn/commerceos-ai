@@ -6,10 +6,27 @@ import { Portal } from "@ark-ui/react/portal";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import { signOutAction } from "@/lib/actions/session";
 
+const ROLE_LABEL: Record<string, string> = {
+  ADMIN: "Yönetici",
+  MANAGER: "Operasyon",
+  VIEWER: "İzleyici",
+};
+
+const ROLE_TONE: Record<string, string> = {
+  ADMIN: "bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400",
+  MANAGER: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+  VIEWER: "bg-[color:var(--color-fg)]/[0.06] text-[color:var(--color-muted)]",
+};
+
 export function UserMenu({
   user,
 }: {
-  user: { name?: string | null; email?: string | null; image?: string | null };
+  user: {
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
+    role?: string;
+  };
 }) {
   const initials = (user.name ?? user.email ?? "?")
     .split(" ")
@@ -39,6 +56,13 @@ export function UserMenu({
                 <p className="truncate text-xs text-[color:var(--color-muted)]">
                   {user.email}
                 </p>
+              )}
+              {user.role && (
+                <span
+                  className={`mt-1.5 inline-block rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${ROLE_TONE[user.role] ?? ROLE_TONE.VIEWER}`}
+                >
+                  {ROLE_LABEL[user.role] ?? user.role}
+                </span>
               )}
             </div>
             <div className="my-1 h-px bg-[color:var(--color-border)]" />

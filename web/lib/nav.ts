@@ -17,6 +17,7 @@ import {
   Star,
   TrendingUp,
   Users,
+  UsersRound,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -26,6 +27,8 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   group: "main" | "finance" | "ai" | "system";
+  /** Görmek için gereken minimum rol. Yoksa tüm authed kullanıcılar görür. */
+  minRole?: "ADMIN" | "MANAGER";
 };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -48,6 +51,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/ai", label: "AI Asistan", icon: MessageSquare, group: "ai" },
   { href: "/admin/autopilot", label: "Otopilot", icon: Sparkles, group: "ai" },
   { href: "/admin/activity", label: "Etkinlik", icon: Activity, group: "system" },
-  { href: "/admin/data-requests", label: "KVKK", icon: Shield, group: "system" },
-  { href: "/admin/settings", label: "Ayarlar", icon: Settings, group: "system" },
+  { href: "/admin/users", label: "Ekip", icon: UsersRound, group: "system", minRole: "ADMIN" },
+  { href: "/admin/data-requests", label: "KVKK", icon: Shield, group: "system", minRole: "ADMIN" },
+  { href: "/admin/settings", label: "Ayarlar", icon: Settings, group: "system", minRole: "ADMIN" },
 ];

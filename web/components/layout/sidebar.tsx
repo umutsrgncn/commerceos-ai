@@ -13,13 +13,29 @@ import { usePathname } from "next/navigation";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
 
-export function Sidebar() {
-  const pathname = usePathname();
+const ROLE_RANK: Record<string, number> = {
+  VIEWER: 1,
+  MANAGER: 2,
+  ADMIN: 3,
+};
 
-  const main = NAV_ITEMS.filter((item) => item.group === "main");
-  const finance = NAV_ITEMS.filter((item) => item.group === "finance");
-  const ai = NAV_ITEMS.filter((item) => item.group === "ai");
-  const system = NAV_ITEMS.filter((item) => item.group === "system");
+function visibleFor(role: string | undefined) {
+  return NAV_ITEMS.filter((item) => {
+    if (!item.minRole) return true;
+    const userRank = ROLE_RANK[role ?? ""] ?? 0;
+    const required = ROLE_RANK[item.minRole];
+    return userRank >= required;
+  });
+}
+
+export function Sidebar({ userRole }: { userRole?: string }) {
+  const pathname = usePathname();
+  const items = visibleFor(userRole);
+
+  const main = items.filter((item) => item.group === "main");
+  const finance = items.filter((item) => item.group === "finance");
+  const ai = items.filter((item) => item.group === "ai");
+  const system = items.filter((item) => item.group === "system");
 
   return (
     <aside className="flex sticky top-0 h-screen w-14 md:w-60 shrink-0 flex-col self-start border-r border-[color:var(--color-border)] bg-[color:var(--color-bg)]">

@@ -328,6 +328,25 @@ const ACTION_META: Record<
     variant: "delete",
     href: (id) => `/admin/customers/${id}`,
   },
+  "user.invited": {
+    label: (m) =>
+      `Yeni kullanıcı: ${(m.email as string) ?? "?"} (${(m.role as string) ?? "?"})`,
+    icon: PackagePlus,
+    variant: "create",
+    href: () => `/admin/users`,
+  },
+  "user.role_changed": {
+    label: (m) => `Kullanıcı rolü değişti → ${(m.newRole as string) ?? "?"}`,
+    icon: Edit3,
+    variant: "update",
+    href: () => `/admin/users`,
+  },
+  "user.deleted": {
+    label: () => `Kullanıcı silindi`,
+    icon: Trash2,
+    variant: "delete",
+    href: () => `/admin/users`,
+  },
   "campaign.email_sent": {
     label: (m) => {
       const segment = (m.segment as string) ?? "?";

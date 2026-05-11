@@ -8,7 +8,7 @@ export function Topbar({
   user,
   theme,
 }: {
-  user: { name?: string | null; email?: string | null; image?: string | null };
+  user: { name?: string | null; email?: string | null; image?: string | null; role?: string };
   theme: Theme;
 }) {
   return (

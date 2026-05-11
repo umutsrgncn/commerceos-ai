@@ -3,14 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/auth/permissions";
 import { recordActivity } from "@/lib/activity";
 
 async function requireSession() {
-  const s = await auth();
-  if (!s?.user) throw new Error("UNAUTHORIZED");
-  return s;
+  return requireRole("MANAGER");
 }
 
 const AddressSchema = z.object({

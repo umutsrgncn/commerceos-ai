@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/auth/permissions";
 import {
   inventoryAdjustSchema,
   reorderLevelSchema,
@@ -16,9 +16,7 @@ export type InventoryActionState = {
 } | null;
 
 async function requireSession() {
-  const session = await auth();
-  if (!session?.user) throw new Error("UNAUTHORIZED");
-  return session;
+  return requireRole("MANAGER");
 }
 
 export async function adjustInventoryAction(

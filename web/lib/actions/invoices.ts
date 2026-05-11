@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/auth/permissions";
 import { getSettings } from "@/lib/queries/settings";
 import { nextSequenceForYear } from "@/lib/queries/invoices";
 import {
@@ -28,9 +28,7 @@ export type IssueInvoiceResult =
 export type DocumentType = "EFATURA" | "EARSIV";
 
 async function requireSession() {
-  const session = await auth();
-  if (!session?.user) throw new Error("UNAUTHORIZED");
-  return session;
+  return requireRole("MANAGER");
 }
 
 /** Sipariş için e-fatura veya e-arşiv kes. UBL üret, sakla, entegratöre/mock'a gönder. */

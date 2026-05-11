@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 
-import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { requireRole } from "@/lib/auth/permissions";
 import {
   customerCreateSchema,
   customerUpdateSchema,
@@ -17,8 +17,7 @@ export type CustomerActionState = {
 } | null;
 
 async function requireSession() {
-  const session = await auth();
-  if (!session?.user) throw new Error("UNAUTHORIZED");
+  return requireRole("MANAGER");
 }
 
 function parseAddress(formData: FormData) {
