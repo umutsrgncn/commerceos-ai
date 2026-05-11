@@ -50,6 +50,7 @@ import {
   demoStockDropAction,
   type DemoResult,
 } from "@/lib/actions/autopilot-demo";
+import { SmoothLoopVideo } from "@/components/ui/smooth-loop-video";
 import { cn } from "@/lib/cn";
 
 const POLL_INTERVAL_MS = 8000;
@@ -672,6 +673,18 @@ function DemoTriggers() {
 
   return (
     <div className="space-y-2 px-3 py-3 max-h-[60vh] themed-scroll overflow-y-auto">
+      {/* Mini teaser video — AI'nın yaptıklarının görsel anlatımı */}
+      <div className="relative overflow-hidden rounded-lg border border-fuchsia-500/20">
+        <SmoothLoopVideo className="h-24 w-full object-cover opacity-90">
+          <source src="/otopilot-loop.mp4" type="video/mp4" />
+        </SmoothLoopVideo>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        <div className="absolute bottom-1.5 left-2 right-2 flex items-center gap-1.5 text-[10px] font-medium text-white">
+          <Sparkles className="h-3 w-3 text-fuchsia-300" />
+          <span className="drop-shadow">AI 7 farklı işi paralel yönetir</span>
+        </div>
+      </div>
+
       {/* Otomatik mod kontrolü */}
       <button
         type="button"
