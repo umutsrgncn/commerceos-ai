@@ -259,6 +259,16 @@ const ACTION_META: Record<
     variant: "money",
     href: () => `/admin/autopilot`,
   },
+  "campaign.email_sent": {
+    label: (m) => {
+      const segment = (m.segment as string) ?? "?";
+      const sent = (m.sent as number) ?? 0;
+      return `E-posta kampanyası gönderildi: ${segment} (${sent} kişi)`;
+    },
+    icon: MessageSquare,
+    variant: "money",
+    href: () => `/admin/customers/campaign`,
+  },
   "campaign.dead_stock_apply": {
     label: (m) => {
       const code = (m.discountCode as string) ?? "?";

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Eye, Plus, Search } from "lucide-react";
+import { Eye, Mail, Plus, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,12 +34,20 @@ export default async function CustomersPage({
             {total} kayıt — sipariş geçmişiyle birlikte
           </p>
         </div>
-        <Link href="/admin/customers/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            Yeni müşteri
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/customers/campaign">
+            <Button variant="outline">
+              <Mail className="h-4 w-4" />
+              E-posta kampanyası
+            </Button>
+          </Link>
+          <Link href="/admin/customers/new">
+            <Button>
+              <Plus className="h-4 w-4" />
+              Yeni müşteri
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <form action="/admin/customers" className="max-w-sm">

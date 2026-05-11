@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { AutoPilotPilot } from "@/components/layout/autopilot-pilot";
+import { OnboardingWizard } from "@/components/layout/onboarding-wizard";
 import { readTheme } from "@/lib/theme";
 import { getSettings } from "@/lib/queries/settings";
 
@@ -30,6 +31,8 @@ export default async function AdminLayout({
       </div>
       {/* Floating canlı Otopilot indicator (otopilot AÇIK iken sağ alt) */}
       <AutoPilotPilot initialEnabled={settings.autoPilotEnabled} />
+      {/* İlk girişte onboarding turu — completed sonrası bir daha açılmaz */}
+      {!settings.onboardingCompletedAt && <OnboardingWizard />}
     </div>
   );
 }

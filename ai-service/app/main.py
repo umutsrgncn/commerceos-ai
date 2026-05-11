@@ -11,6 +11,7 @@ from app.routers import (
     campaigns,
     cashflow,
     chat,
+    customer_campaign,
     customers,
     finance,
     goals,
@@ -57,3 +58,4 @@ app.include_router(cashflow.router)
 app.include_router(anomaly.router)
 app.include_router(pricing.router)
 app.include_router(campaigns.router)
+app.include_router(customer_campaign.router)

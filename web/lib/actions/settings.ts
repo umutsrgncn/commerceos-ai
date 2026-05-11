@@ -151,3 +151,15 @@ export async function updateAutoPilotSettingsAction(
   revalidatePath("/admin");
   return { ok: true };
 }
+
+/** Onboarding wizard'ı tamamlandı olarak işaretle. */
+export async function completeOnboardingAction(): Promise<{ ok: boolean }> {
+  await requireAdmin();
+  await db.systemSettings.upsert({
+    where: { id: SINGLETON_ID },
+    update: { onboardingCompletedAt: new Date() },
+    create: { id: SINGLETON_ID, onboardingCompletedAt: new Date() },
+  });
+  revalidatePath("/admin");
+  return { ok: true };
+}
