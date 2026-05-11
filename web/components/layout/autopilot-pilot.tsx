@@ -19,6 +19,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  FlaskConical,
   Link2,
   Loader2,
   MessageSquare,
@@ -31,8 +32,16 @@ import {
   Sparkles,
   Users,
   X,
+  XCircle,
+  Zap,
 } from "lucide-react";
 import { toggleAutoPilotAction } from "@/lib/actions/settings";
+import {
+  demoConfirmOrderAction,
+  demoNewReviewAction,
+  demoStockDropAction,
+  type DemoResult,
+} from "@/lib/actions/autopilot-demo";
 import { cn } from "@/lib/cn";
 
 const POLL_INTERVAL_MS = 8000;
@@ -142,6 +151,7 @@ export function AutoPilotPilot({
   const [enabled, setEnabled] = useState(initialEnabled);
   const [items, setItems] = useState<Item[]>([]);
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"feed" | "demo">("feed");
   const [toast, setToast] = useState<Item | null>(null);
   const [toggling, startToggle] = useTransition();
   const lastIdRef = useRef<string | null>(null);
@@ -303,29 +313,63 @@ export function AutoPilotPilot({
               </Link>
             </div>
 
+            {/* Tab navigasyon — sadece otopilot aktifken */}
+            {enabled && (
+              <div className="flex border-b border-[color:var(--color-border)] px-2">
+                <TabButton
+                  active={tab === "feed"}
+                  onClick={() => setTab("feed")}
+                  icon={<Sparkles className="h-3 w-3" />}
+                  label="Canlı feed"
+                  count={items.length}
+                />
+                <TabButton
+                  active={tab === "demo"}
+                  onClick={() => setTab("demo")}
+                  icon={<FlaskConical className="h-3 w-3" />}
+                  label="Demo tetikleyici"
+                  highlight
+                />
+              </div>
+            )}
+
             {enabled ? (
-              <>
-                <ul className="max-h-72 divide-y divide-[color:var(--color-border)] themed-scroll overflow-y-auto">
-                  {items.length === 0 ? (
-                    <li className="px-4 py-6 text-center text-xs text-[color:var(--color-muted)]">
-                      Otopilot bekliyor — bir olay tetiklendiğinde burada
-                      görünür.
-                    </li>
-                  ) : (
-                    items.map((item) => <FeedItem key={item.id} item={item} />)
-                  )}
-                </ul>
-                <Link
-                  href="/admin/autopilot"
-                  className="flex items-center justify-center gap-1 border-t border-[color:var(--color-border)] px-4 py-2 text-xs text-fuchsia-600 hover:bg-fuchsia-500/[0.04] dark:text-fuchsia-400"
-                >
-                  Tüm timeline'a git <ArrowUpRight className="h-3 w-3" />
-                </Link>
-              </>
+              tab === "feed" ? (
+                <>
+                  <ul className="max-h-72 divide-y divide-[color:var(--color-border)] themed-scroll overflow-y-auto">
+                    {items.length === 0 ? (
+                      <li className="px-4 py-6 text-center text-xs text-[color:var(--color-muted)]">
+                        Otopilot bekliyor — bir olay tetiklendiğinde burada
+                        görünür. Test etmek için <strong>Demo
+                        tetikleyici</strong> sekmesine geç.
+                      </li>
+                    ) : (
+                      items.map((item) => <FeedItem key={item.id} item={item} />)
+                    )}
+                  </ul>
+                  <Link
+                    href="/admin/autopilot"
+                    className="flex items-center justify-center gap-1 border-t border-[color:var(--color-border)] px-4 py-2 text-xs text-fuchsia-600 hover:bg-fuchsia-500/[0.04] dark:text-fuchsia-400"
+                  >
+                    Tüm timeline'a git <ArrowUpRight className="h-3 w-3" />
+                  </Link>
+                </>
+              ) : (
+                <DemoTriggers />
+              )
             ) : (
-              <div className="px-4 py-5 text-center text-xs text-[color:var(--color-muted)]">
-                Otopilot pasif. <strong>Başlat</strong>'a basınca AI günlük
-                operasyonu yönetmeye başlar.
+              <div className="space-y-2 px-4 py-5 text-center text-xs text-[color:var(--color-muted)]">
+                <p>
+                  Otopilot pasif. <strong>Başlat</strong>'a basınca AI günlük
+                  operasyonu yönetmeye başlar:
+                </p>
+                <ul className="mx-auto inline-block space-y-0.5 text-left text-[11px] leading-relaxed">
+                  <li>• Müşteri yorumlarına Türkçe cevap</li>
+                  <li>• Sipariş onayında otomatik e-fatura</li>
+                  <li>• Kritik stoğa tedarikçi siparişi</li>
+                  <li>• Havale/EFT eşleştirme</li>
+                  <li>• AI fiyat ve segmentasyon önerisi</li>
+                </ul>
               </div>
             )}
           </div>
@@ -371,6 +415,199 @@ export function AutoPilotPilot({
         </button>
       </div>
     </>
+  );
+}
+
+// ─── Tab button ─────────────────────────────────────────────────────────────
+
+function TabButton({
+  active,
+  onClick,
+  icon,
+  label,
+  count,
+  highlight,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  count?: number;
+  highlight?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative flex flex-1 items-center justify-center gap-1.5 px-2 py-2 text-[11px] font-medium transition",
+        active
+          ? "text-[color:var(--color-fg)]"
+          : "text-[color:var(--color-muted)] hover:text-[color:var(--color-fg)]",
+      )}
+    >
+      <span
+        className={cn(
+          highlight && !active && "text-fuchsia-500",
+          active && highlight && "text-fuchsia-600 dark:text-fuchsia-400",
+        )}
+      >
+        {icon}
+      </span>
+      {label}
+      {count !== undefined && count > 0 && (
+        <span className="rounded-full bg-fuchsia-500/15 px-1.5 py-0 text-[9px] font-bold text-fuchsia-600 dark:text-fuchsia-400">
+          {count}
+        </span>
+      )}
+      {active && (
+        <span
+          className={cn(
+            "absolute -bottom-px left-2 right-2 h-0.5 rounded-full",
+            highlight ? "bg-fuchsia-500" : "bg-indigo-500",
+          )}
+        />
+      )}
+    </button>
+  );
+}
+
+// ─── Demo tetikleyici ───────────────────────────────────────────────────────
+
+type DemoSim = "review" | "order" | "stock";
+
+const DEMO_META: Record<
+  DemoSim,
+  {
+    label: string;
+    description: string;
+    expected: string;
+    icon: React.ComponentType<{ className?: string }>;
+    accent: string;
+  }
+> = {
+  review: {
+    label: "Müşteri yorumu gelsin",
+    description: "Rastgele bir ürüne demo yorum eklenir",
+    expected: "→ AI yorumu okur, marka diliyle cevap yazar, yayınlar",
+    icon: MessageSquare,
+    accent: "amber",
+  },
+  order: {
+    label: "Sipariş onaylansın",
+    description: "Bekleyen bir sipariş CONFIRMED'a alınır",
+    expected: "→ AI e-fatura/e-arşiv keser, kayda alır",
+    icon: Receipt,
+    accent: "emerald",
+  },
+  stock: {
+    label: "Stok kritiğe düşsün",
+    description: "Bir ürünün stoğu 3'e indirilir",
+    expected: "→ AI tedarikçiye Türkçe sipariş maili yazar",
+    icon: Package,
+    accent: "indigo",
+  },
+};
+
+function DemoTriggers() {
+  const [pending, start] = useTransition();
+  const [activeSim, setActiveSim] = useState<DemoSim | null>(null);
+  const [feedback, setFeedback] = useState<{
+    ok: boolean;
+    message: string;
+  } | null>(null);
+
+  function run(sim: DemoSim) {
+    setActiveSim(sim);
+    setFeedback(null);
+    start(async () => {
+      let r: DemoResult;
+      if (sim === "review") r = await demoNewReviewAction();
+      else if (sim === "order") r = await demoConfirmOrderAction();
+      else r = await demoStockDropAction();
+
+      setFeedback(
+        r.ok
+          ? { ok: true, message: r.message }
+          : { ok: false, message: r.error },
+      );
+      setActiveSim(null);
+    });
+  }
+
+  return (
+    <div className="space-y-2 px-3 py-3">
+      <div className="flex items-center gap-1.5 rounded-md border border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-500/[0.06] to-indigo-500/[0.04] px-2.5 py-1.5 text-[10px] text-fuchsia-700 dark:text-fuchsia-400">
+        <Zap className="h-3 w-3 shrink-0" />
+        <span>
+          Olay tetikle, Otopilot canlı tepki versin. Sonuç{" "}
+          <strong>Canlı feed</strong>'de görünür.
+        </span>
+      </div>
+
+      {(["review", "order", "stock"] as DemoSim[]).map((sim) => {
+        const meta = DEMO_META[sim];
+        const Icon = meta.icon;
+        const busy = activeSim === sim && pending;
+        const accentClass =
+          meta.accent === "amber"
+            ? "text-amber-600 bg-amber-500/10 group-hover:bg-amber-500/15"
+            : meta.accent === "emerald"
+              ? "text-emerald-600 bg-emerald-500/10 group-hover:bg-emerald-500/15"
+              : "text-indigo-600 bg-indigo-500/10 group-hover:bg-indigo-500/15";
+        return (
+          <button
+            key={sim}
+            type="button"
+            onClick={() => run(sim)}
+            disabled={pending}
+            className="group flex w-full items-start gap-2.5 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-2.5 text-left transition hover:border-fuchsia-500/40 hover:bg-fuchsia-500/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span
+              className={cn(
+                "grid h-7 w-7 shrink-0 place-items-center rounded-lg transition",
+                accentClass,
+              )}
+            >
+              {busy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Icon className="h-3.5 w-3.5" />
+              )}
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-medium leading-tight">
+                {meta.label}
+              </div>
+              <p className="mt-0.5 text-[10px] text-[color:var(--color-muted)] leading-tight">
+                {meta.description}
+              </p>
+              <p className="mt-0.5 text-[10px] font-medium text-fuchsia-600 dark:text-fuchsia-400">
+                {meta.expected}
+              </p>
+            </div>
+          </button>
+        );
+      })}
+
+      {feedback && (
+        <div
+          className={cn(
+            "flex items-start gap-1.5 rounded-md border p-2 text-[11px]",
+            feedback.ok
+              ? "border-emerald-500/30 bg-emerald-500/[0.06] text-emerald-700 dark:text-emerald-400"
+              : "border-red-500/30 bg-red-500/[0.06] text-red-600",
+          )}
+        >
+          {feedback.ok ? (
+            <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0" />
+          ) : (
+            <XCircle className="mt-0.5 h-3 w-3 shrink-0" />
+          )}
+          <span className="leading-snug">{feedback.message}</span>
+        </div>
+      )}
+    </div>
   );
 }
 
