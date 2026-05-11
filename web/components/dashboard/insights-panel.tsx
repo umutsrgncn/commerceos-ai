@@ -67,7 +67,7 @@ export function InsightsPanel() {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4">
+      <CardHeader className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
         <div>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-fuchsia-500" />
@@ -77,7 +77,7 @@ export function InsightsPanel() {
             Gemini son {days} günü analiz eder, aksiyon önerir.
           </CardDescription>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <Select
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}

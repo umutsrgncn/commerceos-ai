@@ -259,6 +259,31 @@ const ACTION_META: Record<
     variant: "money",
     href: () => `/admin/autopilot`,
   },
+  "payment.link_created": {
+    label: (m) => {
+      const num = (m.orderNumber as string) ?? "?";
+      const mode = (m.mode as string) ?? "test";
+      return `Ödeme linki oluşturuldu: ${num} (iyzico ${mode})`;
+    },
+    icon: Coins,
+    variant: "transition",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "payment.captured": {
+    label: (m) => {
+      const amt = (m.amountMinor as number) ?? 0;
+      return `Ödeme tahsil edildi: ${formatMoney(amt, "TRY")}`;
+    },
+    icon: Coins,
+    variant: "money",
+    href: (id) => `/admin/orders/${id}`,
+  },
+  "payment.failed": {
+    label: (m) => `Ödeme başarısız: ${(m.reason as string) ?? "?"}`,
+    icon: CircleAlert,
+    variant: "delete",
+    href: (id) => `/admin/orders/${id}`,
+  },
   "campaign.email_sent": {
     label: (m) => {
       const segment = (m.segment as string) ?? "?";

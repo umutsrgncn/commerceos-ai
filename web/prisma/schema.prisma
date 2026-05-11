@@ -252,9 +252,46 @@ model Order {
   refunds      Refund[]
   invoice      Invoice?
   bankPayments BankTransaction[]
+  payments     Payment[]
 
   @@index([status])
   @@index([customerId])
+}
+
+enum PaymentStatus {
+  PENDING       // checkout başlatıldı, ödeme bekleniyor
+  AUTHORIZED    // ödeme yetkilendirildi (3DS sonrası)
+  CAPTURED      // ödeme alındı (başarılı tahsilat)
+  FAILED        // başarısız
+  CANCELLED     // kullanıcı iptal etti
+  REFUNDED      // iade edildi
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  orderId               String
+  gateway               String // 'iyzico' | 'manual'
+  status                PaymentStatus @default(PENDING)
+  amountMinor           Int
+  currency              String        @default("TRY")
+  // Gateway tarafı tanımlayıcılar
+  gatewayPaymentId      String? // iyzico paymentId
+  gatewayConversationId String? // bizim verdiğimiz unique reference
+  gatewayToken          String? // checkout form token
+  paymentLink           String? // checkoutFormUrl — müşteriye paylaşılır
+  // 3DS / sonuç
+  paidAt                DateTime?
+  errorMessage          String?
+  rawInit               Json? // initialize response
+  rawCallback           Json? // callback payload
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@index([status])
+  @@index([gatewayPaymentId])
 }
 
 enum RefundReason {
@@ -361,6 +398,11 @@ model SystemSettings {
   bankWebhookSecret    String? // HMAC doğrulaması için
   bankAccountIban      String? // Mağazanın IBAN'ı, fatura/sipariş eşleştirmesinde
   bankName             String? // 'Test Bankası' / gerçek banka adı
+  // iyzico ödeme entegrasyonu
+  iyzicoMode           String   @default("test") // 'test' | 'production'
+  iyzicoApiKey         String? // production'da gizli, test'te sandbox key kullanılır
+  iyzicoSecretKey      String? // production'da gizli
+  iyzicoCallbackUrl    String? // tunnel URL gerek (Cloudflare/ngrok)
   // Otopilot Modu — AI'a tüm operasyonu devret
   autoPilotEnabled            Boolean @default(false)
   autoPilotMonthlyBudgetMinor Int? // Aylık operasyon bütçesi (kuruş)

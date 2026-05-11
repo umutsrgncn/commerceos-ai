@@ -15,6 +15,9 @@ import { DraftMessagePanel } from "../components/draft-message-panel";
 import { RefundPanel } from "../components/refund-panel";
 import { IssueInvoiceButton } from "../components/issue-invoice-button";
 import { ShippingCard } from "../components/shipping-card";
+import { PaymentCard } from "../components/payment-card";
+import { listPaymentsForOrder } from "@/lib/queries/payments";
+import { getSettings } from "@/lib/queries/settings";
 import type { Carrier } from "@/lib/shipping/constants";
 
 export const metadata = { title: "Sipariş — CommerceOS" };
@@ -28,10 +31,12 @@ export default async function OrderDetailPage({
   const order = await getOrderById(id);
   if (!order) notFound();
 
-  const [refunds, refundedSoFar, invoice] = await Promise.all([
+  const [refunds, refundedSoFar, invoice, payments, settings] = await Promise.all([
     listRefundsForOrder(order.id),
     getRefundedTotal(order.id),
     getInvoiceByOrder(order.id),
+    listPaymentsForOrder(order.id),
+    getSettings(),
   ]);
 
   const nextStatuses = getNextStatuses(order.status);
@@ -189,6 +194,24 @@ export default async function OrderDetailPage({
               />
             </CardContent>
           </Card>
+
+          {/* Online ödeme (iyzico) */}
+          <PaymentCard
+            orderId={order.id}
+            orderTotal={order.total}
+            currency={order.currency}
+            payments={payments.map((p) => ({
+              id: p.id,
+              status: p.status,
+              paymentLink: p.paymentLink,
+              amountMinor: p.amountMinor,
+              paidAt: p.paidAt,
+              errorMessage: p.errorMessage,
+              gateway: p.gateway,
+              createdAt: p.createdAt,
+            }))}
+            iyzicoMode={settings.iyzicoMode === "production" ? "production" : "test"}
+          />
 
           {/* Kargo */}
           <ShippingCard

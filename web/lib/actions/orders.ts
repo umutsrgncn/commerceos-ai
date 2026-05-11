@@ -94,21 +94,39 @@ export async function createOrderAction(
   // Retry orderNumber on rare collision (unique constraint).
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const created = await db.order.create({
-        data: {
-          orderNumber: generateOrderNumber(),
-          customerId,
-          createdById: session.user.id,
-          status: "PENDING",
-          subtotal,
-          tax,
-          shipping,
-          total,
-          currency,
-          notes: notes ?? null,
-          items: { create: orderItems },
-        },
-        select: { id: true, orderNumber: true },
+      // Sipariş + stok rezervasyonu tek transaction'da
+      const created = await db.$transaction(async (tx) => {
+        const order = await tx.order.create({
+          data: {
+            orderNumber: generateOrderNumber(),
+            customerId,
+            createdById: session.user.id,
+            status: "PENDING",
+            subtotal,
+            tax,
+            shipping,
+            total,
+            currency,
+            notes: notes ?? null,
+            items: { create: orderItems },
+          },
+          select: { id: true, orderNumber: true },
+        });
+
+        // Stok rezervasyonu — her item için inventory.reserved += qty
+        for (const it of orderItems) {
+          await tx.inventory.upsert({
+            where: { productId: it.productId },
+            update: { reserved: { increment: it.quantity } },
+            create: {
+              productId: it.productId,
+              quantity: 0,
+              reserved: it.quantity,
+            },
+          });
+        }
+
+        return order;
       });
 
       await recordActivity({
@@ -143,19 +161,64 @@ export async function transitionOrderAction(formData: FormData) {
   if (!parsed.success) return;
 
   const { id, to } = parsed.data;
-  const order = await db.order.findUnique({ where: { id }, select: { status: true } });
+  const order = await db.order.findUnique({
+    where: { id },
+    select: { status: true, items: { select: { productId: true, quantity: true } } },
+  });
   if (!order) return;
 
   if (!canTransition(order.status, to)) {
     throw new Error(`İzinsiz geçiş: ${order.status} → ${to}`);
   }
 
-  await db.order.update({ where: { id }, data: { status: to } });
+  const from = order.status;
+
+  // Stok rezervasyonu güncelle (transaction)
+  await db.$transaction(async (tx) => {
+    await tx.order.update({ where: { id }, data: { status: to } });
+
+    // PENDING → CONFIRMED: reserved'tan düş + quantity'den de düş (gerçek satış)
+    if (from === "PENDING" && to === "CONFIRMED") {
+      for (const it of order.items) {
+        await tx.inventory.update({
+          where: { productId: it.productId },
+          data: {
+            reserved: { decrement: it.quantity },
+            quantity: { decrement: it.quantity },
+          },
+        });
+      }
+    }
+    // PENDING → CANCELLED: sadece reserved'ı geri al (quantity dokunma)
+    else if (from === "PENDING" && to === "CANCELLED") {
+      for (const it of order.items) {
+        await tx.inventory.update({
+          where: { productId: it.productId },
+          data: { reserved: { decrement: it.quantity } },
+        });
+      }
+    }
+    // CONFIRMED+ → CANCELLED/REFUNDED: stoğa geri yaz (quantity += qty)
+    else if (
+      (from === "CONFIRMED" ||
+        from === "SHIPPED" ||
+        from === "DELIVERED") &&
+      (to === "CANCELLED" || to === "REFUNDED")
+    ) {
+      for (const it of order.items) {
+        await tx.inventory.update({
+          where: { productId: it.productId },
+          data: { quantity: { increment: it.quantity } },
+        });
+      }
+    }
+  });
+
   await recordActivity({
     action: "order.transition",
     entityType: "order",
     entityId: id,
-    metadata: { from: order.status, to },
+    metadata: { from, to },
   });
 
   // Otopilot: CONFIRMED'a geçişte fatura kes

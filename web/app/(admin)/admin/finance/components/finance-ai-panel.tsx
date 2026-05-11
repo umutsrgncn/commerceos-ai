@@ -79,7 +79,7 @@ export function FinanceAiPanel(props: Props) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3">
+      <CardHeader className="flex flex-col sm:flex-row items-start justify-between gap-3">
         <div>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-fuchsia-500" />
