@@ -22,6 +22,18 @@ const SORT_OPTIONS = [
 
 type SortValue = (typeof SORT_OPTIONS)[number]["value"];
 
+// Kategori bazlı renk paleti — header'da accent vurgusu
+const CAT_ACCENT: Record<string, { bg: string; text: string; ring: string }> = {
+  tisort: { bg: "bg-[oklch(0.62_0.18_22)]/10", text: "text-[oklch(0.62_0.18_22)]", ring: "ring-[oklch(0.62_0.18_22)]/30" },
+  pantolon: { bg: "bg-[oklch(0.42_0.12_265)]/10", text: "text-[oklch(0.42_0.12_265)]", ring: "ring-[oklch(0.42_0.12_265)]/30" },
+  ayakkabi: { bg: "bg-[oklch(0.68_0.14_75)]/10", text: "text-[oklch(0.68_0.14_75)]", ring: "ring-[oklch(0.68_0.14_75)]/30" },
+  canta: { bg: "bg-[oklch(0.42_0.13_340)]/10", text: "text-[oklch(0.42_0.13_340)]", ring: "ring-[oklch(0.42_0.13_340)]/30" },
+  aksesuar: { bg: "bg-[oklch(0.65_0.15_15)]/10", text: "text-[oklch(0.65_0.15_15)]", ring: "ring-[oklch(0.65_0.15_15)]/30" },
+  "ev-tekstili": { bg: "bg-[oklch(0.55_0.13_45)]/10", text: "text-[oklch(0.55_0.13_45)]", ring: "ring-[oklch(0.55_0.13_45)]/30" },
+  bebek: { bg: "bg-[oklch(0.65_0.12_145)]/10", text: "text-[oklch(0.65_0.12_145)]", ring: "ring-[oklch(0.65_0.12_145)]/30" },
+  hediye: { bg: "bg-[oklch(0.58_0.14_295)]/10", text: "text-[oklch(0.58_0.14_295)]", ring: "ring-[oklch(0.58_0.14_295)]/30" },
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -59,6 +71,11 @@ export default async function CategoryPage({
 
   const totalPages = Math.ceil(total / pageSize);
   const otherCats = allCats.filter((c) => c.slug !== slug).slice(0, 8);
+  const accent = CAT_ACCENT[slug] ?? {
+    bg: "bg-[color:var(--color-accent)]/10",
+    text: "text-[color:var(--color-accent)]",
+    ring: "ring-[color:var(--color-accent)]/30",
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10 lg:py-14">
@@ -75,30 +92,31 @@ export default async function CategoryPage({
         <span className="text-[color:var(--color-fg)]">{cat.name}</span>
       </nav>
 
-      {/* Header — editoryal başlık */}
-      <header className="mb-10 grid gap-6 border-b border-[color:var(--color-border)] pb-10 lg:grid-cols-12">
-        <div className="lg:col-span-7">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-accent)]">
-            Koleksiyon
-          </p>
-          <h1 className="mt-3 font-display text-5xl italic leading-[0.95] sm:text-7xl">
-            {cat.name}
-          </h1>
-          {cat.description && (
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-[color:var(--color-muted)]">
-              {cat.description}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap items-end gap-3 lg:col-span-5 lg:justify-end">
-          <span className="text-xs text-[color:var(--color-muted)]">
-            <strong className="font-mono text-[color:var(--color-fg)]">
-              {total}
-            </strong>{" "}
-            ürün
-          </span>
-
-          <SortSelect initial={sort} />
+      {/* Header — kategori bazlı renkli banner */}
+      <header
+        className={`relative mb-12 overflow-hidden rounded-3xl ${accent.bg} ring-1 ring-inset ${accent.ring} p-8 sm:p-12`}
+      >
+        <div className="absolute inset-0 grain-bg opacity-30" />
+        <div className="relative grid gap-6 lg:grid-cols-12">
+          <div className="lg:col-span-8">
+            <span
+              className={`inline-flex items-center gap-2 rounded-full bg-[color:var(--color-surface)]/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${accent.text}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${accent.text.replace("text-", "bg-")}`} />
+              Koleksiyon · {total} ürün
+            </span>
+            <h1 className="mt-5 font-display text-5xl italic leading-[0.95] sm:text-7xl lg:text-[88px]">
+              {cat.name}
+            </h1>
+            {cat.description && (
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-[color:var(--color-muted)]">
+                {cat.description}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-end gap-3 lg:col-span-4 lg:justify-end">
+            <SortSelect initial={sort} />
+          </div>
         </div>
       </header>
 

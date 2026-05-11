@@ -23,7 +23,17 @@
   --color-warn: oklch(0.62 0.13 50);
   --color-danger: oklch(0.50 0.18 22);
 
-  /* Shop-only fontlar — body'de aktif edilir */
+  /* Kategori bazlı vurgu renkleri — section'larda kullanılır */
+  --cat-tisort: oklch(0.62 0.18 22);        /* coral */
+  --cat-pantolon: oklch(0.42 0.12 265);     /* indigo */
+  --cat-ayakkabi: oklch(0.68 0.14 75);      /* ochre */
+  --cat-canta: oklch(0.42 0.13 340);        /* plum */
+  --cat-aksesuar: oklch(0.65 0.15 15);      /* rose */
+  --cat-ev: oklch(0.55 0.13 45);             /* terracotta */
+  --cat-bebek: oklch(0.65 0.12 145);        /* sage */
+  --cat-hediye: oklch(0.58 0.14 295);       /* lavender */
+
+  /* Shop-only fontlar */
   --font-display: var(--font-shop-display, "DM Serif Display", Georgia, serif);
   --font-sans: var(--font-shop-sans, "Inter", ui-sans-serif, system-ui);
 }
@@ -79,8 +89,16 @@
 [data-shop="true"] .shop-rise {
   animation: shop-rise 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+/* Marquee scroll */
+@keyframes scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  [data-shop="true"] .shop-rise {
+  [data-shop="true"] .shop-rise,
+  [data-shop="true"] [class*="animate-[scroll"] {
     animation: none;
   }
 }
