@@ -1,5 +1,12 @@
 import "server-only";
 import { auth } from "@/auth";
+import {
+  hasRole,
+  RANK,
+  ROLE_DESCRIPTION,
+  ROLE_LABEL,
+  type Role,
+} from "./role-utils";
 
 /**
  * Rol hiyerarşisi:
@@ -7,23 +14,10 @@ import { auth } from "@/auth";
  * - MANAGER → operasyonel mutasyonlar (sipariş, ürün, müşteri, gider, banka)
  * - VIEWER  → sadece okuma + kişisel profil
  *
- * Buradaki helper'lar Server Action / Route Handler giriş kontrolü için.
- * UI tarafı için `hasRole()` aynı mantıkla saf fonksiyon.
+ * Saf fonksiyonlar `role-utils.ts`'de — bu dosya server-only ve auth() çağırır.
  */
 
-export type Role = "ADMIN" | "MANAGER" | "VIEWER";
-
-const RANK: Record<Role, number> = {
-  VIEWER: 1,
-  MANAGER: 2,
-  ADMIN: 3,
-};
-
-export function hasRole(userRole: string | undefined | null, required: Role) {
-  if (!userRole) return false;
-  if (!(userRole in RANK)) return false;
-  return RANK[userRole as Role] >= RANK[required];
-}
+export { hasRole, ROLE_LABEL, ROLE_DESCRIPTION, type Role };
 
 export async function requireRole(required: Role) {
   const session = await auth();
@@ -45,15 +39,3 @@ export async function getCurrentRole(): Promise<Role | null> {
   if (!role || !(role in RANK)) return null;
   return role as Role;
 }
-
-export const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: "Yönetici",
-  MANAGER: "Operasyon",
-  VIEWER: "İzleyici",
-};
-
-export const ROLE_DESCRIPTION: Record<Role, string> = {
-  ADMIN: "Tüm yetkilere sahip — kullanıcı, ayar ve KVKK yönetimi dahil",
-  MANAGER: "Sipariş, ürün, müşteri, gider ve banka yönetebilir",
-  VIEWER: "Sadece görüntüleyebilir, değişiklik yapamaz",
-};

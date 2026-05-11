@@ -7,13 +7,13 @@ import "server-only";
  * https://docs.iyzico.com/api/iyzipay-checkout-form
  */
 
-import { createHash } from "node:crypto";
 import {
   IYZICO_PRODUCTION,
   IYZICO_SANDBOX,
   SANDBOX_API_KEY,
   SANDBOX_SECRET_KEY,
 } from "./constants";
+import { buildAuthHeader } from "./auth-hash";
 
 export type IyzicoCredentials = {
   mode: "test" | "production";
@@ -41,18 +41,6 @@ function resolveCredentials(c: IyzicoCredentials): {
     apiKey: c.apiKey,
     secretKey: c.secretKey,
   };
-}
-
-/** V1 IYZWS hash: sha1(apiKey + randomKey + secretKey + jsonBody) base64. */
-function buildAuthHeader(
-  apiKey: string,
-  secretKey: string,
-  randomKey: string,
-  jsonBody: string,
-): string {
-  const hashStr = apiKey + randomKey + secretKey + jsonBody;
-  const hash = createHash("sha1").update(hashStr).digest("base64");
-  return `IYZWS ${apiKey}:${hash}`;
 }
 
 async function iyzicoFetch<T = unknown>(
