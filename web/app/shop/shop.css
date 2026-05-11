@@ -1,0 +1,86 @@
+/**
+ * Shop (müşteri tarafı) tema override'ları.
+ * data-shop="true" attribute taşıyan her shadow subtree'de aktif olur —
+ * admin paneline sızmaz.
+ *
+ * Görsel dil: "Editoryal sakin"
+ *   • Arka plan: warm bone (~#FAF8F4)
+ *   • Aksan: deep emerald (~#0E5E3E)
+ *   • Display: DM Serif Display (italic mümkün)
+ *   • Body: Inter
+ */
+
+[data-shop="true"] {
+  /* Renk tokens — Tailwind v4 var'larını override eder */
+  --color-bg: oklch(0.97 0.012 80);          /* bone */
+  --color-surface: oklch(1 0 0);             /* card */
+  --color-fg: oklch(0.18 0.01 60);           /* warm near-black */
+  --color-muted: oklch(0.52 0.015 70);       /* warm gray */
+  --color-border: oklch(0.88 0.01 70);
+  --color-accent: oklch(0.42 0.09 160);      /* deep emerald */
+  --color-accent-soft: oklch(0.93 0.025 160);
+  --color-accent-fg: oklch(0.98 0 0);
+  --color-warn: oklch(0.62 0.13 50);
+  --color-danger: oklch(0.50 0.18 22);
+
+  /* Shop-only fontlar — body'de aktif edilir */
+  --font-display: var(--font-shop-display, "DM Serif Display", Georgia, serif);
+  --font-sans: var(--font-shop-sans, "Inter", ui-sans-serif, system-ui);
+}
+
+[data-shop="true"][data-theme="dark"],
+:root[data-theme="dark"] [data-shop="true"] {
+  --color-bg: oklch(0.13 0.015 60);
+  --color-surface: oklch(0.17 0.015 60);
+  --color-fg: oklch(0.95 0.01 80);
+  --color-muted: oklch(0.65 0.02 70);
+  --color-border: oklch(0.25 0.01 60);
+  --color-accent: oklch(0.66 0.12 160);
+  --color-accent-soft: oklch(0.25 0.04 160);
+}
+
+/* Shop için kullanılan utility'ler */
+[data-shop="true"] .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+[data-shop="true"] .shop-link {
+  position: relative;
+  transition: color 200ms ease;
+}
+[data-shop="true"] .shop-link::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -2px;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+[data-shop="true"] .shop-link:hover::after {
+  transform: scaleX(1);
+}
+
+/* Subtle grain — ürün card hover'da background'a katsam ister */
+[data-shop="true"] .grain-bg {
+  background-image:
+    radial-gradient(at 0% 0%, oklch(0.42 0.09 160 / 0.05) 0%, transparent 50%),
+    radial-gradient(at 100% 100%, oklch(0.62 0.13 50 / 0.04) 0%, transparent 50%);
+}
+
+/* Reveal on scroll */
+@keyframes shop-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+[data-shop="true"] .shop-rise {
+  animation: shop-rise 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-shop="true"] .shop-rise {
+    animation: none;
+  }
+}
