@@ -12,24 +12,29 @@ export async function getRevenueTrend(days = 30): Promise<RevenuePoint[]> {
   since.setDate(since.getDate() - days);
   since.setHours(0, 0, 0, 0);
 
+  const until = new Date();
+  until.setHours(23, 59, 59, 999);
+
+  // Yerel TZ'ye göre gruplama yap — UTC midnight ile yerel midnight arasındaki
+  // kayma günü farklı bucket'a düşürüyordu (TR +03:00 için 1 gün geride).
   const rows = await db.$queryRaw<
-    Array<{ day: Date; total: bigint; orders: bigint }>
+    Array<{ day_str: string; total: bigint; orders: bigint }>
   >`
     SELECT
-      date_trunc('day', "createdAt") AS day,
+      to_char(date_trunc('day', "createdAt" AT TIME ZONE 'Europe/Istanbul'), 'YYYY-MM-DD') AS day_str,
       COALESCE(SUM(total), 0)::bigint AS total,
       COUNT(*)::bigint AS orders
     FROM "Order"
     WHERE "createdAt" >= ${since}
+      AND "createdAt" <= ${until}
       AND status NOT IN ('CANCELLED', 'REFUNDED')
-    GROUP BY day
-    ORDER BY day ASC
+    GROUP BY day_str
+    ORDER BY day_str ASC
   `;
 
-  // Fill gap days with zeros so the chart has a continuous x axis.
   const map = new Map<string, { total: number; orders: number }>();
   for (const r of rows) {
-    map.set(r.day.toISOString().slice(0, 10), {
+    map.set(r.day_str, {
       total: Number(r.total),
       orders: Number(r.orders),
     });
@@ -39,8 +44,11 @@ export async function getRevenueTrend(days = 30): Promise<RevenuePoint[]> {
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    d.setHours(0, 0, 0, 0);
-    const key = d.toISOString().slice(0, 10);
+    // Yerel tarih string'i — toISOString TZ kayması yaratıyor
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const key = `${yyyy}-${mm}-${dd}`;
     const entry = map.get(key) ?? { total: 0, orders: 0 };
     out.push({ date: key, ...entry });
   }

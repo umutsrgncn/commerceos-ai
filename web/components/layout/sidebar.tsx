@@ -10,6 +10,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
 
@@ -44,12 +45,12 @@ export function Sidebar({ userRole }: { userRole?: string }) {
         className="flex h-16 shrink-0 items-center justify-center gap-2 px-2 md:justify-start md:px-5 text-lg font-semibold tracking-tight"
       >
         <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-sm shrink-0">
-          ⌘
+          <Sparkles className="h-4 w-4" />
         </span>
         <span className="hidden md:inline">CommerceOS</span>
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-2 md:p-3">
+      <nav className="themed-scroll flex flex-1 flex-col gap-1 overflow-y-auto p-2 md:p-3">
         {main.map((item) => (
           <NavLink key={item.href} item={item} active={isActive(pathname, item.href)} />
         ))}

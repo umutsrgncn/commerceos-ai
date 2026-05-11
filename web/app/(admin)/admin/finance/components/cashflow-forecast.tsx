@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   AlertTriangle,
   CalendarDays,
+  Clock,
   Loader2,
   RefreshCw,
   Sparkles,
@@ -57,10 +58,26 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
 }
 
+const CACHE_KEY = "commerceos:cashflow-forecast-v1";
+type Cached = { ts: number; forecast: Forecast };
+
 export function CashflowForecast() {
   const [pending, start] = useTransition();
   const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [generatedAt, setGeneratedAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Mount'ta cache'den yükle
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (raw) {
+        const parsed: Cached = JSON.parse(raw);
+        setForecast(parsed.forecast);
+        setGeneratedAt(parsed.ts);
+      }
+    } catch {}
+  }, []);
 
   function fetchForecast() {
     setError(null);
@@ -73,7 +90,15 @@ export function CashflowForecast() {
           return;
         }
         const data = (await r.json()) as Forecast;
+        const ts = Date.now();
         setForecast(data);
+        setGeneratedAt(ts);
+        try {
+          localStorage.setItem(
+            CACHE_KEY,
+            JSON.stringify({ ts, forecast: data } as Cached),
+          );
+        } catch {}
       } catch (e) {
         setError(e instanceof Error ? e.message : "Bağlantı hatası");
       }
@@ -96,6 +121,18 @@ export function CashflowForecast() {
               Son 90 gün satış/gider pattern'i + bekleyen siparişler →
               Gemini tahmini, riskli günleri vurgular.
             </CardDescription>
+            {generatedAt && (
+              <div className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-2 py-0.5 text-[10px] text-[color:var(--color-muted)]">
+                <Clock className="h-2.5 w-2.5" />
+                {new Date(generatedAt).toLocaleString("tr-TR", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                tarihinde üretildi
+              </div>
+            )}
           </div>
           <Button
             type="button"
@@ -204,6 +241,8 @@ function ForecastBody({ forecast }: { forecast: Forecast }) {
 
       <BalanceChart daily={forecast.daily} warningDates={warningDates} />
 
+      <WeeklyBreakdown daily={forecast.daily} startBalance={startBalance} />
+
       {forecast.warnings.length > 0 && (
         <div className="space-y-2">
           <div className="text-xs font-medium uppercase tracking-wider text-[color:var(--color-muted)]">
@@ -307,6 +346,90 @@ function BalanceChart({
       <div className="mt-1 flex justify-between text-[10px] text-[color:var(--color-muted)]">
         <span>{formatDate(daily[0]?.date ?? "")}</span>
         <span>{formatDate(daily[daily.length - 1]?.date ?? "")}</span>
+      </div>
+    </div>
+  );
+}
+
+function WeeklyBreakdown({
+  daily,
+  startBalance,
+}: {
+  daily: ForecastDay[];
+  startBalance: number;
+}) {
+  if (daily.length === 0) return null;
+  // 7-günlük gruplar
+  const weeks: Array<{
+    label: string;
+    inSum: number;
+    outSum: number;
+    netDelta: number;
+    endBalance: number;
+    startDate: string;
+    endDate: string;
+  }> = [];
+  for (let i = 0; i < daily.length; i += 7) {
+    const slice = daily.slice(i, i + 7);
+    const inSum = slice.reduce((s, d) => s + d.in_minor, 0);
+    const outSum = slice.reduce((s, d) => s + d.out_minor, 0);
+    const startBal = i === 0 ? startBalance : daily[i - 1].balance_minor;
+    const endBalance = slice[slice.length - 1].balance_minor;
+    weeks.push({
+      label: `Hafta ${weeks.length + 1}`,
+      inSum,
+      outSum,
+      netDelta: endBalance - startBal,
+      endBalance,
+      startDate: slice[0].date,
+      endDate: slice[slice.length - 1].date,
+    });
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-[color:var(--color-border)]">
+      <div className="border-b border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.03] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted)]">
+        Haftalık özet
+      </div>
+      <div className="divide-y divide-[color:var(--color-border)]">
+        {weeks.map((w) => {
+          const positive = w.netDelta >= 0;
+          return (
+            <div
+              key={w.label}
+              className="grid grid-cols-12 items-center gap-2 px-3 py-2 text-xs"
+            >
+              <div className="col-span-3 sm:col-span-2">
+                <div className="font-medium">{w.label}</div>
+                <div className="text-[10px] text-[color:var(--color-muted)]">
+                  {formatDate(w.startDate)} – {formatDate(w.endDate)}
+                </div>
+              </div>
+              <div className="col-span-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                +{formatTry(w.inSum)}
+              </div>
+              <div className="col-span-3 text-right tabular-nums text-red-500">
+                −{formatTry(w.outSum)}
+              </div>
+              <div className="col-span-3 sm:col-span-4 flex items-center justify-end gap-2">
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-mono tabular-nums",
+                    positive
+                      ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                      : "bg-red-500/10 text-red-600",
+                  )}
+                >
+                  {positive ? "+" : ""}
+                  {formatTry(w.netDelta)}
+                </span>
+                <span className="text-right text-[10px] tabular-nums text-[color:var(--color-muted)]">
+                  →{formatTry(w.endBalance)}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

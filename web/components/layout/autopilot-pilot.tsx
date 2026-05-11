@@ -231,7 +231,7 @@ export function AutoPilotPilot({
               </button>
             </div>
 
-            <ul className="max-h-80 divide-y divide-[color:var(--color-border)] overflow-y-auto">
+            <ul className="max-h-80 divide-y divide-[color:var(--color-border)] themed-scroll overflow-y-auto">
               {items.length === 0 ? (
                 <li className="px-4 py-6 text-center text-xs text-[color:var(--color-muted)]">
                   Otopilot bekliyor — bir olay tetiklendiğinde burada görünür.

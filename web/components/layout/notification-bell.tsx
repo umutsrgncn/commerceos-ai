@@ -149,7 +149,7 @@ export function NotificationBell() {
                 Henüz bildirim yok.
               </div>
             ) : (
-              <ul className="max-h-96 overflow-y-auto">
+              <ul className="max-h-96 themed-scroll overflow-y-auto">
                 {items.map((it) => {
                   const meta = ACTION_META[it.action];
                   const Icon = meta?.icon ?? Bell;

@@ -197,58 +197,92 @@ export default async function CustomerDetailPage({
 
       {/* Sipariş timeline */}
       <Card>
-        <CardHeader className="border-b border-[color:var(--color-border)]">
-          <CardTitle>Sipariş geçmişi</CardTitle>
-          <CardDescription>
-            {totalOrders} sipariş — son {Math.min(20, totalOrders)} gösteriliyor
-          </CardDescription>
+        <CardHeader className="flex flex-row items-end justify-between gap-3 border-b border-[color:var(--color-border)]">
+          <div>
+            <CardTitle>Sipariş geçmişi</CardTitle>
+            <CardDescription>
+              {totalOrders} sipariş
+              {totalOrders > 20 && ` — son ${Math.min(20, totalOrders)} gösteriliyor`}
+            </CardDescription>
+          </div>
+          {totalOrders > 0 && (
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">
+                Toplam ciro
+              </div>
+              <div className="text-base font-semibold tabular-nums">
+                {formatMoney(
+                  orders
+                    .filter(
+                      (o) =>
+                        o.status !== "CANCELLED" && o.status !== "REFUNDED",
+                    )
+                    .reduce((s, o) => s + o.total, 0),
+                  customerCurrency,
+                )}
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {orders.length === 0 ? (
-            <div className="px-6 py-12 text-center text-sm text-[color:var(--color-muted)]">
-              Henüz sipariş yok.
+            <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[color:var(--color-fg)]/[0.05] text-[color:var(--color-muted)]">
+                <ShoppingBag className="h-4 w-4" />
+              </span>
+              <p className="text-sm text-[color:var(--color-muted)]">
+                Henüz sipariş yok.
+              </p>
             </div>
           ) : (
-            <ul className="relative ml-6 border-l border-[color:var(--color-border)]">
-              {orders.map((order) => (
-                <li key={order.id} className="relative py-4">
-                  <span
-                    className={cn(
-                      "absolute -left-[5px] top-6 h-2.5 w-2.5 rounded-full ring-2 ring-[color:var(--color-bg)]",
-                      order.status === "DELIVERED"
-                        ? "bg-emerald-500"
-                        : order.status === "CANCELLED" ||
-                            order.status === "REFUNDED"
-                          ? "bg-red-500"
-                          : "bg-indigo-500"
-                    )}
-                  />
-                  <Link
-                    href={`/admin/orders/${order.id}`}
-                    className="block pl-6 transition hover:bg-[color:var(--color-fg)]/[0.025] rounded-r-md"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
+            <ol className="relative ml-7 border-l border-[color:var(--color-border)] py-2">
+              {orders.map((order) => {
+                const dotTone =
+                  order.status === "DELIVERED"
+                    ? "bg-emerald-500"
+                    : order.status === "CANCELLED" ||
+                        order.status === "REFUNDED"
+                      ? "bg-red-500"
+                      : order.status === "SHIPPED"
+                        ? "bg-indigo-500"
+                        : order.status === "CONFIRMED"
+                          ? "bg-fuchsia-500"
+                          : "bg-amber-500";
+                return (
+                  <li key={order.id} className="relative">
+                    <span
+                      className={cn(
+                        "absolute -left-[7px] top-4 grid h-3 w-3 place-items-center rounded-full ring-4 ring-[color:var(--color-bg)]",
+                        dotTone,
+                      )}
+                    />
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="group flex items-center justify-between gap-3 rounded-md px-4 py-3 ml-3 transition hover:bg-[color:var(--color-fg)]/[0.04]"
+                    >
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm font-medium">
+                          <span className="font-mono text-sm font-medium group-hover:text-[color:var(--color-accent)]">
                             {order.orderNumber}
                           </span>
                           <Badge variant={statusVariant(order.status)}>
                             {statusLabel(order.status)}
                           </Badge>
                         </div>
-                        <div className="mt-0.5 text-xs text-[color:var(--color-muted)]">
-                          {formatDate(order.createdAt)} · {formatRelativeTime(order.createdAt)}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-[color:var(--color-muted)]">
+                          <span>{formatDate(order.createdAt)}</span>
+                          <span className="opacity-50">·</span>
+                          <span>{formatRelativeTime(order.createdAt)}</span>
                         </div>
                       </div>
-                      <span className="text-base font-semibold tabular-nums">
+                      <span className="shrink-0 text-base font-semibold tabular-nums">
                         {formatMoney(order.total, order.currency)}
                       </span>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </CardContent>
       </Card>

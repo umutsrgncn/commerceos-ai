@@ -20,7 +20,13 @@ SEGMENT: <segment adı>
 GEREKÇE: <1 cümle, hangi sayılara dayanarak>
 AKSİYON: <1 cümle, somut bir öneri>
 
-Çıktıda başka satır olmasın. Sayıyı UYDURMA, sadece verilende olanı kullan."""
+Çıktıda başka satır olmasın. Sayıyı UYDURMA, sadece verilende olanı kullan.
+
+Para birimleri:
+- 'total_spent' ve 'average_basket' alanları zaten 'XX.XXX,XX ₺' formatında
+  hazır verilir. Bu değerleri AYNEN kullan, kuruşa çevirme, 'minor' yazma,
+  rakamı tek başına kullanma.
+- 'minor' kelimesini ASLA çıktıya yazma."""
 
 
 def build_segmentation_prompt(stats: dict) -> str:

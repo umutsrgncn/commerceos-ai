@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Package, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,7 +66,7 @@ export default async function ProductsPage({
           {items.length === 0 ? (
             <EmptyState />
           ) : (
-            <div className="overflow-x-auto">
+            <div className="themed-scroll overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[color:var(--color-border)] text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
@@ -140,8 +140,8 @@ export default async function ProductsPage({
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-      <div className="grid h-12 w-12 place-items-center rounded-full bg-[color:var(--color-fg)]/[0.05] text-2xl">
-        ✨
+      <div className="grid h-12 w-12 place-items-center rounded-full bg-[color:var(--color-fg)]/[0.05] text-[color:var(--color-muted)]">
+        <Package className="h-5 w-5" />
       </div>
       <h3 className="text-base font-semibold">Henüz ürün yok</h3>
       <p className="max-w-sm text-sm text-[color:var(--color-muted)]">

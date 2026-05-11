@@ -243,7 +243,7 @@ export function ChatPanel() {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-6"
+        className="flex-1 themed-scroll overflow-y-auto rounded-xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-6"
       >
         {messages.length === 0 ? (
           <EmptyState onPick={(text) => send(text)} />

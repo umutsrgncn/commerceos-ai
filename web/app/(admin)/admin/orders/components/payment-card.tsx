@@ -1,18 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
   CheckCircle2,
   Copy,
   CreditCard,
   ExternalLink,
-  Loader2,
   TestTube2,
   XCircle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { createPaymentLinkAction } from "@/lib/actions/payments";
 import { cn } from "@/lib/cn";
 
 type ExistingPayment = {
@@ -26,38 +24,13 @@ type ExistingPayment = {
   createdAt: Date;
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: "Bekliyor",
-  AUTHORIZED: "Yetkili",
-  CAPTURED: "Tahsil edildi",
-  FAILED: "Başarısız",
-  CANCELLED: "İptal",
-  REFUNDED: "İade edildi",
-};
-
-const STATUS_TONE: Record<string, string> = {
-  PENDING: "border-amber-500/30 bg-amber-500/[0.04] text-amber-700 dark:text-amber-400",
-  AUTHORIZED: "border-indigo-500/30 bg-indigo-500/[0.04] text-indigo-700 dark:text-indigo-400",
-  CAPTURED: "border-emerald-500/30 bg-emerald-500/[0.06] text-emerald-700 dark:text-emerald-400",
-  FAILED: "border-red-500/30 bg-red-500/[0.06] text-red-600",
-  CANCELLED: "border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.04] text-[color:var(--color-muted)]",
-  REFUNDED: "border-fuchsia-500/30 bg-fuchsia-500/[0.06] text-fuchsia-700 dark:text-fuchsia-400",
-};
-
 export function PaymentCard({
-  orderId,
-  orderTotal,
-  currency,
   payments,
   iyzicoMode,
 }: {
-  orderId: string;
-  orderTotal: number;
-  currency: string;
   payments: ExistingPayment[];
   iyzicoMode: "test" | "production";
 }) {
-  const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -65,14 +38,6 @@ export function PaymentCard({
   const activePending = payments.find(
     (p) => p.status === "PENDING" && p.paymentLink,
   );
-
-  function createLink() {
-    setError(null);
-    start(async () => {
-      const r = await createPaymentLinkAction(orderId);
-      if (!r.ok) setError(r.error);
-    });
-  }
 
   async function copyLink(link: string) {
     try {
@@ -184,30 +149,10 @@ export function PaymentCard({
           </a>
         </>
       ) : (
-        <>
-          <p className="text-xs text-[color:var(--color-muted)]">
-            iyzico ile online tahsilat. {iyzicoMode === "test" ? "Test kartlarıyla deneyebilirsin." : ""}
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            onClick={createLink}
-            disabled={pending}
-            className="w-full"
-          >
-            {pending ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Oluşturuluyor...
-              </>
-            ) : (
-              <>
-                <CreditCard className="h-3.5 w-3.5" />
-                Ödeme linki oluştur
-              </>
-            )}
-          </Button>
-        </>
+        <p className="rounded-md bg-[color:var(--color-fg)]/[0.04] p-2.5 text-xs text-[color:var(--color-muted)]">
+          Ödeme henüz alınmadı. Otopilot açıkken sipariş onaylanınca otomatik
+          tahsilat başlar; manuel müdahale gerekmez.
+        </p>
       )}
 
       {error && (

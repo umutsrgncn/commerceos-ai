@@ -33,7 +33,7 @@ export default async function AdminLayout({
           }}
           theme={theme ?? "light"}
         />
-        <main className="flex-1 p-3 sm:p-4 md:p-6 min-w-0 overflow-x-auto">
+        <main className="flex-1 p-3 sm:p-4 md:p-6 min-w-0 themed-scroll overflow-x-auto">
           {children}
         </main>
       </div>

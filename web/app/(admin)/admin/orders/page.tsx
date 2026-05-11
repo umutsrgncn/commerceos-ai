@@ -74,7 +74,7 @@ export default async function OrdersPage({
               Bu filtreyle sipariş yok.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="themed-scroll overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[color:var(--color-border)] text-xs uppercase tracking-wider text-[color:var(--color-muted)]">

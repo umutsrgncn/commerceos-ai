@@ -158,7 +158,7 @@ export function CampaignDialog({
               </button>
             </div>
 
-            <div className="max-h-[70vh] overflow-y-auto p-5 space-y-4">
+            <div className="max-h-[70vh] themed-scroll overflow-y-auto p-5 space-y-4">
               {pending && !result && (
                 <div className="flex items-center gap-2 py-6 text-sm text-[color:var(--color-muted)]">
                   <Loader2 className="h-4 w-4 animate-spin text-fuchsia-500" />

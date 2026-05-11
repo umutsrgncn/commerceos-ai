@@ -4,20 +4,15 @@ import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   Loader2,
   RefreshCw,
+  ShieldAlert,
   Sparkles,
   X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 
 type Anomaly = {
@@ -39,12 +34,10 @@ type ScanResult = {
 
 const STORAGE_KEY = "commerceos:anomaly-dismissed-v1";
 const CACHE_KEY = "commerceos:anomaly-cache-v1";
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 saat
+const EXPANDED_KEY = "commerceos:anomaly-expanded-v1";
+const CACHE_TTL_MS = 60 * 60 * 1000;
 
-type CachedScan = {
-  ts: number; // timestamp
-  data: ScanResult;
-};
+type CachedScan = { ts: number; data: ScanResult };
 
 export function AnomalyBanner() {
   const [pending, setPending] = useState(false);
@@ -52,25 +45,25 @@ export function AnomalyBanner() {
   const [error, setError] = useState<string | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [cachedAt, setCachedAt] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
-  // Dismiss state + cache localStorage'dan yükle
   useEffect(() => {
     try {
       const dis = localStorage.getItem(STORAGE_KEY);
       if (dis) setDismissed(new Set(JSON.parse(dis)));
 
+      const exp = localStorage.getItem(EXPANDED_KEY);
+      if (exp === "1") setExpanded(true);
+
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const parsed: CachedScan = JSON.parse(cached);
-        const age = Date.now() - parsed.ts;
-        if (age < CACHE_TTL_MS) {
-          // Cache hala taze → onu kullan, AI çağrısı yapma
+        if (Date.now() - parsed.ts < CACHE_TTL_MS) {
           setData(parsed.data);
           setCachedAt(parsed.ts);
-          return; // ilk mount scan'i atla
+          return;
         }
       }
-      // Cache yoksa veya bayatladı → ilk taramayı yap
       scan();
     } catch {
       scan();
@@ -90,6 +83,16 @@ export function AnomalyBanner() {
       localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
       setCachedAt(payload.ts);
     } catch {}
+  }
+
+  function toggle() {
+    setExpanded((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(EXPANDED_KEY, next ? "1" : "0");
+      } catch {}
+      return next;
+    });
   }
 
   function dismiss(metric: string) {
@@ -123,111 +126,162 @@ export function AnomalyBanner() {
 
   const visible = data?.anomalies.filter((a) => !dismissed.has(a.metric)) ?? [];
   const allClear = data && visible.length === 0;
+  const highCount = visible.filter((a) => a.severity === "high").length;
 
+  // Loading durumu — kompakt pill
   if (pending && !data) {
     return (
-      <Card className="border-fuchsia-500/20 bg-gradient-to-br from-fuchsia-500/[0.03] to-indigo-500/[0.02]">
-        <CardContent className="flex items-center gap-3 p-4 text-sm">
-          <Loader2 className="h-4 w-4 animate-spin text-fuchsia-500" />
-          <span className="text-[color:var(--color-muted)]">
-            AI son 7 günü inceliyor, anormallik var mı diye bakıyor...
-          </span>
-        </CardContent>
-      </Card>
+      <Pill
+        tone="muted"
+        icon={<Loader2 className="h-3.5 w-3.5 animate-spin" />}
+        text="AI son 7 günü tarıyor…"
+      />
     );
   }
 
   if (error) {
     return (
-      <Card className="border-amber-500/30 bg-amber-500/[0.04]">
-        <CardContent className="flex items-center justify-between gap-3 p-4 text-xs">
-          <span className="text-amber-700 dark:text-amber-400">
-            AI taraması başarısız: {error}
-          </span>
+      <Pill
+        tone="warning"
+        icon={<AlertTriangle className="h-3.5 w-3.5" />}
+        text={`AI taraması başarısız: ${error}`}
+        action={
           <Button size="sm" variant="ghost" onClick={scan}>
             <RefreshCw className="h-3.5 w-3.5" />
             Tekrar dene
           </Button>
-        </CardContent>
-      </Card>
+        }
+      />
     );
   }
 
   if (allClear) {
     return (
-      <Card className="border-emerald-500/30 bg-emerald-500/[0.03]">
-        <CardContent className="flex flex-wrap items-center gap-3 p-4 text-sm">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-          <span className="flex-1 min-w-0">
-            Anormallik yok — son 7 gün önceki 4 hafta ile uyumlu.
-            {cachedAt && (
-              <span className="ml-1 text-[10px] text-[color:var(--color-muted)]">
-                ({formatCacheAge(cachedAt)})
-              </span>
-            )}
-          </span>
-          <Button
-            size="sm"
-            variant="ghost"
+      <Pill
+        tone="success"
+        icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+        text="Anormallik yok — son 7 gün önceki 4 hafta ile uyumlu."
+        meta={cachedAt ? formatCacheAge(cachedAt) : undefined}
+        action={
+          <button
+            type="button"
             onClick={scan}
             disabled={pending}
+            className="rounded p-1 text-[color:var(--color-muted)] hover:bg-[color:var(--color-fg)]/[0.06]"
+            aria-label="Yenile"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", pending && "animate-spin")} />
-            Yenile
-          </Button>
-        </CardContent>
-      </Card>
+          </button>
+        }
+      />
     );
   }
 
   if (!data) return null;
 
+  // Anormallik VAR — kompakt collapsed başlık + expand edilince detay
   return (
-    <Card className="border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/[0.04] to-indigo-500/[0.03]">
-      <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-fuchsia-500" />
-              AI Proaktif Uyarılar
-              <span className="rounded-full bg-fuchsia-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-700 dark:text-fuchsia-400">
-                {visible.length}
+    <div className="rounded-xl border border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-500/[0.04] to-indigo-500/[0.02]">
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
+        aria-expanded={expanded}
+      >
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-fuchsia-500 to-indigo-500 text-white">
+          <Sparkles className="h-3.5 w-3.5" />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 text-sm font-medium">
+            AI Proaktif Uyarılar
+            <span className="rounded-full bg-fuchsia-500/15 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-fuchsia-700 dark:text-fuchsia-400">
+              {visible.length}
+            </span>
+            {highCount > 0 && (
+              <span className="inline-flex items-center gap-0.5 rounded-full bg-red-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-red-600">
+                <ShieldAlert className="h-2.5 w-2.5" />
+                {highCount} kritik
               </span>
-            </CardTitle>
-            <CardDescription>
-              {data.summary || "Son 7 gün önceki 4 haftaya kıyasla anormal."}
-              {cachedAt && (
-                <span className="ml-1 text-[10px] text-[color:var(--color-muted)]">
-                  · {formatCacheAge(cachedAt)}
-                </span>
-              )}
-            </CardDescription>
+            )}
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={scan}
-            disabled={pending}
-          >
-            <RefreshCw className={cn("h-3.5 w-3.5", pending && "animate-spin")} />
-            Yenile
-          </Button>
+          {!expanded && (
+            <p className="mt-0.5 truncate text-xs text-[color:var(--color-muted)]">
+              {data.summary || `${visible.length} anormallik tespit edildi`}
+              {cachedAt && ` · ${formatCacheAge(cachedAt)}`}
+            </p>
+          )}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2 pt-0">
-        {visible.map((a) => (
-          <AnomalyCard
-            key={a.metric}
-            anomaly={a}
-            onDismiss={() => dismiss(a.metric)}
-          />
-        ))}
-      </CardContent>
-    </Card>
+        <span
+          className="rounded p-1 text-[color:var(--color-muted)] hover:bg-[color:var(--color-fg)]/[0.06]"
+          aria-label="Yenile"
+          onClick={(e) => {
+            e.stopPropagation();
+            scan();
+          }}
+          role="button"
+        >
+          <RefreshCw className={cn("h-3.5 w-3.5", pending && "animate-spin")} />
+        </span>
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 text-[color:var(--color-muted)] transition-transform",
+            expanded && "rotate-180",
+          )}
+        />
+      </button>
+
+      {expanded && (
+        <div className="border-t border-fuchsia-500/15 p-3 space-y-2">
+          {visible.map((a) => (
+            <AnomalyRow
+              key={a.metric}
+              anomaly={a}
+              onDismiss={() => dismiss(a.metric)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
-function AnomalyCard({
+function Pill({
+  tone,
+  icon,
+  text,
+  meta,
+  action,
+}: {
+  tone: "muted" | "success" | "warning";
+  icon: React.ReactNode;
+  text: string;
+  meta?: string;
+  action?: React.ReactNode;
+}) {
+  const toneClass =
+    tone === "success"
+      ? "border-emerald-500/30 bg-emerald-500/[0.04] text-emerald-700 dark:text-emerald-400"
+      : tone === "warning"
+        ? "border-amber-500/30 bg-amber-500/[0.04] text-amber-700 dark:text-amber-400"
+        : "border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.03] text-[color:var(--color-muted)]";
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs",
+        toneClass,
+      )}
+    >
+      <span className="shrink-0">{icon}</span>
+      <span className="flex-1 min-w-0 truncate">{text}</span>
+      {meta && (
+        <span className="shrink-0 text-[10px] opacity-70">{meta}</span>
+      )}
+      {action && <span className="shrink-0">{action}</span>}
+    </div>
+  );
+}
+
+function AnomalyRow({
   anomaly,
   onDismiss,
 }: {
@@ -236,10 +290,10 @@ function AnomalyCard({
 }) {
   const tone =
     anomaly.severity === "high"
-      ? "border-red-500/40 bg-red-500/[0.05]"
+      ? "border-red-500/30 bg-red-500/[0.05]"
       : anomaly.severity === "medium"
-        ? "border-amber-500/30 bg-amber-500/[0.04]"
-        : "border-indigo-500/30 bg-indigo-500/[0.03]";
+        ? "border-amber-500/25 bg-amber-500/[0.04]"
+        : "border-indigo-500/25 bg-indigo-500/[0.03]";
   const iconColor =
     anomaly.severity === "high"
       ? "text-red-500"
@@ -251,32 +305,22 @@ function AnomalyCard({
   const sign = change != null && change > 0 ? "+" : "";
 
   return (
-    <div className={cn("relative rounded-lg border p-3 text-sm", tone)}>
+    <div className={cn("relative rounded-md border p-2.5 text-sm", tone)}>
       <button
         type="button"
         onClick={onDismiss}
-        className="absolute right-2 top-2 rounded p-1 text-[color:var(--color-muted)] hover:bg-[color:var(--color-fg)]/[0.06] hover:text-[color:var(--color-fg)]"
+        className="absolute right-1.5 top-1.5 rounded p-0.5 text-[color:var(--color-muted)] hover:bg-[color:var(--color-fg)]/[0.06] hover:text-[color:var(--color-fg)]"
         title="Yoksay"
       >
         <X className="h-3 w-3" />
       </button>
 
-      <div className="flex items-start gap-2 pr-6">
-        <AlertTriangle className={cn("mt-0.5 h-4 w-4 shrink-0", iconColor)} />
-        <div className="flex-1 space-y-1.5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{anomaly.title}</span>
-            <span
-              className={cn(
-                "rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
-                anomaly.severity === "high"
-                  ? "bg-red-500/15 text-red-700 dark:text-red-400"
-                  : anomaly.severity === "medium"
-                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
-                    : "bg-indigo-500/15 text-indigo-700 dark:text-indigo-400",
-              )}
-            >
-              {anomaly.severity}
+      <div className="flex items-start gap-2 pr-5">
+        <AlertTriangle className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", iconColor)} />
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-sm font-medium leading-tight">
+              {anomaly.title}
             </span>
             {change != null && (
               <span className="rounded-full bg-[color:var(--color-fg)]/[0.06] px-1.5 py-0.5 font-mono text-[10px] tabular-nums">
@@ -290,7 +334,7 @@ function AnomalyCard({
               </span>
             )}
           </div>
-          <p className="text-xs text-[color:var(--color-muted)]">
+          <p className="text-xs leading-relaxed text-[color:var(--color-muted)]">
             {anomaly.explanation}
           </p>
           {anomaly.action && (

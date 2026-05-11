@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 import { AuroraBackground } from "@/components/magic/aurora-background";
 
 export default function AuthLayout({
@@ -15,7 +16,7 @@ export default function AuthLayout({
             className="inline-flex items-center gap-2 text-2xl font-semibold tracking-tight"
           >
             <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-sm">
-              ⌘
+              <Sparkles className="h-4 w-4" />
             </span>
             CommerceOS
           </Link>

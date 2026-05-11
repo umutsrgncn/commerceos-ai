@@ -115,7 +115,7 @@ export function MatchDialog({
           </Button>
         </div>
 
-        <div className="max-h-[65vh] overflow-y-auto p-5 space-y-3">
+        <div className="max-h-[65vh] themed-scroll overflow-y-auto p-5 space-y-3">
           {suggestedOrderId && suggestedConfidence != null && (
             <div className="rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/[0.04] p-3 text-xs">
               <div className="flex items-start gap-2">

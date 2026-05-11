@@ -305,7 +305,7 @@ export default async function InvoiceDetailPage({
               <CopyButton text={invoice.ublXml} />
             </CardHeader>
             <CardContent>
-              <pre className="max-h-96 overflow-auto rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.03] p-3 text-[10px] leading-relaxed text-[color:var(--color-muted)]">
+              <pre className="max-h-96 themed-scroll overflow-auto rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.03] p-3 text-[10px] leading-relaxed text-[color:var(--color-muted)]">
                 <code>{invoice.ublXml}</code>
               </pre>
             </CardContent>

@@ -287,7 +287,7 @@ export function CsvImportClient({
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="themed-scroll overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-[color:var(--color-border)] text-[10px] uppercase tracking-wider text-[color:var(--color-muted)]">

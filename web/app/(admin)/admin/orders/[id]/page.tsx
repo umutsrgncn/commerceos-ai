@@ -205,9 +205,6 @@ export default async function OrderDetailPage({
 
           {/* Online ödeme (iyzico) */}
           <PaymentCard
-            orderId={order.id}
-            orderTotal={order.total}
-            currency={order.currency}
             payments={payments.map((p) => ({
               id: p.id,
               status: p.status,
