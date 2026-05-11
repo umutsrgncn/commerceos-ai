@@ -51,6 +51,7 @@ import {
   type DemoResult,
 } from "@/lib/actions/autopilot-demo";
 import { cn } from "@/lib/cn";
+import { CommerceOSLogo } from "@/components/brand/logo";
 
 const POLL_INTERVAL_MS = 8000;
 const TOAST_DURATION_MS = 5500;
@@ -412,42 +413,45 @@ export function AutoPilotPilot({
           </div>
         )}
 
-        {/* Floating button */}
+        {/* Floating button — otopilot aktifken CommerceOS logosu */}
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           className={cn(
-            "group relative grid h-12 w-12 place-items-center rounded-full text-white shadow-lg transition hover:scale-105 active:scale-95",
+            "group relative grid h-14 w-14 place-items-center rounded-full shadow-lg transition hover:scale-105 active:scale-95",
             enabled
-              ? "bg-gradient-to-br from-fuchsia-500 to-indigo-500 shadow-fuchsia-500/30"
-              : "bg-[color:var(--color-fg)]/[0.85] shadow-black/20",
+              ? "bg-[color:var(--color-bg)] shadow-fuchsia-500/40 ring-2 ring-fuchsia-500/40"
+              : "bg-[color:var(--color-fg)]/[0.85] text-white shadow-black/20",
           )}
           aria-label={enabled ? "Otopilot canlı feed" : "Otopilot pasif"}
-          title={enabled ? "Otopilot AKTİF" : "Otopilot pasif"}
+          title={enabled ? "Otopilot AKTİF — CommerceOS" : "Otopilot pasif"}
         >
           {enabled && (
             <>
-              <span className="absolute inset-0 rounded-full bg-fuchsia-500/40 animate-ping" />
-              <span className="absolute inset-0 rounded-full ring-2 ring-fuchsia-500/30" />
+              <span className="absolute inset-0 rounded-full bg-fuchsia-500/30 animate-ping" />
+              <span className="absolute inset-[-4px] rounded-full bg-gradient-to-br from-fuchsia-500/20 via-indigo-500/15 to-emerald-500/15 blur-md" />
             </>
           )}
-          <span className="relative">
+          <span className="relative flex items-center justify-center">
             {open ? (
-              <ChevronDown className="h-5 w-5" />
+              <ChevronDown className={cn("h-5 w-5", enabled ? "text-fuchsia-600 dark:text-fuchsia-400" : "text-white")} />
             ) : enabled ? (
-              <Sparkles className="h-5 w-5" />
+              <CommerceOSLogo size={36} />
             ) : (
-              <Power className="h-5 w-5" />
+              <Power className="h-5 w-5 text-white" />
             )}
           </span>
-          {/* Status badge */}
+          {/* Status badge — aktifken nabız atan yeşil nokta */}
           <span
             className={cn(
               "absolute -top-1 -right-1 grid h-4 w-4 place-items-center rounded-full text-[8px] font-bold text-white ring-2 ring-[color:var(--color-bg)]",
               enabled ? "bg-emerald-500" : "bg-[color:var(--color-muted)]",
             )}
           >
-            {enabled ? "●" : "○"}
+            {enabled && (
+              <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping" />
+            )}
+            <span className="relative">{enabled ? "●" : "○"}</span>
           </span>
         </button>
       </div>
