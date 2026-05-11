@@ -5,10 +5,14 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import {
+  autoAnalyzeReview,
   autoIssueInvoice,
   autoReplyToReview,
   autoReorderStockIfLow,
+  autoSegmentCustomer,
+  runPriceSuggestionScan,
 } from "@/lib/autopilot/core";
+import { tryAiMatch } from "@/lib/actions/bank";
 
 async function requireSession() {
   const s = await auth();
@@ -98,6 +102,166 @@ export async function demoConfirmOrderAction(): Promise<DemoResult> {
     ok: true,
     message: `${order.orderNumber} CONFIRMED. Otopilot fatura kesti.`,
     entityId: order.id,
+  };
+}
+
+/** Demo: negatif yorum bırak, otopilot flag + analiz tetiklesin. */
+export async function demoNegativeReviewAction(): Promise<DemoResult> {
+  await requireSession();
+
+  const product = await db.product.findFirst({
+    where: { status: "PUBLISHED" },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!product) return { ok: false, error: "Yayında ürün yok." };
+
+  const negativeBodies = [
+    "Çok kötü bir deneyim yaşadım, ürün tamamen bozuk geldi ve müşteri hizmetleri ilgilenmedi.",
+    "Açıklamada yazandan çok farklı, kandırılmış hissettim. İade etmek istiyorum.",
+    "Berbat kalite, parasını hak etmiyor. Asla almayın.",
+  ];
+  const idx = Math.floor(Math.random() * negativeBodies.length);
+
+  const created = await db.productReview.create({
+    data: {
+      productId: product.id,
+      authorName: ["Aslı Çelik", "Burak Öz", "Ceren Aydın"][
+        Math.floor(Math.random() * 3)
+      ],
+      authorEmail: "demo-neg@example.com",
+      rating: [1, 2][Math.floor(Math.random() * 2)],
+      body: negativeBodies[idx],
+      isPublished: false,
+    },
+  });
+
+  // Önce analiz (sentiment + flag), sonra cevap
+  await autoAnalyzeReview(created.id);
+  await autoReplyToReview(created.id);
+
+  revalidatePath("/admin/autopilot");
+  revalidatePath("/admin/reviews");
+
+  return {
+    ok: true,
+    message: `Negatif yorum girdi: ${product.name}. AI analiz + flag + Türkçe özür cevabı yazdı.`,
+    entityId: created.id,
+  };
+}
+
+/** Demo: müşterinin hesabına havale geldi, otopilot AI ile sipariş eşleştirsin. */
+export async function demoBankPaymentAction(): Promise<DemoResult> {
+  await requireSession();
+
+  // PENDING bir sipariş bul (havale yapılacak)
+  const order = await db.order.findFirst({
+    where: { status: "PENDING" },
+    orderBy: { createdAt: "desc" },
+    include: { customer: true },
+  });
+  if (!order) {
+    return {
+      ok: false,
+      error:
+        "PENDING sipariş yok. Önce 'Sipariş onaylansın' demosu için sipariş oluştur.",
+    };
+  }
+
+  // Banka hesabı (varsa kullan, yoksa ilkini al)
+  const account = await db.bankAccount.findFirst({
+    where: { isActive: true },
+  });
+  if (!account) {
+    return {
+      ok: false,
+      error: "Aktif banka hesabı yok. /admin/bank'tan ekle.",
+    };
+  }
+
+  // Sahte havale: müşteri adını + sipariş numarasını açıklamaya yaz
+  const description = `${order.customer.name} - ${order.orderNumber} havale`;
+  const created = await db.bankTransaction.create({
+    data: {
+      bankAccountId: account.id,
+      transactionDate: new Date(),
+      amountMinor: order.total,
+      currency: order.currency,
+      direction: "IN",
+      description,
+      counterpartyName: order.customer.name,
+      reference: order.orderNumber,
+      status: "UNMATCHED",
+    },
+  });
+
+  // AI eşleştirmeyi tetikle
+  const matched = await tryAiMatch(created.id);
+
+  revalidatePath("/admin/autopilot");
+  revalidatePath("/admin/bank");
+  revalidatePath(`/admin/orders/${order.id}`);
+
+  return {
+    ok: true,
+    message: matched
+      ? `Havale geldi: ${order.orderNumber}. AI siparişi otomatik eşleştirdi ve onayladı.`
+      : `Havale geldi: ${order.orderNumber}. AI eşleştirme önerisi oluşturdu (manuel onay bekliyor).`,
+    entityId: order.id,
+  };
+}
+
+/** Demo: rastgele bir müşteriyi seç, otopilot AI segmentleme yapsın. */
+export async function demoSegmentCustomerAction(): Promise<DemoResult> {
+  await requireSession();
+
+  const customer = await db.customer.findFirst({
+    where: {
+      orders: { some: { status: { in: ["DELIVERED", "CONFIRMED", "SHIPPED"] } } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!customer) {
+    return { ok: false, error: "Sipariş geçmişi olan müşteri yok." };
+  }
+
+  await autoSegmentCustomer(customer.id);
+
+  revalidatePath("/admin/autopilot");
+  revalidatePath(`/admin/customers/${customer.id}`);
+
+  return {
+    ok: true,
+    message: `${customer.name} için AI segment + aksiyon önerisi oluşturuldu.`,
+    entityId: customer.id,
+  };
+}
+
+/** Demo: yavaş hareket eden ürünleri tara, otopilot fiyat önerisi yapsın. */
+export async function demoPriceSuggestionAction(): Promise<DemoResult> {
+  await requireSession();
+
+  const result = await runPriceSuggestionScan({ productLimit: 3 });
+
+  revalidatePath("/admin/autopilot");
+  revalidatePath("/admin/products");
+
+  if (result.suggested === 0) {
+    if (result.scanned === 0) {
+      return {
+        ok: false,
+        error:
+          "Fiyat önerisi yapılacak ürün yok (1 hafta+ güncellenmemiş + maliyet fiyatı olan).",
+      };
+    }
+    return {
+      ok: false,
+      error: `${result.scanned} ürün tarandı, AI yeni öneri yapmadı. Otopilot autoSuggestPrice ayarını aç.`,
+    };
+  }
+
+  return {
+    ok: true,
+    message: `AI ${result.suggested} ürün için fiyat önerisi yazdı (${result.scanned} tarandı).`,
   };
 }
 

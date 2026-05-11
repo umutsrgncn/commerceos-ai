@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowUpRight,
+  Banknote,
   Building2,
   CheckCircle2,
   ChevronDown,
@@ -29,7 +30,10 @@ import {
   Power,
   Receipt,
   Settings,
+  ShieldAlert,
   Sparkles,
+  Tag,
+  UserSearch,
   Users,
   X,
   XCircle,
@@ -37,8 +41,12 @@ import {
 } from "lucide-react";
 import { toggleAutoPilotAction } from "@/lib/actions/settings";
 import {
+  demoBankPaymentAction,
   demoConfirmOrderAction,
+  demoNegativeReviewAction,
   demoNewReviewAction,
+  demoPriceSuggestionAction,
+  demoSegmentCustomerAction,
   demoStockDropAction,
   type DemoResult,
 } from "@/lib/actions/autopilot-demo";
@@ -474,7 +482,14 @@ function TabButton({
 
 // ─── Demo tetikleyici ───────────────────────────────────────────────────────
 
-type DemoSim = "review" | "order" | "stock";
+type DemoSim =
+  | "review"
+  | "negative"
+  | "order"
+  | "bank"
+  | "stock"
+  | "segment"
+  | "price";
 
 const DEMO_META: Record<
   DemoSim,
@@ -483,22 +498,41 @@ const DEMO_META: Record<
     description: string;
     expected: string;
     icon: React.ComponentType<{ className?: string }>;
-    accent: string;
+    accent: "amber" | "red" | "emerald" | "blue" | "indigo" | "purple" | "pink";
+    action: () => Promise<DemoResult>;
   }
 > = {
   review: {
-    label: "Müşteri yorumu gelsin",
-    description: "Rastgele bir ürüne demo yorum eklenir",
-    expected: "→ AI yorumu okur, marka diliyle cevap yazar, yayınlar",
+    label: "Pozitif yorum gelsin",
+    description: "5★ demo yorum eklenir",
+    expected: "→ AI markaya uygun teşekkür cevabı yazar, yayınlar",
     icon: MessageSquare,
     accent: "amber",
+    action: demoNewReviewAction,
+  },
+  negative: {
+    label: "Negatif yorum gelsin",
+    description: "1-2★ olumsuz yorum eklenir",
+    expected: "→ AI sentiment analiz + flag + özür cevabı",
+    icon: ShieldAlert,
+    accent: "red",
+    action: demoNegativeReviewAction,
   },
   order: {
     label: "Sipariş onaylansın",
-    description: "Bekleyen bir sipariş CONFIRMED'a alınır",
-    expected: "→ AI e-fatura/e-arşiv keser, kayda alır",
+    description: "PENDING sipariş CONFIRMED'a alınır",
+    expected: "→ AI e-fatura/e-arşiv keser, GİB'e kaydeder",
     icon: Receipt,
     accent: "emerald",
+    action: demoConfirmOrderAction,
+  },
+  bank: {
+    label: "Havale geldi",
+    description: "Müşteri sipariş tutarını yatırır",
+    expected: "→ AI havaleyi siparişle eşleştirir + onaylar",
+    icon: Banknote,
+    accent: "blue",
+    action: demoBankPaymentAction,
   },
   stock: {
     label: "Stok kritiğe düşsün",
@@ -506,67 +540,227 @@ const DEMO_META: Record<
     expected: "→ AI tedarikçiye Türkçe sipariş maili yazar",
     icon: Package,
     accent: "indigo",
+    action: demoStockDropAction,
+  },
+  segment: {
+    label: "VIP segmentleme",
+    description: "Bir müşteri AI ile segmentlenir",
+    expected: "→ AI segment + aksiyon önerisi (loyalty/risky/VIP)",
+    icon: UserSearch,
+    accent: "purple",
+    action: demoSegmentCustomerAction,
+  },
+  price: {
+    label: "Fiyat önerisi",
+    description: "Yavaş hareket eden ürün taranır",
+    expected: "→ AI rekabet bazlı yeni fiyat + gerekçe yazar",
+    icon: Tag,
+    accent: "pink",
+    action: demoPriceSuggestionAction,
   },
 };
+
+const ALL_SIMS: DemoSim[] = [
+  "review",
+  "negative",
+  "order",
+  "bank",
+  "stock",
+  "segment",
+  "price",
+];
+
+const ACCENT_CLASS: Record<string, string> = {
+  amber: "text-amber-600 bg-amber-500/10 group-hover:bg-amber-500/15",
+  red: "text-red-600 bg-red-500/10 group-hover:bg-red-500/15",
+  emerald: "text-emerald-600 bg-emerald-500/10 group-hover:bg-emerald-500/15",
+  blue: "text-blue-600 bg-blue-500/10 group-hover:bg-blue-500/15",
+  indigo: "text-indigo-600 bg-indigo-500/10 group-hover:bg-indigo-500/15",
+  purple: "text-purple-600 bg-purple-500/10 group-hover:bg-purple-500/15",
+  pink: "text-pink-600 bg-pink-500/10 group-hover:bg-pink-500/15",
+};
+
+const AUTO_INTERVAL_MS = 15000; // 15sn aralıklarla rastgele demo
+const AUTO_KEY = "commerceos:autopilot-demo-auto-v1";
 
 function DemoTriggers() {
   const [pending, start] = useTransition();
   const [activeSim, setActiveSim] = useState<DemoSim | null>(null);
   const [feedback, setFeedback] = useState<{
     ok: boolean;
+    sim: DemoSim;
     message: string;
   } | null>(null);
 
-  function run(sim: DemoSim) {
+  // Auto mode
+  const [autoMode, setAutoMode] = useState(false);
+  const [countdown, setCountdown] = useState<number>(AUTO_INTERVAL_MS / 1000);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSimsRef = useRef<DemoSim[]>([]);
+
+  // İlk mount'ta auto state'i yükle (sayfa değişiminde devam etsin)
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(AUTO_KEY);
+      if (v === "1") setAutoMode(true);
+    } catch {}
+  }, []);
+
+  function persistAuto(v: boolean) {
+    try {
+      localStorage.setItem(AUTO_KEY, v ? "1" : "0");
+    } catch {}
+  }
+
+  function pickRandomSim(): DemoSim {
+    // Son 2 demoyu tekrar etmemeye çalış
+    const recent = new Set(lastSimsRef.current);
+    const candidates = ALL_SIMS.filter((s) => !recent.has(s));
+    const pool = candidates.length > 0 ? candidates : ALL_SIMS;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function runSim(sim: DemoSim) {
+    if (pending) return;
     setActiveSim(sim);
     setFeedback(null);
+    lastSimsRef.current = [sim, ...lastSimsRef.current].slice(0, 2);
     start(async () => {
-      let r: DemoResult;
-      if (sim === "review") r = await demoNewReviewAction();
-      else if (sim === "order") r = await demoConfirmOrderAction();
-      else r = await demoStockDropAction();
-
+      const r = await DEMO_META[sim].action();
       setFeedback(
         r.ok
-          ? { ok: true, message: r.message }
-          : { ok: false, message: r.error },
+          ? { ok: true, sim, message: r.message }
+          : { ok: false, sim, message: r.error },
       );
       setActiveSim(null);
     });
   }
 
+  // Auto mode interval
+  useEffect(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (tickRef.current) clearInterval(tickRef.current);
+    if (!autoMode) {
+      setCountdown(AUTO_INTERVAL_MS / 1000);
+      return;
+    }
+    setCountdown(AUTO_INTERVAL_MS / 1000);
+    // Hemen ilk demoyu çalıştır
+    runSim(pickRandomSim());
+    intervalRef.current = setInterval(() => {
+      runSim(pickRandomSim());
+      setCountdown(AUTO_INTERVAL_MS / 1000);
+    }, AUTO_INTERVAL_MS);
+    tickRef.current = setInterval(() => {
+      setCountdown((c) => Math.max(0, c - 1));
+    }, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (tickRef.current) clearInterval(tickRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMode]);
+
+  function toggleAuto() {
+    setAutoMode((v) => {
+      const next = !v;
+      persistAuto(next);
+      return next;
+    });
+  }
+
   return (
-    <div className="space-y-2 px-3 py-3">
-      <div className="flex items-center gap-1.5 rounded-md border border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-500/[0.06] to-indigo-500/[0.04] px-2.5 py-1.5 text-[10px] text-fuchsia-700 dark:text-fuchsia-400">
+    <div className="space-y-2 px-3 py-3 max-h-[60vh] themed-scroll overflow-y-auto">
+      {/* Otomatik mod kontrolü */}
+      <button
+        type="button"
+        onClick={toggleAuto}
+        className={cn(
+          "group relative w-full overflow-hidden rounded-lg border p-2.5 text-left transition",
+          autoMode
+            ? "border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/[0.08] to-indigo-500/[0.06]"
+            : "border-[color:var(--color-border)] bg-[color:var(--color-bg)] hover:border-fuchsia-500/30",
+        )}
+      >
+        {/* Progress bar — otomatik moddayken sıradaki tetiğe sayım */}
+        {autoMode && (
+          <div
+            className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-fuchsia-500 to-indigo-500 transition-all"
+            style={{
+              width: `${((AUTO_INTERVAL_MS / 1000 - countdown) / (AUTO_INTERVAL_MS / 1000)) * 100}%`,
+            }}
+          />
+        )}
+        <div className="flex items-center gap-2.5">
+          <span
+            className={cn(
+              "grid h-8 w-8 shrink-0 place-items-center rounded-lg transition",
+              autoMode
+                ? "bg-gradient-to-br from-fuchsia-500 to-indigo-500 text-white animate-pulse"
+                : "bg-[color:var(--color-fg)]/[0.06] text-[color:var(--color-muted)]",
+            )}
+          >
+            {autoMode ? (
+              <Zap className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold">
+                Otomatik demo modu
+              </span>
+              <span
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                  autoMode
+                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                    : "bg-[color:var(--color-fg)]/[0.06] text-[color:var(--color-muted)]",
+                )}
+              >
+                {autoMode ? "AKTİF" : "KAPALI"}
+              </span>
+            </div>
+            <p className="text-[10px] text-[color:var(--color-muted)]">
+              {autoMode
+                ? `${countdown}sn sonra rastgele bir demo tetiklenecek`
+                : `Her 15sn'de bir rastgele demo otomatik çalıştırır`}
+            </p>
+          </div>
+        </div>
+      </button>
+
+      <div className="flex items-center gap-1.5 rounded-md border border-fuchsia-500/15 bg-gradient-to-r from-fuchsia-500/[0.04] to-indigo-500/[0.03] px-2.5 py-1.5 text-[10px] text-fuchsia-700 dark:text-fuchsia-400">
         <Zap className="h-3 w-3 shrink-0" />
         <span>
-          Olay tetikle, Otopilot canlı tepki versin. Sonuç{" "}
-          <strong>Canlı feed</strong>'de görünür.
+          Olayı manuel tetikle veya <strong>otomatik mod</strong> ile sürekli
+          çalıştır.
         </span>
       </div>
 
-      {(["review", "order", "stock"] as DemoSim[]).map((sim) => {
+      {ALL_SIMS.map((sim) => {
         const meta = DEMO_META[sim];
         const Icon = meta.icon;
         const busy = activeSim === sim && pending;
-        const accentClass =
-          meta.accent === "amber"
-            ? "text-amber-600 bg-amber-500/10 group-hover:bg-amber-500/15"
-            : meta.accent === "emerald"
-              ? "text-emerald-600 bg-emerald-500/10 group-hover:bg-emerald-500/15"
-              : "text-indigo-600 bg-indigo-500/10 group-hover:bg-indigo-500/15";
         return (
           <button
             key={sim}
             type="button"
-            onClick={() => run(sim)}
+            onClick={() => runSim(sim)}
             disabled={pending}
-            className="group flex w-full items-start gap-2.5 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-2.5 text-left transition hover:border-fuchsia-500/40 hover:bg-fuchsia-500/[0.03] disabled:cursor-not-allowed disabled:opacity-50"
+            className={cn(
+              "group flex w-full items-start gap-2.5 rounded-lg border bg-[color:var(--color-bg)] p-2.5 text-left transition hover:border-fuchsia-500/40 hover:bg-fuchsia-500/[0.03] disabled:cursor-not-allowed disabled:opacity-50",
+              busy
+                ? "border-fuchsia-500/40 bg-fuchsia-500/[0.04]"
+                : "border-[color:var(--color-border)]",
+            )}
           >
             <span
               className={cn(
                 "grid h-7 w-7 shrink-0 place-items-center rounded-lg transition",
-                accentClass,
+                ACCENT_CLASS[meta.accent],
               )}
             >
               {busy ? (
@@ -582,7 +776,7 @@ function DemoTriggers() {
               <p className="mt-0.5 text-[10px] text-[color:var(--color-muted)] leading-tight">
                 {meta.description}
               </p>
-              <p className="mt-0.5 text-[10px] font-medium text-fuchsia-600 dark:text-fuchsia-400">
+              <p className="mt-0.5 text-[10px] font-medium text-fuchsia-600 dark:text-fuchsia-400 leading-tight">
                 {meta.expected}
               </p>
             </div>
@@ -604,7 +798,9 @@ function DemoTriggers() {
           ) : (
             <XCircle className="mt-0.5 h-3 w-3 shrink-0" />
           )}
-          <span className="leading-snug">{feedback.message}</span>
+          <span className="leading-snug">
+            <strong>{DEMO_META[feedback.sim].label}:</strong> {feedback.message}
+          </span>
         </div>
       )}
     </div>
