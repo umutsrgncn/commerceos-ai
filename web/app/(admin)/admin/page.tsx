@@ -15,6 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { StatTile } from "@/components/ui/stat-tile";
 import {
   getDashboardStats,
   getRecentOrders,
@@ -78,30 +79,33 @@ export default async function DashboardPage() {
       <AnomalyBanner />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={<TrendingUp className="h-4 w-4" />}
+        <StatTile
+          icon={<TrendingUp className="h-5 w-5" />}
           label="Bugünkü ciro"
           value={formatMoney(stats.revenueToday.total, stats.revenueToday.currency)}
           hint="İptal/iade hariç"
+          tone="emerald"
         />
-        <StatCard
-          icon={<ShoppingCart className="h-4 w-4" />}
+        <StatTile
+          icon={<ShoppingCart className="h-5 w-5" />}
           label="Bugünkü sipariş"
           value={String(stats.ordersToday)}
           hint="İptal hariç"
+          tone="indigo"
         />
-        <StatCard
-          icon={<Users className="h-4 w-4" />}
+        <StatTile
+          icon={<Users className="h-5 w-5" />}
           label="Yeni müşteri"
           value={String(stats.newCustomersThisWeek)}
           hint="Bu hafta"
+          tone="fuchsia"
         />
-        <StatCard
-          icon={<AlertTriangle className="h-4 w-4" />}
+        <StatTile
+          icon={<AlertTriangle className="h-5 w-5" />}
           label="Stok uyarısı"
           value={String(stats.lowStockCount)}
           hint="Yayında & düşük"
-          accent={stats.lowStockCount > 0 ? "danger" : "muted"}
+          tone={stats.lowStockCount > 0 ? "red" : "amber"}
         />
       </div>
 
@@ -227,41 +231,3 @@ export default async function DashboardPage() {
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-  accent = "muted",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint: string;
-  accent?: "muted" | "danger";
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardDescription className="text-xs uppercase tracking-wider">
-            {label}
-          </CardDescription>
-          <span
-            className={
-              accent === "danger"
-                ? "rounded-md bg-red-500/10 p-1.5 text-red-500"
-                : "rounded-md bg-[color:var(--color-fg)]/[0.05] p-1.5 text-[color:var(--color-muted)]"
-            }
-          >
-            {icon}
-          </span>
-        </div>
-        <CardTitle className="text-3xl">{value}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0 text-xs text-[color:var(--color-muted)]">
-        {hint}
-      </CardContent>
-    </Card>
-  );
-}

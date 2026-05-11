@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatTile } from "@/components/ui/stat-tile";
 import { getSettings } from "@/lib/queries/settings";
 import {
   getAutoPilotStats,
@@ -147,33 +148,33 @@ export default async function AutoPilotPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          icon={<Sparkles className="h-4 w-4" />}
+        <StatTile
+          icon={<Sparkles className="h-5 w-5" />}
           label="Bu hafta aksiyon"
           value={String(stats.weekTotal)}
           hint={`Toplam ${stats.total}`}
-          tone="info"
+          tone="fuchsia"
         />
-        <StatCard
-          icon={<CheckCircle2 className="h-4 w-4" />}
+        <StatTile
+          icon={<CheckCircle2 className="h-5 w-5" />}
           label="Yapıldı"
           value={String(stats.executed)}
           hint="AI otomatik gerçekleştirdi"
-          tone="success"
+          tone="emerald"
         />
-        <StatCard
-          icon={<Clock className="h-4 w-4" />}
+        <StatTile
+          icon={<Clock className="h-5 w-5" />}
           label="Bekleyen"
           value={String(stats.pending)}
           hint="Manuel onay öneriliyor"
-          tone={stats.pending > 0 ? "warning" : "neutral"}
+          tone={stats.pending > 0 ? "amber" : "muted"}
         />
-        <StatCard
-          icon={<XCircle className="h-4 w-4" />}
+        <StatTile
+          icon={<XCircle className="h-5 w-5" />}
           label="Başarısız + atlandı"
           value={String(stats.failed + stats.skipped)}
           hint={`${stats.failed} başarısız · ${stats.skipped} atlandı`}
-          tone={stats.failed > 0 ? "danger" : "neutral"}
+          tone={stats.failed > 0 ? "red" : "muted"}
         />
       </div>
 
@@ -331,52 +332,3 @@ function ResultLink({ resultRef }: { resultRef: string }) {
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-  tone = "neutral",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "neutral" | "success" | "warning" | "danger" | "info";
-}) {
-  const toneClass =
-    tone === "success"
-      ? "bg-emerald-500/10 text-emerald-600"
-      : tone === "info"
-        ? "bg-fuchsia-500/10 text-fuchsia-600"
-        : tone === "warning"
-          ? "bg-amber-500/10 text-amber-600"
-          : tone === "danger"
-            ? "bg-red-500/10 text-red-600"
-            : "bg-[color:var(--color-fg)]/[0.05] text-[color:var(--color-muted)]";
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-3 p-4">
-        <span
-          className={cn(
-            "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
-            toneClass,
-          )}
-        >
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-            {label}
-          </div>
-          <div className="text-xl font-semibold tabular-nums">{value}</div>
-          {hint && (
-            <div className="mt-0.5 truncate text-[10px] text-[color:var(--color-muted)]">
-              {hint}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

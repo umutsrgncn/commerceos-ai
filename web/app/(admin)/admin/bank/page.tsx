@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { StatTile } from "@/components/ui/stat-tile";
 import {
   getBankStats,
   listBankTransactions,
@@ -108,28 +109,29 @@ export default async function BankPage({
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          icon={<Wallet className="h-4 w-4" />}
+        <StatTile
+          icon={<Wallet className="h-5 w-5" />}
           label="Toplam işlem"
           value={String(stats.total)}
           hint={`${stats.matched} eşleşti · ${stats.unmatched} bekliyor`}
+          tone="indigo"
         />
-        <StatCard
-          icon={<TrendingUp className="h-4 w-4" />}
+        <StatTile
+          icon={<TrendingUp className="h-5 w-5" />}
           label="Bu ay tahsilat"
           value={formatMoney(stats.monthInflowMinor, "TRY")}
           hint={`${stats.monthInflowCount} havale`}
-          tone="success"
+          tone="emerald"
         />
-        <StatCard
-          icon={<Sparkles className="h-4 w-4" />}
+        <StatTile
+          icon={<Sparkles className="h-5 w-5" />}
           label="AI başarı oranı"
           value={`%${stats.matchRate}`}
           hint={`${stats.autoMatched} otomatik · ${stats.manualMatched} manuel`}
-          tone={stats.matchRate >= 70 ? "success" : "neutral"}
+          tone={stats.matchRate >= 70 ? "fuchsia" : "amber"}
         />
-        <StatCard
-          icon={<CircleAlert className="h-4 w-4" />}
+        <StatTile
+          icon={<CircleAlert className="h-5 w-5" />}
           label="Onay bekleyen"
           value={String(stats.unmatched)}
           hint={
@@ -137,7 +139,7 @@ export default async function BankPage({
               ? "AI önerisi varsa rozetli, manuel onayla"
               : "Tüm tahsilatlar eşleşti"
           }
-          tone={stats.unmatched > 0 ? "warning" : "success"}
+          tone={stats.unmatched > 0 ? "amber" : "emerald"}
         />
       </div>
 
@@ -428,50 +430,3 @@ function FilterChip({
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-  tone = "neutral",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "neutral" | "success" | "warning" | "danger";
-}) {
-  const toneClass =
-    tone === "success"
-      ? "bg-emerald-500/10 text-emerald-600"
-      : tone === "warning"
-        ? "bg-amber-500/10 text-amber-600"
-        : tone === "danger"
-          ? "bg-red-500/10 text-red-600"
-          : "bg-[color:var(--color-fg)]/[0.05] text-[color:var(--color-muted)]";
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-3 p-4">
-        <span
-          className={cn(
-            "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
-            toneClass,
-          )}
-        >
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-            {label}
-          </div>
-          <div className="text-xl font-semibold tabular-nums">{value}</div>
-          {hint && (
-            <div className="mt-0.5 truncate text-[10px] text-[color:var(--color-muted)]">
-              {hint}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

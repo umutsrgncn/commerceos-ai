@@ -181,6 +181,7 @@ async function cleanup() {
   await db.inventoryAdjustment.deleteMany({});
   await db.inventory.deleteMany({});
   await db.expense.deleteMany({});
+  await db.scheduledPayment.deleteMany({});
   await db.discount.deleteMany({});
   await db.salesGoal.deleteMany({});
   await db.product.deleteMany({});
@@ -808,6 +809,42 @@ async function seedExpenses(adminId: string | null) {
   console.log(`  ✓ ${count} gider (${recurringTemplates.length} recurring template + ${count - recurringTemplates.length * 12} ad-hoc)`);
 }
 
+// ─── Scheduled Payments (kira, maaş, vergi vb. gelecek ödemeler) ────────────
+
+async function seedScheduledPayments() {
+  const items = [
+    { name: "Personel maaşları", amount: 4800000, category: "PAYROLL", dueDay: 5, vendor: "Personel", notes: "Aylık net — 6 kişi" },
+    { name: "Dükkan kirası", amount: 1750000, category: "RENT", dueDay: 1, vendor: "Mülk sahibi", notes: "Levent şube" },
+    { name: "KDV beyanı", amount: 350000, category: "TAXES", dueDay: 26, vendor: "GİB", notes: "Aylık KDV" },
+    { name: "SGK primi", amount: 720000, category: "TAXES", dueDay: 23, vendor: "SGK", notes: "Personel SGK" },
+    { name: "İnternet + telefon", amount: 95000, category: "UTILITIES", dueDay: 15, vendor: "Türk Telekom", notes: "Fiber 1000" },
+    { name: "Elektrik faturası", amount: 220000, category: "UTILITIES", dueDay: 18, vendor: "BEDAŞ", notes: "Aylık ticari" },
+    { name: "SaaS abonelikleri", amount: 88000, category: "SOFTWARE", dueDay: 10, vendor: "Çeşitli", notes: "Shopify+Mailchimp+Klaviyo" },
+    { name: "Kargo sözleşmesi avansı", amount: 250000, category: "SHIPPING", dueDay: 8, vendor: "Aras Kargo", notes: "Aylık avans" },
+  ];
+  const startOfYear = new Date(new Date().getFullYear(), 0, 1);
+  for (const it of items) {
+    const start = new Date(startOfYear);
+    start.setDate(it.dueDay);
+    await db.scheduledPayment.create({
+      data: {
+        name: it.name,
+        amount: it.amount,
+        currency: "TRY",
+        category: it.category as never,
+        recurrence: "MONTHLY",
+        dueDay: it.dueDay,
+        startDate: start,
+        endDate: null,
+        active: true,
+        vendor: it.vendor,
+        notes: it.notes,
+      },
+    });
+  }
+  console.log(`  ✓ ${items.length} gelecek/tekrarlayan ödeme`);
+}
+
 // ─── Sales Goals ────────────────────────────────────────────────────────────
 
 async function seedGoals() {
@@ -1056,6 +1093,7 @@ async function main() {
     where: { email: "demo@commerceos.dev" },
   });
   await seedExpenses(admin?.id ?? null);
+  await seedScheduledPayments();
   await seedGoals();
 
   // Bank tx için order id'leri

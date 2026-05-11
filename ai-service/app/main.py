@@ -24,6 +24,7 @@ from app.routers import (
     products,
     receipt_ocr,
     reviews,
+    turnaround,
 )
 
 settings = get_settings()
@@ -56,6 +57,7 @@ app.include_router(finance.router)
 app.include_router(bank.router)
 app.include_router(receipt_ocr.router)
 app.include_router(cashflow.router)
+app.include_router(turnaround.router)
 app.include_router(anomaly.router)
 app.include_router(pricing.router)
 app.include_router(campaigns.router)

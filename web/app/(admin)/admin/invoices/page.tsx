@@ -13,6 +13,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { StatTile } from "@/components/ui/stat-tile";
 import { listInvoices, getInvoiceStats } from "@/lib/queries/invoices";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -78,32 +79,33 @@ export default async function InvoicesPage({
 
       {/* Stats — 4 kart */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          icon={<FileText className="h-4 w-4" />}
+        <StatTile
+          icon={<FileText className="h-5 w-5" />}
           label="Toplam fatura"
           value={String(stats.total)}
           hint={`${stats.efatura} E-Fatura · ${stats.earsiv} E-Arşiv`}
+          tone="indigo"
         />
-        <StatCard
-          icon={<TrendingUp className="h-4 w-4" />}
+        <StatTile
+          icon={<TrendingUp className="h-5 w-5" />}
           label="Kabul tutarı"
           value={formatMoney(stats.acceptedTotalMinor, "TRY")}
           hint={`KDV: ${formatMoney(stats.taxMinor, "TRY")}`}
-          tone="success"
+          tone="emerald"
         />
-        <StatCard
-          icon={<CheckCircle2 className="h-4 w-4" />}
+        <StatTile
+          icon={<CheckCircle2 className="h-5 w-5" />}
           label="Kabul oranı"
           value={`%${acceptanceRate}`}
           hint={`${stats.accepted} / ${stats.total} fatura`}
-          tone={acceptanceRate >= 90 ? "success" : "neutral"}
+          tone={acceptanceRate >= 90 ? "emerald" : "amber"}
         />
-        <StatCard
-          icon={<XCircle className="h-4 w-4" />}
+        <StatTile
+          icon={<XCircle className="h-5 w-5" />}
           label="Sorunlu"
           value={String(stats.rejected + stats.cancelled)}
           hint={`${stats.rejected} reddedildi · ${stats.cancelled} iptal`}
-          tone={stats.rejected > 0 ? "danger" : "neutral"}
+          tone={stats.rejected > 0 ? "red" : "muted"}
         />
       </div>
 
@@ -343,48 +345,3 @@ function DocChip({ type }: { type: string }) {
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-  tone = "neutral",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "neutral" | "success" | "danger";
-}) {
-  const toneClass =
-    tone === "success"
-      ? "bg-emerald-500/10 text-emerald-600"
-      : tone === "danger"
-        ? "bg-red-500/10 text-red-600"
-        : "bg-[color:var(--color-fg)]/[0.05] text-[color:var(--color-muted)]";
-  return (
-    <Card>
-      <CardContent className="flex items-start gap-3 p-4">
-        <span
-          className={cn(
-            "grid h-9 w-9 shrink-0 place-items-center rounded-lg",
-            toneClass
-          )}
-        >
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-            {label}
-          </div>
-          <div className="text-xl font-semibold tabular-nums">{value}</div>
-          {hint && (
-            <div className="mt-0.5 truncate text-[10px] text-[color:var(--color-muted)]">
-              {hint}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

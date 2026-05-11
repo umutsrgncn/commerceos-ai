@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TrendingUp } from "lucide-react";
+import { Receipt, ShoppingCart, TrendingUp } from "lucide-react";
 
 import {
   Card,
@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { StatTile } from "@/components/ui/stat-tile";
 import {
   getRevenueTrend,
   getTopProducts,
@@ -77,34 +78,27 @@ export default async function AnalyticsPage({
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wider">
-              Toplam ciro
-            </CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {formatMoney(totalRevenue, "TRY")}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wider">
-              Sipariş
-            </CardDescription>
-            <CardTitle className="text-3xl tabular-nums">{totalOrders}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs uppercase tracking-wider">
-              Ortalama sepet
-            </CardDescription>
-            <CardTitle className="text-3xl tabular-nums">
-              {formatMoney(avgBasket, "TRY")}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+        <StatTile
+          icon={<TrendingUp className="h-5 w-5" />}
+          label="Toplam ciro"
+          value={formatMoney(totalRevenue, "TRY")}
+          hint={`Son ${days} gün`}
+          tone="emerald"
+        />
+        <StatTile
+          icon={<ShoppingCart className="h-5 w-5" />}
+          label="Sipariş"
+          value={String(totalOrders)}
+          hint={`Son ${days} gün`}
+          tone="indigo"
+        />
+        <StatTile
+          icon={<Receipt className="h-5 w-5" />}
+          label="Ortalama sepet"
+          value={formatMoney(avgBasket, "TRY")}
+          hint={`Sipariş başına ortalama`}
+          tone="fuchsia"
+        />
       </div>
 
       <Card>

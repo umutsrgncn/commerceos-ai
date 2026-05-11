@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { StatTile } from "@/components/ui/stat-tile";
 import {
   listCategoryOptions,
   listCategoryTree,
@@ -55,28 +56,28 @@ export default async function CategoriesPage() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatTile
-          icon={<FolderOpen className="h-4 w-4" />}
+          icon={<FolderOpen className="h-5 w-5" />}
           label="Toplam"
           value={String(total)}
           tone="indigo"
         />
         <StatTile
-          icon={<Layers className="h-4 w-4" />}
+          icon={<Layers className="h-5 w-5" />}
           label="Kök / Alt"
           value={`${rootCount} / ${subCount}`}
-          tone="muted"
+          tone="sky"
         />
         <StatTile
-          icon={<Package className="h-4 w-4" />}
+          icon={<Package className="h-5 w-5" />}
           label="Toplam ürün"
           value={String(totalProducts)}
-          tone="muted"
+          tone="emerald"
         />
         <StatTile
-          icon={<FolderTree className="h-4 w-4" />}
+          icon={<FolderTree className="h-5 w-5" />}
           label="En derin seviye"
           value={String(maxDepth)}
-          tone="muted"
+          tone="fuchsia"
         />
       </div>
 
@@ -123,34 +124,3 @@ export default async function CategoriesPage() {
   );
 }
 
-function StatTile({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tone: "muted" | "indigo";
-}) {
-  const toneClass =
-    tone === "indigo"
-      ? "bg-indigo-500/10 text-indigo-500"
-      : "bg-[color:var(--color-fg)]/[0.05] text-[color:var(--color-muted)]";
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <span className={cn("grid h-9 w-9 place-items-center rounded-lg", toneClass)}>
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <div className="truncate text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-            {label}
-          </div>
-          <div className="text-xl font-semibold tabular-nums">{value}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}

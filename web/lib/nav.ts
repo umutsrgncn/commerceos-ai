@@ -4,6 +4,7 @@ import {
   Boxes,
   Building,
   Building2,
+  CalendarClock,
   FolderTree,
   LayoutDashboard,
   MessageSquare,
@@ -43,6 +44,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/admin/analytics", label: "Analitik", icon: BarChart3, group: "main" },
 
   { href: "/admin/finance", label: "Finans", icon: TrendingUp, group: "finance" },
+  { href: "/admin/finance/scheduled", label: "Gelecek ödemeler", icon: CalendarClock, group: "finance" },
   { href: "/admin/expenses", label: "Giderler", icon: Wallet, group: "finance" },
   { href: "/admin/invoices", label: "E-Fatura", icon: Receipt, group: "finance" },
   { href: "/admin/bank", label: "Banka", icon: Building, group: "finance" },

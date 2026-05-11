@@ -21,6 +21,7 @@ Frontend bu yanıtı satır bazlı JSON event stream olarak alır:
 import json
 import logging
 from collections.abc import AsyncIterator
+from datetime import date
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -39,8 +40,13 @@ log = logging.getLogger(__name__)
 
 MAX_TOOL_TURNS = 6
 
-AGENT_SYSTEM_PROMPT = f"""Sen CommerceOS yönetici panelinin AI asistanısın.
+AGENT_SYSTEM_PROMPT_TEMPLATE = """Sen CommerceOS yönetici panelinin AI asistanısın.
 Mağaza sahibi/yöneticisi sana panel verisi hakkında sorular sorar. Türkçe konuş.
+
+⏰ BUGÜNÜN TARİHİ: {today_iso} ({today_tr})
+Kullanıcı "geçen ay", "bu hafta", "2 mayıs" gibi yıl belirtmezse bu tarihi
+referans al. Eğitim verisindeki yılları DEĞİL, yukarıdaki bugünün tarihini
+kullan. Sorgularda yıl varsayımı YAPMAN GEREKİYORSA bu yılın yılı = {year}.
 
 ARAÇLAR:
 - query_database(sql, explanation?): Postgres'e SELECT cümlesi gönder.
@@ -78,6 +84,36 @@ KURALLAR:
 5. Sorgu hata verirse hatayı oku, düzelt, tekrar çağır (max 6 tur).
 6. Cevapların kısa ve aksiyon önerili olsun. Pazarlama dili kullanma.
 
+7. 🚫 GİZLİLİK — KESİNLİKLE UYULACAK 🚫
+   Kullanıcı son kullanıcıdır, mühendis değil. Aşağıdakileri ASLA cevabında
+   gösterme veya açıklama:
+     • SQL kodu, sorgu metni, kod blokları (``` veya satır içi `SELECT...`)
+     • Tablo isimleri: "Order", "Expense", "ScheduledPayment" vb. — bunların
+       yerine 'sipariş kayıtları', 'gider tablosu', 'ödeme planı' de
+     • Kolon isimleri: createdAt, totalMinor, status vb. — yerine 'sipariş
+       tarihi', 'toplam tutar', 'durum' Türkçe açıklama
+     • Yapılan teknik adımlar: "JOIN attım", "GROUP BY kullandım" yasak
+   "Ciroyu nasıl hesapladın / sorgun ne / kodu göster" gibi soru gelirse:
+   sadece YÜKSEK SEVİYE Türkçe açıklama yap. Örnek doğru cevap:
+     "Son 30 gündeki tamamlanmış siparişlerin günlük toplamını çıkardım,
+      kuruşu liraya çevirdim ve grafiğe aldım."
+   Örnek YANLIŞ cevap (sızıntı):
+     "SELECT DATE(createdAt) FROM Order WHERE..." ← BU CEVAP YASAK.
+
+8. ⏱ TARİH KAPSAMI — kullanıcı yıl belirtmezse:
+   • "2 mayıs", "geçen pazartesi", "ocak ayında" gibi yıl yoksa: ÖNCE
+     CURRENT_DATE'in yılı varsay (örn. bugün 2026'daysa → 2026-05-02).
+   • Sonuç boş gelirse direkt "veri yok" DEME. Şu fallback'i uygula:
+     - Önce o tarih için DB'deki en yakın aktivite tarihini bul:
+       `SELECT MIN(DATE("createdAt")), MAX(DATE("createdAt")) FROM "Order"`
+       veya o entity için min/max sorgusu çek
+     - Sonra "2 Mayıs 2026'da kayıt yok ama 2 Mayıs 2025'te 4 sipariş var,
+       onu mu istersin?" gibi yardımcı bir cevap ver
+   • Saatlik granül lazımsa `EXTRACT(HOUR FROM ...)` kullan. Türkiye saati
+     varsayılır (DB UTC saklasa bile yaklaşık).
+   • Date aralık formatı: `DATE("createdAt") = DATE '2026-05-02'` ya da
+     `"createdAt" >= '2026-05-02' AND "createdAt" < '2026-05-03'`.
+
 GRAFİK KULLANIMI (ÇOK ÖNEMLİ):
 Aşağıdaki SORU TÜRLERİNDE render_chart MUTLAKA çağırılmalı — kullanıcı
 "grafik" demese bile:
@@ -114,7 +150,25 @@ Adımlar:
   2. render_chart: type='bar', title='Sipariş Durum Dağılımı',
      labels=['Beklemede', 'Onaylandı', 'Kargoda', ...],
      values=[3, 12, 5, ...], unit='adet'
-  3. Kısa yorum: "Çoğunluk onaylandı durumunda. 5 sipariş hâlâ kargoda."""
+  3. Kısa yorum: "Çoğunluk onaylandı durumunda. 5 sipariş hâlâ kargoda."
+"""
+
+
+_TR_MONTHS = [
+    "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+    "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+]
+
+
+def _agent_system_prompt() -> str:
+    today = date.today()
+    today_tr = f"{today.day} {_TR_MONTHS[today.month - 1]} {today.year}"
+    return AGENT_SYSTEM_PROMPT_TEMPLATE.format(
+        today_iso=today.isoformat(),
+        today_tr=today_tr,
+        year=today.year,
+        DATABASE_SCHEMA_DOC=DATABASE_SCHEMA_DOC,
+    )
 
 
 class AgentRequest(BaseModel):
@@ -151,7 +205,7 @@ async def _agent_loop(messages: list[dict]) -> AsyncIterator[bytes]:
     contents = _build_contents(messages)
 
     config = types.GenerateContentConfig(
-        system_instruction=AGENT_SYSTEM_PROMPT,
+        system_instruction=_agent_system_prompt(),
         temperature=0.4,
         tools=TOOLS,
     )

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import {
   ArrowDown,
+  ArrowRight,
   ArrowUp,
+  CalendarClock,
   Coins,
   TrendingDown,
   TrendingUp,
@@ -21,6 +23,8 @@ import {
   getCurrentMonthRevenue,
   getGoal,
 } from "@/lib/queries/goals";
+import { listUpcomingOccurrences } from "@/lib/queries/scheduled-payments";
+import { StatTile } from "@/components/ui/stat-tile";
 import {
   EXPENSE_CATEGORY_LABELS,
   type ExpenseCategoryValue,
@@ -30,6 +34,7 @@ import { cn } from "@/lib/cn";
 import { CashflowChart } from "./components/cashflow-chart";
 import { CashflowForecast } from "./components/cashflow-forecast";
 import { FinanceAiPanel } from "./components/finance-ai-panel";
+import { TurnaroundPanel } from "./components/turnaround-panel";
 
 export const metadata = { title: "Finans — CommerceOS" };
 
@@ -55,12 +60,20 @@ export default async function FinancePage({
   from.setDate(from.getDate() - days + 1);
   from.setHours(0, 0, 0, 0);
 
-  const [pl, cashflow, currentGoal, currentMonthRev] = await Promise.all([
-    getProfitLoss(from, to),
-    getCashFlow(days),
-    getGoal(currentPeriod()),
-    getCurrentMonthRevenue(),
-  ]);
+  const next30From = new Date();
+  const next30To = new Date();
+  next30To.setDate(next30To.getDate() + 30);
+
+  const [pl, cashflow, currentGoal, currentMonthRev, upcomingNext30] =
+    await Promise.all([
+      getProfitLoss(from, to),
+      getCashFlow(days),
+      getGoal(currentPeriod()),
+      getCurrentMonthRevenue(),
+      listUpcomingOccurrences(next30From, next30To),
+    ]);
+
+  const upcomingTotalMinor = upcomingNext30.reduce((s, o) => s + o.amount, 0);
 
   const goalProgressPct = currentGoal
     ? Math.min(100, (currentMonthRev / currentGoal.targetAmount) * 100)
@@ -96,33 +109,33 @@ export default async function FinancePage({
 
       {/* P&L stat tile'ları */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <PLTile
-          icon={<ArrowUp className="h-4 w-4" />}
+        <StatTile
+          icon={<ArrowUp className="h-5 w-5" />}
           label="Net Gelir"
           value={formatMoney(pl.revenueNet, "TRY")}
           hint={`Brüt ${formatMoney(pl.revenueGross, "TRY")} − iade ${formatMoney(pl.refunds, "TRY")}`}
-          tone="success"
+          tone="emerald"
         />
-        <PLTile
-          icon={<ArrowDown className="h-4 w-4" />}
+        <StatTile
+          icon={<ArrowDown className="h-5 w-5" />}
           label="Gider"
           value={formatMoney(pl.expenseTotal, "TRY")}
           hint={`${pl.byCategory.length} kategoride`}
-          tone="danger"
+          tone="red"
         />
-        <PLTile
-          icon={<Coins className="h-4 w-4" />}
+        <StatTile
+          icon={<Coins className="h-5 w-5" />}
           label="İade"
           value={formatMoney(pl.refunds, "TRY")}
           hint="Pending + completed"
-          tone="warning"
+          tone="amber"
         />
-        <PLTile
+        <StatTile
           icon={
             pl.netProfit >= 0 ? (
-              <TrendingUp className="h-4 w-4" />
+              <TrendingUp className="h-5 w-5" />
             ) : (
-              <TrendingDown className="h-4 w-4" />
+              <TrendingDown className="h-5 w-5" />
             )
           }
           label="Net Kâr"
@@ -132,7 +145,7 @@ export default async function FinancePage({
               ? `Marj %${((pl.netProfit / pl.revenueNet) * 100).toFixed(1)}`
               : "—"
           }
-          tone={pl.netProfit >= 0 ? "success" : "danger"}
+          tone={pl.netProfit >= 0 ? "emerald" : "red"}
           highlight
         />
       </div>
@@ -184,6 +197,77 @@ export default async function FinancePage({
         </CardContent>
       </Card>
 
+      {/* Gelecek ödemeler özet kartı */}
+      <Card className="border-indigo-500/30 bg-indigo-500/[0.03]">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-indigo-500" />
+              Önümüzdeki 30 gün — kesin çıkışlar
+            </CardTitle>
+            <CardDescription>
+              Maaş, kira, vergi, abonelik — {upcomingNext30.length} ödeme,
+              toplam{" "}
+              <strong className="text-[color:var(--color-fg)]">
+                {formatMoney(upcomingTotalMinor, "TRY")}
+              </strong>
+            </CardDescription>
+          </div>
+          <Link
+            href="/admin/finance/scheduled"
+            className="inline-flex items-center gap-1 self-start rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-1.5 text-xs font-medium hover:bg-[color:var(--color-fg)]/[0.04]"
+          >
+            Tümünü yönet
+            <ArrowRight className="h-3 w-3" />
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {upcomingNext30.length === 0 ? (
+            <p className="text-xs text-[color:var(--color-muted)]">
+              Bu ay için planlı ödeme tanımlanmamış.{" "}
+              <Link
+                href="/admin/finance/scheduled"
+                className="underline hover:text-[color:var(--color-fg)]"
+              >
+                Şimdi ekle
+              </Link>
+              .
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {upcomingNext30.slice(0, 6).map((o) => (
+                <li
+                  key={`${o.paymentId}-${o.date.toISOString()}`}
+                  className="grid grid-cols-12 items-center gap-2 text-xs"
+                >
+                  <span className="col-span-2 font-mono tabular-nums text-[10px] text-[color:var(--color-muted)]">
+                    {o.date.toLocaleDateString("tr-TR", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                  <span className="col-span-6 truncate">{o.name}</span>
+                  <span className="col-span-2 truncate text-[10px] text-[color:var(--color-muted)]">
+                    {EXPENSE_CATEGORY_LABELS[o.category as ExpenseCategoryValue]}
+                  </span>
+                  <span className="col-span-2 text-right font-mono tabular-nums">
+                    {formatMoney(o.amount, "TRY")}
+                  </span>
+                </li>
+              ))}
+              {upcomingNext30.length > 6 && (
+                <li className="text-[10px] text-[color:var(--color-muted)] pt-1">
+                  +{upcomingNext30.length - 6} daha…
+                </li>
+              )}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* AI Turnaround Plan (3 ay) — grafiksel kanıt */}
+      <TurnaroundPanel />
+
       {/* AI Cash flow forecast (önümüzdeki 30 gün) */}
       <CashflowForecast />
 
@@ -202,58 +286,6 @@ export default async function FinancePage({
         goalProgressPct={goalProgressPct}
       />
     </div>
-  );
-}
-
-function PLTile({
-  icon,
-  label,
-  value,
-  hint,
-  tone,
-  highlight,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  hint?: string;
-  tone: "success" | "danger" | "warning" | "muted";
-  highlight?: boolean;
-}) {
-  const toneClass =
-    tone === "success"
-      ? "bg-emerald-500/10 text-emerald-500"
-      : tone === "danger"
-        ? "bg-red-500/10 text-red-500"
-        : tone === "warning"
-          ? "bg-amber-500/10 text-amber-500"
-          : "bg-[color:var(--color-fg)]/[0.05] text-[color:var(--color-muted)]";
-  return (
-    <Card className={cn(highlight && "border-[color:var(--color-accent)]/40")}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between">
-          <span
-            className={cn(
-              "grid h-9 w-9 place-items-center rounded-lg",
-              toneClass
-            )}
-          >
-            {icon}
-          </span>
-        </div>
-        <div className="mt-3">
-          <div className="text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-            {label}
-          </div>
-          <div className="mt-1 text-2xl font-semibold tabular-nums">{value}</div>
-          {hint && (
-            <div className="mt-0.5 text-[10px] text-[color:var(--color-muted)]">
-              {hint}
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 

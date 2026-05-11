@@ -32,14 +32,16 @@ HISTORY_DAYS = 90
 
 FORECAST_SYSTEM = """Sen bir finansal analiz asistanısın. Türkçe yanıt veriyorsun.
 Bir e-ticaret mağazasının son 90 günlük gelir/gider verisi + bekleyen
-siparişleri verilecek. Sen önümüzdeki 30 gün için günlük cash flow
-projeksiyonu üreteceksin.
+siparişleri + KESİN gelecek ödemeleri (maaş, kira, vergi, abonelik)
+verilecek. Sen önümüzdeki 30 gün için günlük cash flow projeksiyonu
+üreteceksin.
 
 PROJEKSIYON YÖNTEMİ:
 - Gelir: bekleyen siparişler tahmini teslim tarihinde + son 90 gün
   ortalama günlük satış (ağırlıklı, yakın günler ağırlıklı)
-- Gider: tekrarlayan kategori ortalamaları aynı tarih aralıklarında
-  (örn. RENT ayda bir, PAYROLL ayda bir, COGS satış oranlı)
+- Gider: ⚠️ KESİN ÖDEMELER bölümündeki her satır, vade gününde MUTLAKA
+  out_minor olarak eklenmeli (maaş/kira/vergi kaçırılmaz). Bunlara ek
+  olarak tekrarlayan kategori ortalamalarını ad-hoc gider olarak ekle.
 - Bakiye: günlük (gelir - gider) cumulative
 
 ÇIKTI: SADECE JSON, başka metin yok:
@@ -115,6 +117,18 @@ async def _expense_category_rollup(days: int) -> list[dict[str, Any]]:
     return await fetch_rows(sql, 20)
 
 
+async def _active_scheduled_payments() -> list[dict[str, Any]]:
+    """Aktif scheduled ödemeleri (maaş, kira, abonelik) çek."""
+    sql = """
+    SELECT id, name, amount, category, recurrence, "dueDay" AS due_day,
+           "startDate" AS start_date, "endDate" AS end_date, vendor
+    FROM "ScheduledPayment"
+    WHERE active = true
+    ORDER BY amount DESC
+    """
+    return await fetch_rows(sql, 100)
+
+
 # ─── Models ─────────────────────────────────────────────────────────────────
 
 
@@ -168,18 +182,25 @@ def _extract_json(text: str) -> dict | None:
 @router.post("/cashflow/forecast", response_model=ForecastResponse)
 async def cashflow_forecast() -> ForecastResponse:
     rev_rows, exp_rows, pend_rows, cat_rows = await _gather_history()
+    sched_rows = await _active_scheduled_payments()
 
     # 90 günlük net cash (gelir - gider) starting balance kabul edilir
     total_revenue = sum(int(r["gelir"] or 0) for r in rev_rows)
     total_expense = sum(int(r["amount"] or 0) for r in exp_rows)
     starting_balance = total_revenue - total_expense
 
-    # Gemini'ye sun
     today = date.today()
+
+    # 30 gün boyunca düşecek scheduled ödemeleri açalım
+    sched_occurrences = _expand_scheduled(sched_rows, today, FORECAST_DAYS)
+    total_scheduled = sum(o["amount"] for o in sched_occurrences)
+
+    # Gemini'ye sun
     prompt_lines = [
         f"BUGÜN: {today.isoformat()}",
         f"BAŞLANGIÇ BAKİYESİ (son {HISTORY_DAYS}g net): {starting_balance / 100:.2f} TL",
         f"BEKLEYEN SİPARİŞ SAYISI: {len(pend_rows)}",
+        f"ÖNÜMÜZDEKİ 30 GÜN KESİN ÇIKIŞ: {total_scheduled / 100:.2f} TL",
         "",
         f"SON {HISTORY_DAYS} GÜN GÜNLÜK GELİR (örnek):",
     ]
@@ -204,6 +225,17 @@ async def cashflow_forecast() -> ForecastResponse:
             prompt_lines.append(
                 f"  {r['order_number']} | {r['status']} | "
                 f"{int(r['total'] or 0) / 100:.0f} TL"
+            )
+
+    if sched_occurrences:
+        prompt_lines.append("")
+        prompt_lines.append(
+            "KESİN ÖDEMELER (önümüzdeki 30 gün — bunları MUTLAKA out_minor'a ekle):"
+        )
+        for o in sched_occurrences:
+            prompt_lines.append(
+                f"  {o['date']} | {o['name']} ({o['category']}): "
+                f"{o['amount'] / 100:.0f} TL"
             )
 
     prompt_lines.append("")
@@ -273,6 +305,96 @@ async def _gather_history() -> tuple[list, list, list, list]:
     pend_rows = await _pending_orders()
     cat_rows = await _expense_category_rollup(HISTORY_DAYS)
     return rev_rows, exp_rows, pend_rows, cat_rows
+
+
+def _expand_scheduled(
+    sched_rows: list[dict[str, Any]], today: date, horizon_days: int
+) -> list[dict[str, Any]]:
+    """Aktif scheduled ödemeleri occurrence listesine genişlet."""
+    out: list[dict[str, Any]] = []
+    horizon_end = today + timedelta(days=horizon_days)
+
+    for s in sched_rows:
+        rec = s.get("recurrence") or "MONTHLY"
+        due_day = int(s.get("due_day") or 1)
+        start_raw = s.get("start_date")
+        end_raw = s.get("end_date")
+        try:
+            start = (
+                datetime.fromisoformat(start_raw).date()
+                if isinstance(start_raw, str)
+                else start_raw
+            )
+        except (ValueError, TypeError):
+            continue
+        if not start:
+            continue
+        end = None
+        if end_raw:
+            try:
+                end = (
+                    datetime.fromisoformat(end_raw).date()
+                    if isinstance(end_raw, str)
+                    else end_raw
+                )
+            except (ValueError, TypeError):
+                end = None
+
+        limit = min(end, horizon_end) if end else horizon_end
+
+        if rec == "ONE_TIME":
+            if today <= start <= limit:
+                out.append(_occurrence(s, start))
+            continue
+
+        cursor = start
+        # Cursor `today`'a kadar sıçra
+        i = 0
+        while cursor < today and i < 600:
+            cursor = _advance_date(cursor, rec, due_day)
+            i += 1
+        # `today..limit` aralığında topla
+        i = 0
+        while cursor <= limit and i < 600:
+            if cursor >= today:
+                out.append(_occurrence(s, cursor))
+            cursor = _advance_date(cursor, rec, due_day)
+            i += 1
+
+    out.sort(key=lambda o: o["date"])
+    return out
+
+
+def _advance_date(d: date, rec: str, due_day: int) -> date:
+    if rec == "WEEKLY":
+        return d + timedelta(days=7)
+    if rec == "QUARTERLY":
+        return _shift_months(d, 3, due_day)
+    if rec == "YEARLY":
+        return _shift_months(d, 12, due_day)
+    # MONTHLY default
+    return _shift_months(d, 1, due_day)
+
+
+def _shift_months(d: date, months: int, due_day: int) -> date:
+    year = d.year + (d.month - 1 + months) // 12
+    month = (d.month - 1 + months) % 12 + 1
+    # ay sonu güvenliği
+    from calendar import monthrange
+
+    last_of_month = monthrange(year, month)[1]
+    day = max(1, min(due_day or d.day, last_of_month))
+    return date(year, month, day)
+
+
+def _occurrence(s: dict[str, Any], d: date) -> dict[str, Any]:
+    return {
+        "date": d.isoformat(),
+        "name": s.get("name", ""),
+        "category": s.get("category", "OTHER"),
+        "amount": int(s.get("amount") or 0),
+        "vendor": s.get("vendor"),
+    }
 
 
 def _fallback_forecast(

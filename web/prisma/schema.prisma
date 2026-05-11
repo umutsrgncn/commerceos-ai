@@ -370,6 +370,37 @@ enum ExpenseCategory {
   OTHER // Diğer
 }
 
+enum RecurrenceRule {
+  MONTHLY // her ay dueDay'de
+  WEEKLY // her hafta dueDay (0=pazar...6=cumartesi)
+  QUARTERLY // 3 ayda bir
+  YEARLY // yılda bir
+  ONE_TIME // tek seferlik (startDate'de)
+}
+
+// Gelecek/tekrarlayan ödemeler — kira, maaş, abonelik vb.
+// AI cash flow forecast bu listeyi kesin ödeme olarak kabul eder.
+model ScheduledPayment {
+  id          String          @id @default(cuid())
+  name        String // 'Personel maaşı', 'Ofis kirası'
+  amount      Int // kuruş
+  currency    String          @default("TRY")
+  category    ExpenseCategory @default(OTHER)
+  recurrence  RecurrenceRule  @default(MONTHLY)
+  // MONTHLY/QUARTERLY/YEARLY: 1-31 (gün), WEEKLY: 0-6 (haftanın günü).
+  dueDay      Int
+  startDate   DateTime // ilk vade
+  endDate     DateTime? // null → süresiz
+  active      Boolean         @default(true)
+  notes       String?
+  vendor      String? // alıcı / firma
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([active, startDate])
+  @@index([category])
+}
+
 model SalesGoal {
   // period 'YYYY-MM' — aylık hedef. Tek satır per ay (unique).
   id           String   @id @default(cuid())

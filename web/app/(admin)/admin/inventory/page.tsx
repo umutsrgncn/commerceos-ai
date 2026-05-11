@@ -11,6 +11,7 @@ import {
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { StatTile } from "@/components/ui/stat-tile";
 import { ProductThumb } from "@/components/products/product-thumb";
 import { listInventory, listSlowMovingStock } from "@/lib/queries/inventory";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
@@ -56,28 +57,28 @@ export default async function InventoryPage({
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatTile
-          icon={<Package className="h-4 w-4" />}
+          icon={<Package className="h-5 w-5" />}
           label="Ürün"
           value={String(totalProducts)}
-          tone="muted"
+          tone="indigo"
         />
         <StatTile
-          icon={<Boxes className="h-4 w-4" />}
+          icon={<Boxes className="h-5 w-5" />}
           label="Toplam adet"
           value={totalUnits.toLocaleString("tr-TR")}
-          tone="muted"
+          tone="sky"
         />
         <StatTile
-          icon={<AlertTriangle className="h-4 w-4" />}
+          icon={<AlertTriangle className="h-5 w-5" />}
           label="Düşük stok"
           value={String(lowCount)}
-          tone={lowCount > 0 ? "warning" : "muted"}
+          tone={lowCount > 0 ? "amber" : "muted"}
         />
         <StatTile
-          icon={<XCircle className="h-4 w-4" />}
+          icon={<XCircle className="h-5 w-5" />}
           label="Tükenmiş"
           value={String(outCount)}
-          tone={outCount > 0 ? "danger" : "muted"}
+          tone={outCount > 0 ? "red" : "muted"}
         />
       </div>
 
@@ -229,36 +230,3 @@ export default async function InventoryPage({
   );
 }
 
-function StatTile({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tone: "muted" | "warning" | "danger";
-}) {
-  const toneClass =
-    tone === "danger"
-      ? "bg-red-500/10 text-red-500"
-      : tone === "warning"
-        ? "bg-amber-500/10 text-amber-500"
-        : "bg-[color:var(--color-fg)]/[0.05] text-[color:var(--color-muted)]";
-  return (
-    <Card>
-      <CardContent className="flex items-center gap-3 p-4">
-        <span className={cn("grid h-9 w-9 place-items-center rounded-lg", toneClass)}>
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <div className="truncate text-xs uppercase tracking-wider text-[color:var(--color-muted)]">
-            {label}
-          </div>
-          <div className="text-xl font-semibold tabular-nums">{value}</div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
