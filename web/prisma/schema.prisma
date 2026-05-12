@@ -756,3 +756,107 @@ model Discount {
 
   @@index([isActive, endsAt])
 }
+
+// ─── Agent (Gemini-driven autonomous coding agent) ───
+// Kullanıcı admin tarafından task girer; Gemini /shop ve admin UI dosyalarını
+// izole bir worktree'de düzenler, e2e testleri çalıştırır, screenshot çeker,
+// tunnel ile preview verir. Onay → main'e merge.
+
+enum AgentTaskStatus {
+  PENDING // task girildi, daha agent başlamadı
+  PLANNING // Gemini planlama adımında
+  RUNNING // agent kod yazıyor
+  TESTING // e2e + tsc çalışıyor
+  REVIEW // tunnel açık, kullanıcı onayı bekleniyor
+  MERGED // onaylandı, main'e merge edildi
+  REJECTED // kullanıcı reddetti
+  FAILED // hata — agent durduruldu
+}
+
+enum AgentEventType {
+  STATUS // status geçişi
+  THINK // model'in plan/reasoning metni
+  TOOL_CALL // tool çağrısı (özet — kod yok)
+  TOOL_RESULT // tool sonucu (özet)
+  FILE_WRITE // dosya yazıldı/edit'lendi (sadece path)
+  TEST_RUN // e2e/tsc çalıştı
+  SCREENSHOT // ekran görüntüsü alındı
+  TUNNEL // tunnel açıldı/kapandı
+  COMMIT // git commit atıldı
+  ERROR // hata
+  NOTE // genel not
+}
+
+enum AgentTestStatus {
+  PASSED
+  FAILED
+  SKIPPED
+}
+
+model AgentTask {
+  id           String          @id @default(cuid())
+  title        String
+  prompt       String          @db.Text
+  status       AgentTaskStatus @default(PENDING)
+  branchName   String?
+  worktreePath String?
+  port         Int?
+  tunnelUrl    String?
+  planJson     Json?
+  tokensUsed   Int             @default(0)
+  iterations   Int             @default(0)
+  errorMsg     String?         @db.Text
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  events      AgentEvent[]
+  screenshots AgentScreenshot[]
+  testRuns    AgentTestRun[]
+
+  @@index([status, createdAt])
+}
+
+model AgentEvent {
+  id        String         @id @default(cuid())
+  taskId    String
+  seq       Int
+  type      AgentEventType
+  summary   String         @db.Text
+  payload   Json?
+  createdAt DateTime       @default(now())
+
+  task AgentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, seq])
+  @@index([taskId, createdAt])
+}
+
+model AgentScreenshot {
+  id        String   @id @default(cuid())
+  taskId    String
+  label     String
+  path      String
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
+
+  task AgentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+}
+
+model AgentTestRun {
+  id         String          @id @default(cuid())
+  taskId     String
+  name       String
+  status     AgentTestStatus
+  durationMs Int             @default(0)
+  output     String?         @db.Text
+  createdAt  DateTime        @default(now())
+
+  task AgentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, status])
+}
