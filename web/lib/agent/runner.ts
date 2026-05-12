@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
 import { agentModel, plannerModel } from "./gemini";
 import { buildAgentTurnPrompt, buildPlannerPrompt, SYSTEM_PROMPT } from "./prompts";
+import { startPreview, stopPreview } from "./preview";
 import { execTool, TOOL_DECLS, type AgentContext } from "./tools";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
@@ -285,7 +286,31 @@ export async function runTask(taskId: string): Promise<void> {
       });
     }
 
-    // ─── 5) REVIEW status'una geç (test/tunnel sonraki gün) ───
+    // ─── 5) Önizleme aç (worktree dev + cloudflared tunnel) ───
+    if (commit.ok) {
+      try {
+        const { port, tunnelUrl } = await startPreview({ taskId, wt });
+        await db.agentTask.update({
+          where: { id: taskId },
+          data: { port, tunnelUrl: tunnelUrl ?? null },
+        });
+      } catch (previewErr) {
+        const msg = previewErr instanceof Error ? previewErr.message : String(previewErr);
+        await emitAgentEvent({
+          taskId,
+          type: "ERROR",
+          summary: `Önizleme başlatılamadı: ${msg.slice(0, 200)}`,
+        });
+      }
+    } else {
+      await emitAgentEvent({
+        taskId,
+        type: "NOTE",
+        summary: "Değişiklik yok — önizleme açılmadı.",
+      });
+    }
+
+    // ─── 6) REVIEW status'una geç ───
     await db.agentTask.update({
       where: { id: taskId },
       data: {
@@ -297,7 +322,7 @@ export async function runTask(taskId: string): Promise<void> {
     await emitAgentEvent({
       taskId,
       type: "STATUS",
-      summary: "Onay bekleniyor. Inceleyebilirsin.",
+      summary: "Onay bekleniyor. Önizleme linkinden test edebilirsin.",
       payload: { iterations: iteration, tokens: totalTokens },
     });
   } catch (err) {
@@ -307,7 +332,8 @@ export async function runTask(taskId: string): Promise<void> {
         type: "STATUS",
         summary: "Durdurma istenmişti — agent çıkıyor.",
       });
-      // Worktree'yi temizle
+      // Preview + worktree temizle
+      await stopPreview(taskId, "task iptal edildi");
       if (wt) await destroyWorktree(taskId, wt.branch);
       await db.agentTask.update({
         where: { id: taskId },

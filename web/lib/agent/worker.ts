@@ -1,5 +1,8 @@
 import { db } from "@/lib/db";
+import { emitAgentEvent } from "./events";
+import { getActivePreview, stopPreview } from "./preview";
 import { runTask } from "./runner";
+import { destroyWorktree, mergeBranchToMain } from "./worktree";
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -23,6 +26,13 @@ export async function runWorkerLoop() {
   console.log("[agent/worker] başlatıldı");
   while (!stopped) {
     try {
+      // 1) Aktif preview varsa: review/approve/reject akışını yönet
+      const handled = await handleActivePreview();
+      if (handled) {
+        await sleep(POLL_INTERVAL_MS);
+        continue;
+      }
+      // 2) Sıradaki PENDING'i al
       const claimed = await claimNextTask();
       if (claimed) {
         // eslint-disable-next-line no-console
@@ -41,6 +51,71 @@ export async function runWorkerLoop() {
   }
   // eslint-disable-next-line no-console
   console.log("[agent/worker] durdu");
+}
+
+async function handleActivePreview(): Promise<boolean> {
+  const active = getActivePreview();
+  if (!active) return false;
+
+  const task = await db.agentTask.findUnique({
+    where: { id: active.taskId },
+    select: { status: true, branchName: true, title: true },
+  });
+
+  if (!task) {
+    await stopPreview(active.taskId, "task silindi");
+    return true;
+  }
+
+  // Hâlâ inceleme bekliyor — döngüye dön
+  if (task.status === "REVIEW") return true;
+
+  // Onaylandı → main'e merge + cleanup
+  if (task.status === "MERGED") {
+    await stopPreview(active.taskId, "onaylandı, main'e merge ediliyor");
+    if (task.branchName) {
+      try {
+        await mergeBranchToMain(task.branchName, `merge: ${task.title}`);
+        await emitAgentEvent({
+          taskId: active.taskId,
+          type: "COMMIT",
+          summary: `main'e merge edildi: ${task.branchName}`,
+          payload: { branch: task.branchName },
+        });
+        await destroyWorktree(active.taskId, task.branchName);
+        await emitAgentEvent({
+          taskId: active.taskId,
+          type: "NOTE",
+          summary: "Worktree ve branch temizlendi.",
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await emitAgentEvent({
+          taskId: active.taskId,
+          type: "ERROR",
+          summary: `Merge hatası: ${msg.slice(0, 300)}`,
+        });
+      }
+    }
+    return true;
+  }
+
+  // Reddedildi veya iptal → cleanup, merge yok
+  if (task.status === "REJECTED" || task.status === "CANCELLED") {
+    const reason = task.status === "REJECTED" ? "reddedildi" : "iptal";
+    await stopPreview(active.taskId, reason);
+    if (task.branchName) {
+      await destroyWorktree(active.taskId, task.branchName);
+      await emitAgentEvent({
+        taskId: active.taskId,
+        type: "NOTE",
+        summary: "Worktree ve branch temizlendi.",
+      });
+    }
+    return true;
+  }
+
+  return true;
 }
 
 async function claimNextTask(): Promise<{ id: string; title: string } | null> {
