@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Check, CreditCard, MapPin, Truck, User } from "lucide-react";
+import { ArrowRight, Check, MapPin, Truck, User } from "lucide-react";
 
 import {
-  submitCheckoutAction,
+  submitCheckoutStepOneAction,
   type CheckoutActionState,
 } from "@/lib/shop/checkout";
 
@@ -23,8 +23,8 @@ function SubmitButton() {
       disabled={pending}
       className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[color:var(--color-fg)] px-6 py-4 text-sm font-medium text-[color:var(--color-bg)] transition hover:bg-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-60"
     >
-      <CreditCard className="h-4 w-4" />
-      {pending ? "Sipariş oluşturuluyor…" : "Siparişi tamamla"}
+      {pending ? "İlerleniyor…" : "Ödemeye geç"}
+      {!pending && <ArrowRight className="h-4 w-4" />}
     </button>
   );
 }
@@ -39,7 +39,7 @@ export function CheckoutForm({
   shippingCosts: { standard: number; express: number };
 }) {
   const [state, formAction] = useActionState<CheckoutActionState, FormData>(
-    submitCheckoutAction,
+    submitCheckoutStepOneAction,
     null,
   );
   const [shipping, setShipping] = useState<"standard" | "express">("standard");
@@ -136,15 +136,6 @@ export function CheckoutForm({
             {state.error}
           </div>
         )}
-
-        {/* Bilgilendirme: ödeme sahte (hackathon scope) */}
-        <p className="rounded-md border border-amber-500/30 bg-amber-500/[0.04] p-3 text-[11px] text-[color:var(--color-muted)]">
-          <strong className="text-amber-700 dark:text-amber-400">
-            Hackathon demo:
-          </strong>{" "}
-          Sipariş oluşturulur, ödeme adımı mock (gerçek iyzico entegrasyonu
-          admin/settings'te yapılandırılır).
-        </p>
 
         <SubmitButton />
 

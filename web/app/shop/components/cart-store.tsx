@@ -70,9 +70,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   async function add(productId: string, qty = 1) {
     await withPending(async () => {
-      const r = await addToCartAction(productId, qty);
-      if (r.ok) setCart(r.cart);
-      setDrawerOpen(true);
+      try {
+        const r = await addToCartAction(productId, qty);
+        if (r.ok) {
+          setCart(r.cart);
+          setDrawerOpen(true);
+        } else {
+          console.error("[cart] addToCartAction failed:", r.error);
+          alert(`Sepete eklenemedi: ${r.error}`);
+        }
+      } catch (e) {
+        console.error("[cart] add error:", e);
+        alert(`Sepete ekleme hatası: ${e instanceof Error ? e.message : "bilinmeyen"}`);
+      }
     });
   }
 

@@ -16,10 +16,13 @@ function revalidateCart() {
 
 export async function addToCartAction(productId: string, quantity = 1) {
   try {
+    console.log("[cart-action] addToCart", { productId, quantity });
     const cart = await addToCart(productId, quantity);
     revalidateCart();
+    console.log("[cart-action] success — items:", cart.items.length);
     return { ok: true as const, cart };
   } catch (e) {
+    console.error("[cart-action] FAILED:", e);
     return {
       ok: false as const,
       error: e instanceof Error ? e.message : "Sepete ekleme hatası",

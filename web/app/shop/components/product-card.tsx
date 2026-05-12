@@ -72,15 +72,15 @@ export function ProductCard({
           </div>
         </Link>
 
-        {/* "Hızlı bak" — Link DIŞINDA, alt sınırdan hover'da yükselir */}
-        <div className="pointer-events-none absolute inset-x-3 bottom-3 translate-y-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+        {/* "Hızlı bak" — Link DIŞINDA, z-10 ile en üstte, mobile her zaman görünür */}
+        <div className="pointer-events-none absolute inset-x-3 bottom-3 z-10 translate-y-3 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100 max-sm:translate-y-0 max-sm:opacity-100">
           <QuickViewButton product={product} />
         </div>
 
-        {/* Favori — sağ üst */}
+        {/* Favori — sağ üst, z-10 */}
         <WishlistButton
           productId={product.id}
-          className="absolute right-3 top-3 opacity-0 group-hover:opacity-100"
+          className="absolute right-3 top-3 z-10 opacity-0 group-hover:opacity-100 max-sm:opacity-100"
         />
       </div>
 
