@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ArrowLeft, Lock, ShieldCheck, Truck } from "lucide-react";
 
 import { readCart } from "@/lib/shop/cart";
+import { requireCustomer } from "@/lib/shop/auth";
 import { CheckoutForm } from "./components/checkout-form";
 import { Price } from "../components/price";
 import { ShopImage } from "../components/shop-image";
@@ -14,6 +15,8 @@ const SHIPPING_THRESHOLD = 75000;
 const SHIPPING_COSTS = { standard: 4990, express: 9990 };
 
 export default async function CheckoutPage() {
+  // Login zorunlu — yoksa /shop/auth/login?next=/shop/checkout
+  const customer = await requireCustomer("/shop/checkout");
   const cart = await readCart();
   if (cart.items.length === 0) {
     redirect("/shop/cart");
@@ -47,6 +50,11 @@ export default async function CheckoutPage() {
             subtotal={cart.subtotal}
             shippingThreshold={SHIPPING_THRESHOLD}
             shippingCosts={SHIPPING_COSTS}
+            initialCustomer={{
+              email: customer.email,
+              fullName: customer.name,
+              phone: customer.phone ?? "",
+            }}
           />
         </div>
 

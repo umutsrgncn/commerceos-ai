@@ -33,10 +33,12 @@ export function CheckoutForm({
   subtotal,
   shippingThreshold,
   shippingCosts,
+  initialCustomer,
 }: {
   subtotal: number;
   shippingThreshold: number;
   shippingCosts: { standard: number; express: number };
+  initialCustomer?: { email: string; fullName: string; phone: string };
 }) {
   const [state, formAction] = useActionState<CheckoutActionState, FormData>(
     submitCheckoutStepOneAction,
@@ -57,10 +59,10 @@ export function CheckoutForm({
         </h3>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field label="Ad Soyad" name="fullName" required placeholder="Ayşe Demir" errs={state?.fieldErrors?.fullName} />
-          <Field label="E-posta" name="email" type="email" required placeholder="ornek@mail.com" errs={state?.fieldErrors?.email} />
+          <Field label="Ad Soyad" name="fullName" required placeholder="Ayşe Demir" defaultValue={initialCustomer?.fullName} errs={state?.fieldErrors?.fullName} />
+          <Field label="E-posta" name="email" type="email" required placeholder="ornek@mail.com" defaultValue={initialCustomer?.email} errs={state?.fieldErrors?.email} />
           <div className="sm:col-span-2">
-            <Field label="Telefon" name="phone" type="tel" required placeholder="0532 ..." errs={state?.fieldErrors?.phone} />
+            <Field label="Telefon" name="phone" type="tel" required placeholder="0532 ..." defaultValue={initialCustomer?.phone} errs={state?.fieldErrors?.phone} />
           </div>
         </div>
       </section>
@@ -168,6 +170,7 @@ function Field({
   type = "text",
   required,
   placeholder,
+  defaultValue,
   errs,
 }: {
   label: string;
@@ -175,6 +178,7 @@ function Field({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  defaultValue?: string;
   errs?: string[];
 }) {
   return (
@@ -192,6 +196,7 @@ function Field({
         type={type}
         required={required}
         placeholder={placeholder}
+        defaultValue={defaultValue}
         className="mt-1.5 w-full rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2.5 text-sm placeholder:text-[color:var(--color-muted)]/50 focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/30"
       />
       <FieldError messages={errs} />

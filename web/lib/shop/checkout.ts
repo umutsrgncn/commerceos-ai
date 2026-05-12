@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { readCart, clearCart } from "./cart";
+import { getCurrentCustomer } from "./auth";
 
 const COOKIE_NAME = "commerceos_cart";
 const PENDING_COOKIE = "commerceos_checkout_pending";
@@ -138,16 +139,25 @@ export async function submitMockPaymentAction(
     return { error: "Sepetin boş." };
   }
 
-  const customer = await db.customer.upsert({
-    where: { email: pending.email },
-    update: { name: pending.fullName, phone: pending.phone },
-    create: {
-      email: pending.email,
-      name: pending.fullName,
-      phone: pending.phone,
-    },
-    select: { id: true },
-  });
+  // Login zorunlu (checkout sayfası requireCustomer ile guard). Yine de
+  // güvende olmak için bağlı customer'ı al, yoksa upsert by email.
+  const session = await getCurrentCustomer();
+  const customer = session
+    ? await db.customer.update({
+        where: { id: session.id },
+        data: { name: pending.fullName, phone: pending.phone },
+        select: { id: true },
+      })
+    : await db.customer.upsert({
+        where: { email: pending.email },
+        update: { name: pending.fullName, phone: pending.phone },
+        create: {
+          email: pending.email,
+          name: pending.fullName,
+          phone: pending.phone,
+        },
+        select: { id: true },
+      });
 
   await db.customerAddress.updateMany({
     where: { customerId: customer.id, isDefault: true },
