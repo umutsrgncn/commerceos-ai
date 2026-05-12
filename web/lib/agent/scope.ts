@@ -1,11 +1,17 @@
 /**
- * Agent dosya erişim politikası.
+ * Agent dosya erişim politikası — iki katmanlı:
  *
- * Repo kökünden RELATIF path beklenir (örn. "web/app/shop/page.tsx").
+ *  1) HARD GUARD (her zaman): .env, prisma, auth, db.ts, middleware → asla yazılamaz.
+ *  2) USER SCOPE: kullanıcının seçtiği scope'ların writeGlobs path'lerine yazılabilir.
  *
- * Okuma → daha geniş (test/migration dahil hepsi okunabilir, ama .env yok).
- * Yazma → çok daha dar (sadece UI dosyaları; prisma/auth/db/middleware yasak).
+ * Hard guard, scope seçimi ne olursa olsun geçerlidir.
+ * Eğer scope kümesi boşsa → hiçbir yere yazma yok.
+ *
+ * Okuma → genel (test/migration dahil hepsi okunabilir, ama .env yok).
  */
+
+import type { AgentScope } from "./scopes";
+import { pathInScopes } from "./scopes";
 
 const FORBIDDEN_READ: RegExp[] = [
   /(^|\/)\.env(\.|$)/, // .env, .env.local, .env.production
@@ -16,35 +22,20 @@ const FORBIDDEN_READ: RegExp[] = [
   /(^|\/)playwright-report\//,
 ];
 
-const FORBIDDEN_WRITE: RegExp[] = [
+const HARD_FORBIDDEN_WRITE: RegExp[] = [
   ...FORBIDDEN_READ,
   /^web\/prisma\//,
   /^web\/middleware\.ts$/,
   /^web\/auth(\.config)?\.ts$/,
   /^web\/lib\/db\.ts$/,
   /^web\/lib\/auth\//,
+  /^web\/lib\/agent\//, // agent kendi kendini değiştiremesin
   /^docker-compose\.yml$/,
   /^web\/package(-lock)?\.json$/,
   /^web\/pnpm-lock\.yaml$/,
   /^web\/next\.config\./,
   /^web\/tsconfig\.json$/,
-];
-
-const ALLOWED_WRITE: RegExp[] = [
-  // Shop tarafı: tüm dosyalar
-  /^web\/app\/shop\//,
-  /^web\/components\/(shop|brand|ui|landing|aceternity|reactbits|magic)\//,
-  /^web\/lib\/shop\//,
-  // Admin UI (component & sayfa, lib hariç)
-  /^web\/app\/\(admin\)\/admin\/.+\.(tsx|ts|css)$/,
-  /^web\/components\/(dashboard|layout)\/.+\.(tsx|ts|css)$/,
-  // Diğer izin verilenler (hero/landing kısımları)
-  /^web\/app\/page\.tsx$/,
-  /^web\/app\/globals\.css$/,
-  /^web\/app\/layout\.tsx$/,
-  // Public, types
-  /^web\/types\//,
-  /^web\/lib\/(format|cn|theme|nav)\.ts$/,
+  /^web\/scripts\//,
 ];
 
 function pathOf(p: string) {
@@ -58,25 +49,39 @@ export function canRead(path: string): boolean {
   return true;
 }
 
-export function canWrite(path: string): { ok: boolean; reason?: string } {
+export function canWrite(
+  path: string,
+  scopes: AgentScope[],
+): { ok: boolean; reason?: string } {
   const p = pathOf(path);
   if (p.includes("..")) return { ok: false, reason: "path traversal yasak" };
-  for (const r of FORBIDDEN_WRITE) {
-    if (r.test(p)) return { ok: false, reason: `yasaklı: ${r.source}` };
+
+  // 1) Hard guard
+  for (const r of HARD_FORBIDDEN_WRITE) {
+    if (r.test(p)) return { ok: false, reason: `kritik sistem dosyası — yazılamaz` };
   }
-  for (const r of ALLOWED_WRITE) {
-    if (r.test(p)) return { ok: true };
+
+  // 2) Scope kuralı
+  if (scopes.length === 0) {
+    return { ok: false, reason: "hiç scope seçilmemiş" };
   }
-  return {
-    ok: false,
-    reason: "scope dışı (web/app/shop, components/shop, admin UI yazılabilir)",
-  };
+  if (!pathInScopes(p, scopes)) {
+    return {
+      ok: false,
+      reason: `bu yol seçili scope dışı (seçilen: ${scopes.map((s) => s.label).join(", ")})`,
+    };
+  }
+  return { ok: true };
 }
 
-export function scopeSummary(): string {
+export function scopeSummary(scopes: AgentScope[]): string {
+  if (scopes.length === 0) {
+    return "Hiç scope seçilmedi — hiçbir dosyaya yazamazsın.";
+  }
   return [
-    "✓ shop ve admin UI dosyaları yazılabilir",
-    "✗ prisma/, middleware, auth, db.ts, .env, package.json yazılamaz",
-    "✓ Repo'daki her dosya okunabilir (.env hariç)",
+    "✓ Sadece şu scope'lardaki dosyalara yazabilirsin:",
+    ...scopes.map((s) => `   • ${s.label}`),
+    "✗ Prisma, auth, db.ts, .env, middleware, package.json her zaman yasak.",
+    "✓ Repo'daki her dosya OKUNABİLİR (.env hariç) — keşif için kullan.",
   ].join("\n");
 }

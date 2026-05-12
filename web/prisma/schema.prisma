@@ -808,6 +808,7 @@ model AgentTask {
   iterations      Int             @default(0)
   errorMsg        String?         @db.Text
   cancelRequested Boolean         @default(false)
+  targetScopes    Json? // string[] — kullanıcının seçtiği scope id'leri (web/lib/agent/scopes.ts)
   startedAt       DateTime?
   completedAt     DateTime?
   createdAt       DateTime        @default(now())

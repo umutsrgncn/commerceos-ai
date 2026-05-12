@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
+import { listScopeIds } from "./scopes";
 
 export type CreateState =
   | { ok: true; id: string }
@@ -24,23 +25,36 @@ function validatePrompt(p: string) {
   return null;
 }
 
+function validateScopes(ids: string[]) {
+  if (ids.length === 0) return "En az bir sayfa seçmelisin";
+  const valid = new Set(listScopeIds());
+  const unknown = ids.filter((id) => !valid.has(id));
+  if (unknown.length > 0) return `Bilinmeyen scope: ${unknown.join(", ")}`;
+  if (ids.length > 8) return "En fazla 8 scope seçebilirsin";
+  return null;
+}
+
 export async function createAgentTaskAction(
   _prev: CreateState,
   formData: FormData,
 ): Promise<CreateState> {
   const title = (formData.get("title") as string | null) ?? "";
   const prompt = (formData.get("prompt") as string | null) ?? "";
+  const scopes = (formData.getAll("targetScopes") as string[]).filter(Boolean);
 
   const titleErr = validateTitle(title);
   if (titleErr) return { ok: false, error: titleErr };
   const promptErr = validatePrompt(prompt);
   if (promptErr) return { ok: false, error: promptErr };
+  const scopesErr = validateScopes(scopes);
+  if (scopesErr) return { ok: false, error: scopesErr };
 
   const task = await db.agentTask.create({
     data: {
       title: title.trim(),
       prompt: prompt.trim(),
       status: "PENDING",
+      targetScopes: scopes,
     },
     select: { id: true },
   });

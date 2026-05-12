@@ -1,0 +1,292 @@
+/**
+ * Agent'ın yazabileceği sayfa/alan kataloğu.
+ *
+ * Kullanıcı listeden seçer, agent yalnızca seçilen scope'ların
+ * `writeGlobs` path'lerine yazabilir. Seçilen scope yoksa hiçbir yere yazamaz.
+ *
+ * Her scope agent'a kısa Türkçe bir açıklama sunar — agent path'leri tahmin
+ * etmek yerine bu açıklamadan başlar.
+ */
+
+export type AgentScopeGroup = "shop" | "admin" | "shared";
+
+export type AgentScope = {
+  id: string;
+  group: AgentScopeGroup;
+  label: string; // kullanıcıya
+  shortDesc: string; // kullanıcıya, satır altı
+  /** Agent system prompt'una eklenir — bu sayfanın ne olduğunu açıklar */
+  agentBriefing: string;
+  /** Regex'ler — bu scope seçildiğinde yazılabilen dosyalar */
+  writeGlobs: RegExp[];
+};
+
+export const AGENT_SCOPES: AgentScope[] = [
+  // ─── SHOP (müşteri tarafı) ───
+  {
+    id: "shop_home",
+    group: "shop",
+    label: "Shop · Ana sayfa",
+    shortDesc: "Hero, öne çıkan kategoriler, ürün gridleri",
+    agentBriefing:
+      "Müşteri storefront'unun açılış sayfası. Hero bölümü, öne çıkan kategoriler ve son ürünler burada. Dosya: web/app/shop/page.tsx.",
+    writeGlobs: [
+      /^web\/app\/shop\/page\.tsx$/,
+      /^web\/app\/shop\/components\/(hero|featured|home-|landing)/,
+    ],
+  },
+  {
+    id: "shop_category",
+    group: "shop",
+    label: "Shop · Kategori sayfası",
+    shortDesc: "/shop/c/[slug] — ürün listesi, filtreler",
+    agentBriefing:
+      "Kategori detay sayfası — ürünleri listeler, filtre/sıralama bulunur. Dosya: web/app/shop/c/[slug]/page.tsx, web/app/shop/c/page.tsx.",
+    writeGlobs: [
+      /^web\/app\/shop\/c\//,
+    ],
+  },
+  {
+    id: "shop_product",
+    group: "shop",
+    label: "Shop · Ürün detay",
+    shortDesc: "/shop/p/[slug] — galeri, varyant, sepete ekle",
+    agentBriefing:
+      "Ürün detay sayfası — görsel galeri, varyant seçimi, sepete ekle butonu. Dosya: web/app/shop/p/[slug]/page.tsx + buy-actions.tsx.",
+    writeGlobs: [
+      /^web\/app\/shop\/p\//,
+      /^web\/app\/shop\/components\/(buy-actions|product-)/,
+    ],
+  },
+  {
+    id: "shop_cart_checkout",
+    group: "shop",
+    label: "Shop · Sepet & checkout",
+    shortDesc: "Sepet drawer, /shop/cart, /shop/checkout, başarı sayfası",
+    agentBriefing:
+      "Sepet ve checkout akışı. Dosyalar: web/app/shop/cart/, web/app/shop/checkout/, web/app/shop/components/cart-*.tsx.",
+    writeGlobs: [
+      /^web\/app\/shop\/cart\//,
+      /^web\/app\/shop\/checkout\//,
+      /^web\/app\/shop\/components\/cart-/,
+    ],
+  },
+  {
+    id: "shop_account",
+    group: "shop",
+    label: "Shop · Hesap",
+    shortDesc: "/shop/account — profil, siparişler, adresler, favoriler",
+    agentBriefing:
+      "Müşteri hesap merkezi. Profil, sipariş geçmişi, adresler, favoriler. Dosya: web/app/shop/account/.",
+    writeGlobs: [/^web\/app\/shop\/account\//],
+  },
+  {
+    id: "shop_auth",
+    group: "shop",
+    label: "Shop · Giriş / Kayıt",
+    shortDesc: "/shop/auth — login, register formları",
+    agentBriefing:
+      "Müşteri auth formları (UI). Login ve register sayfaları. Dosya: web/app/shop/auth/. Backend (lib/shop/auth-actions.ts) dokunulmaz.",
+    writeGlobs: [
+      /^web\/app\/shop\/auth\/.+\/page\.tsx$/,
+      /^web\/app\/shop\/auth\/.+\.tsx$/,
+    ],
+  },
+  {
+    id: "shop_info",
+    group: "shop",
+    label: "Shop · Bilgi sayfaları",
+    shortDesc: "Yardım, iade, kargo, KVKK, iletişim",
+    agentBriefing:
+      "Footer'daki bilgi sayfaları: /shop/yardim, /shop/iade, /shop/kargo, /shop/kvkk, /shop/iletisim. Dosya: web/app/shop/(info)/.",
+    writeGlobs: [/^web\/app\/shop\/\(info\)\//],
+  },
+  {
+    id: "shop_footer_header",
+    group: "shop",
+    label: "Shop · Header & Footer",
+    shortDesc: "Üst nav + alt footer (tüm shop sayfalarında)",
+    agentBriefing:
+      "Shop'un tüm sayfalarında görünen üst header ve alt footer. Dosyalar: web/app/shop/components/shop-header.tsx, shop-footer.tsx.",
+    writeGlobs: [/^web\/app\/shop\/components\/shop-(header|footer)\.tsx$/],
+  },
+  {
+    id: "shop_theme",
+    group: "shop",
+    label: "Shop · Tema / Stil",
+    shortDesc: "Renk paleti, dark/light toggle, layout",
+    agentBriefing:
+      "Shop genelindeki stil ve tema. Dosya: web/app/shop/layout.tsx, web/app/shop/theme-toggle.tsx.",
+    writeGlobs: [
+      /^web\/app\/shop\/layout\.tsx$/,
+      /^web\/app\/shop\/theme-toggle\.tsx$/,
+    ],
+  },
+
+  // ─── ADMIN (yönetici tarafı) ───
+  {
+    id: "admin_dashboard",
+    group: "admin",
+    label: "Admin · Dashboard",
+    shortDesc: "Ana özet kartları, son siparişler, KPI'lar",
+    agentBriefing:
+      "Admin paneli açılış sayfası. KPI kartları, satış grafiği, son siparişler. Dosya: web/app/(admin)/admin/page.tsx.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/page\.tsx$/],
+  },
+  {
+    id: "admin_products",
+    group: "admin",
+    label: "Admin · Ürünler",
+    shortDesc: "Ürün listesi, ekle, düzenle",
+    agentBriefing:
+      "Ürün yönetimi sayfaları. Dosya: web/app/(admin)/admin/products/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/products\//],
+  },
+  {
+    id: "admin_inventory",
+    group: "admin",
+    label: "Admin · Envanter",
+    shortDesc: "Stok takibi, yavaş hareket eden ürünler",
+    agentBriefing:
+      "Envanter ve stok yönetimi. Dosya: web/app/(admin)/admin/inventory/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/inventory\//],
+  },
+  {
+    id: "admin_orders",
+    group: "admin",
+    label: "Admin · Siparişler",
+    shortDesc: "Sipariş listesi, durum, kargo, iade",
+    agentBriefing:
+      "Sipariş yönetimi sayfaları. Dosya: web/app/(admin)/admin/orders/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/orders\//],
+  },
+  {
+    id: "admin_customers",
+    group: "admin",
+    label: "Admin · Müşteriler",
+    shortDesc: "Müşteri listesi, segmentasyon, profil",
+    agentBriefing:
+      "Müşteri yönetimi. Dosya: web/app/(admin)/admin/customers/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/customers\//],
+  },
+  {
+    id: "admin_categories",
+    group: "admin",
+    label: "Admin · Kategoriler",
+    shortDesc: "Kategori CRUD, görseller",
+    agentBriefing:
+      "Kategori yönetimi. Dosya: web/app/(admin)/admin/categories/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/categories\//],
+  },
+  {
+    id: "admin_discounts",
+    group: "admin",
+    label: "Admin · İndirimler",
+    shortDesc: "Kupon yönetimi",
+    agentBriefing: "İndirim kuponları sayfası. Dosya: web/app/(admin)/admin/discounts/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/discounts\//],
+  },
+  {
+    id: "admin_finance",
+    group: "admin",
+    label: "Admin · Finans",
+    shortDesc: "Finans paneli, gelecek ödemeler, AI cashflow",
+    agentBriefing:
+      "Finans, gelecek ödemeler, AI Turnaround insight. Dosya: web/app/(admin)/admin/finance/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/finance\//],
+  },
+  {
+    id: "admin_analytics",
+    group: "admin",
+    label: "Admin · Analitik",
+    shortDesc: "Satış grafiği, raporlar",
+    agentBriefing: "Analitik sayfası. Dosya: web/app/(admin)/admin/analytics/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/analytics\//],
+  },
+  {
+    id: "admin_autopilot",
+    group: "admin",
+    label: "Admin · Otopilot",
+    shortDesc: "Otopilot canlı feed, kabiliyet kartları",
+    agentBriefing:
+      "Otopilot durumu, canlı feed, kabiliyetler. Dosya: web/app/(admin)/admin/autopilot/.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/autopilot\//],
+  },
+  {
+    id: "admin_sidebar",
+    group: "shared",
+    label: "Admin · Sidebar & Topbar",
+    shortDesc: "Tüm admin sayfalarında görünen sidebar/topbar",
+    agentBriefing:
+      "Admin paneli layout (sidebar + topbar). Dosya: web/components/layout/sidebar.tsx, topbar.tsx, web/lib/nav.ts.",
+    writeGlobs: [
+      /^web\/components\/layout\/(sidebar|topbar)\.tsx$/,
+      /^web\/lib\/nav\.ts$/,
+    ],
+  },
+
+  // ─── SHARED ───
+  {
+    id: "landing",
+    group: "shared",
+    label: "Landing · Ana sayfa",
+    shortDesc: "/ — hackathon tanıtım landing'i",
+    agentBriefing:
+      "Login-öncesi tanıtım landing sayfası. Dosya: web/app/page.tsx + landing components.",
+    writeGlobs: [
+      /^web\/app\/page\.tsx$/,
+      /^web\/components\/landing\//,
+    ],
+  },
+  {
+    id: "shared_ui",
+    group: "shared",
+    label: "Ortak · UI bileşenleri",
+    shortDesc: "Button, Card, Input vb. paylaşılan bileşenler",
+    agentBriefing:
+      "Tüm projede kullanılan UI primitive'leri. Dosya: web/components/ui/.",
+    writeGlobs: [/^web\/components\/ui\//],
+  },
+  {
+    id: "shared_brand",
+    group: "shared",
+    label: "Ortak · Marka (Logo)",
+    shortDesc: "CommerceOS logosu",
+    agentBriefing:
+      "Marka bileşenleri (logo). Dosya: web/components/brand/.",
+    writeGlobs: [/^web\/components\/brand\//],
+  },
+];
+
+const SCOPE_BY_ID = new Map(AGENT_SCOPES.map((s) => [s.id, s]));
+
+export function getScopesByIds(ids: string[]): AgentScope[] {
+  return ids.map((id) => SCOPE_BY_ID.get(id)).filter((s): s is AgentScope => !!s);
+}
+
+/**
+ * Path verilen scope'ların yazılabilir glob'larıyla eşleşiyor mu?
+ */
+export function pathInScopes(p: string, scopes: AgentScope[]): boolean {
+  const norm = p.replace(/^\/+/, "").replace(/\\/g, "/");
+  for (const s of scopes) {
+    for (const re of s.writeGlobs) {
+      if (re.test(norm)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Agent system prompt'una eklenmek üzere — seçili scope'ların adlandırılmış özetini döner.
+ */
+export function buildScopeBriefing(scopes: AgentScope[]): string {
+  if (scopes.length === 0) return "Hiç scope seçilmedi — yazma yapılamaz.";
+  return scopes
+    .map((s, i) => `${i + 1}. ${s.label}\n   ${s.agentBriefing}`)
+    .join("\n\n");
+}
+
+export function listScopeIds(): string[] {
+  return AGENT_SCOPES.map((s) => s.id);
+}

@@ -5,12 +5,14 @@ import { promisify } from "node:util";
 import type { FunctionDeclaration, SchemaType } from "@google/generative-ai";
 
 import { canRead, canWrite } from "./scope";
+import type { AgentScope } from "./scopes";
 
 const exec = promisify(execFile);
 
 export type AgentContext = {
   taskId: string;
   worktreePath: string;
+  scopes: AgentScope[];
   emit: (
     type:
       | "TOOL_CALL"
@@ -226,7 +228,7 @@ async function grep(ctx: AgentContext, pattern: string, relPath?: string) {
 }
 
 async function writeFile(ctx: AgentContext, relPath: string, content: string) {
-  const check = canWrite(relPath);
+  const check = canWrite(relPath, ctx.scopes);
   if (!check.ok) {
     await ctx.emit("ERROR", `Yazma reddedildi: ${relPath}`, { reason: check.reason });
     throw new Error(`yazma yasak: ${check.reason}`);
@@ -252,7 +254,7 @@ async function editFile(
   oldStr: string,
   newStr: string,
 ) {
-  const check = canWrite(relPath);
+  const check = canWrite(relPath, ctx.scopes);
   if (!check.ok) {
     await ctx.emit("ERROR", `Edit reddedildi: ${relPath}`, { reason: check.reason });
     throw new Error(`yazma yasak: ${check.reason}`);

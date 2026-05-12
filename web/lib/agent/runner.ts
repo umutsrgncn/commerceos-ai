@@ -5,6 +5,7 @@ import { emitAgentEvent } from "./events";
 import { agentModel, plannerModel } from "./gemini";
 import { buildAgentTurnPrompt, buildPlannerPrompt, SYSTEM_PROMPT } from "./prompts";
 import { startPreview, stopPreview } from "./preview";
+import { buildScopeBriefing, getScopesByIds, type AgentScope } from "./scopes";
 import { execTool, TOOL_DECLS, type AgentContext } from "./tools";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
@@ -28,10 +29,11 @@ async function ensureNotCancelled(taskId: string) {
   if (await isCancelled(taskId)) throw new CancelledError();
 }
 
-function makeCtx(taskId: string, wt: Worktree): AgentContext {
+function makeCtx(taskId: string, wt: Worktree, scopes: AgentScope[]): AgentContext {
   return {
     taskId,
     worktreePath: wt.path,
+    scopes,
     emit: async (type, summary, payload) => {
       await emitAgentEvent({ taskId, type, summary, payload: payload ?? undefined });
     },
@@ -70,9 +72,19 @@ export async function runTask(taskId: string): Promise<void> {
     await db.agentTask.update({ where: { id: taskId }, data: { status: "PLANNING" } });
     await emitAgentEvent({ taskId, type: "STATUS", summary: "Plan çıkarılıyor (Gemini)…" });
 
+    // Scope'ları çöz
+    const scopeIds = Array.isArray(task.targetScopes)
+      ? (task.targetScopes as string[])
+      : [];
+    const scopes = getScopesByIds(scopeIds);
+
     const planner = plannerModel();
     const planRes = await planner.generateContent(
-      buildPlannerPrompt({ title: task.title, prompt: task.prompt }),
+      buildPlannerPrompt({
+        title: task.title,
+        prompt: task.prompt,
+        scopes,
+      }),
     );
     const planText = planRes.response.text();
     let plan: Record<string, unknown> = {};
@@ -120,12 +132,12 @@ export async function runTask(taskId: string): Promise<void> {
     await db.agentTask.update({ where: { id: taskId }, data: { status: "RUNNING" } });
     await emitAgentEvent({ taskId, type: "STATUS", summary: "Kod değişiklikleri yapılıyor…" });
 
-    const ctx = makeCtx(taskId, wt);
+    const ctx = makeCtx(taskId, wt, scopes);
     const model = agentModel(TOOL_DECLS);
 
     // Conversation state
     const history: Content[] = [
-      { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
+      { role: "user", parts: [{ text: SYSTEM_PROMPT(scopes) }] },
       {
         role: "model",
         parts: [{ text: "Anladım. Tool'ları kullanarak görevi tamamlayacağım." }],
