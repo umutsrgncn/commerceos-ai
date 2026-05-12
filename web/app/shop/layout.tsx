@@ -3,6 +3,8 @@ import Script from "next/script";
 import { DM_Serif_Display, Inter } from "next/font/google";
 
 import "./shop.css";
+import { CartProvider } from "./components/cart-store";
+import { CartDrawer } from "./components/cart-drawer";
 import { ShopHeader } from "./components/shop-header";
 import { ShopFooter } from "./components/shop-footer";
 import { THEME_INIT_SCRIPT } from "./components/theme-toggle";
@@ -45,9 +47,12 @@ export default function ShopLayout({
         className={`${sans.variable} ${display.variable} min-h-screen bg-[color:var(--color-bg)] text-[color:var(--color-fg)] antialiased`}
         style={{ fontFamily: "var(--font-sans)" }}
       >
-        <ShopHeader />
-        <main className="min-h-[60vh]">{children}</main>
-        <ShopFooter />
+        <CartProvider>
+          <ShopHeader />
+          <main className="min-h-[60vh]">{children}</main>
+          <ShopFooter />
+          <CartDrawer />
+        </CartProvider>
       </div>
     </>
   );

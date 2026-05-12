@@ -7,6 +7,7 @@ import { ArrowRight, Eye, Heart, ShoppingBag } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Price } from "./price";
 import { ShopImage } from "./shop-image";
+import { useCart } from "./cart-store";
 
 type QuickViewData = {
   id: string;
@@ -24,6 +25,13 @@ export function QuickViewButton({
   product: QuickViewData;
 }) {
   const [open, setOpen] = useState(false);
+  const { add, pending } = useCart();
+
+  async function handleAdd() {
+    if (product.outOfStock) return;
+    await add(product.id, 1);
+    setOpen(false); // cart drawer otomatik açılır
+  }
 
   return (
     <>
@@ -92,15 +100,16 @@ export function QuickViewButton({
             <div className="mt-6 space-y-2">
               <button
                 type="button"
-                disabled={product.outOfStock}
-                onClick={() => {
-                  // TODO Phase 2 — cart server action
-                  setOpen(false);
-                }}
+                disabled={product.outOfStock || pending}
+                onClick={handleAdd}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-[color:var(--color-fg)] px-6 py-3.5 text-sm font-medium text-[color:var(--color-bg)] transition hover:bg-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ShoppingBag className="h-4 w-4" />
-                {product.outOfStock ? "Stokta yok" : "Sepete ekle"}
+                {product.outOfStock
+                  ? "Stokta yok"
+                  : pending
+                    ? "Ekleniyor…"
+                    : "Sepete ekle"}
               </button>
               <button
                 type="button"

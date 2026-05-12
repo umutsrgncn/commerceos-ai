@@ -126,6 +126,8 @@ model Product {
   inventory  Inventory?
   orderItems OrderItem[]
   reviews    ProductReview[]
+  cartItems  CartItem[]
+  wishlistItems Wishlist[]
 
   @@index([status])
   @@index([categoryId])
@@ -197,6 +199,8 @@ model Customer {
   phone     String?
   address   Json?
   notes     String?
+  // Müşteri auth — shop/account login için (admin User'dan ayrı)
+  passwordHash String?
   // AI segmentasyon (otopilot autoSegmentCustomers)
   aiSegment            String? // 'sadık' | 'yeni' | 'risky' | 'VIP' | vb.
   aiSegmentConfidence  Int? // 0-100
@@ -208,8 +212,53 @@ model Customer {
   emails          CustomerEmail[]
   addresses       CustomerAddress[]
   deletionRequests DataDeletionRequest[]
+  carts           Cart[]
+  wishlist        Wishlist[]
 
   @@index([aiSegment])
+}
+
+// Shop sepeti — guest için sessionToken, login sonrası customer'a bağlanır.
+// Login'de guest cart customer'ın mevcut cart'ına merge edilir.
+model Cart {
+  id           String   @id @default(cuid())
+  customerId   String?
+  sessionToken String?  @unique // cookie'deki anonim id
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  customer Customer?  @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items    CartItem[]
+
+  @@index([customerId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int      @default(1)
+  addedAt   DateTime @default(now())
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+// Müşteri favorileri
+model Wishlist {
+  id         String   @id @default(cuid())
+  customerId String
+  productId  String
+  addedAt    DateTime @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([customerId, productId])
+  @@index([customerId])
 }
 
 model CustomerAddress {

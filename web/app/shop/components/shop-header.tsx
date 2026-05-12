@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Heart, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { ThemeToggle } from "./theme-toggle";
+import { useCart } from "./cart-store";
 
 const NAV = [
   { href: "/shop/c/tisort", label: "Tişört" },
@@ -18,6 +19,7 @@ const NAV = [
 export function ShopHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { cart, openDrawer } = useCart();
 
   useEffect(() => {
     function onScroll() {
@@ -103,14 +105,19 @@ export function ShopHeader() {
           >
             <User className="h-4 w-4" />
           </Link>
-          <Link
-            href="/shop/cart"
+          <button
+            type="button"
+            onClick={openDrawer}
             className="relative grid h-9 w-9 place-items-center rounded-md hover:bg-[color:var(--color-fg)]/[0.05]"
-            aria-label="Sepet"
+            aria-label={`Sepet (${cart.itemCount} ürün)`}
           >
             <ShoppingBag className="h-4 w-4" />
-            {/* TODO: badge count — Phase 2 cart wiring */}
-          </Link>
+            {cart.itemCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-[color:var(--color-accent)] px-1 text-[9px] font-bold text-[color:var(--color-accent-fg)] ring-2 ring-[color:var(--color-bg)]">
+                {cart.itemCount > 99 ? "99+" : cart.itemCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 

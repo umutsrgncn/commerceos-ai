@@ -1,22 +1,20 @@
 "use client";
 
 import { ArrowRight, Heart, ShoppingBag } from "lucide-react";
-import { useState } from "react";
+import { useCart } from "./cart-store";
 
 export function BuyActions({
-  productId: _productId,
+  productId,
   outOfStock,
 }: {
   productId: string;
   outOfStock: boolean;
 }) {
-  const [pending, setPending] = useState(false);
+  const { add, pending } = useCart();
 
-  function addToCart() {
+  async function addToCart() {
     if (outOfStock || pending) return;
-    setPending(true);
-    // TODO Phase 2 — cart server action
-    setTimeout(() => setPending(false), 800);
+    await add(productId, 1);
   }
 
   return (
