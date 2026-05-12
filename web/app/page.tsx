@@ -286,17 +286,12 @@ export default function HomePage() {
                 </span>
                 <span>teknoloji</span>
                 <span className="h-3.5 w-px bg-white/15" />
-                <span className="tabular-nums text-base font-semibold text-white">
-                  5
-                </span>
-                <span>disiplin</span>
-                <span className="h-3.5 w-px bg-white/15" />
                 <span className="inline-flex items-center gap-1.5 text-emerald-300/90">
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                     <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
                   </span>
-                  production
+                  production'da çalışıyor
                 </span>
               </div>
             </div>
