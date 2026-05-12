@@ -95,6 +95,47 @@ export async function rejectAgentTaskAction(id: string) {
   return { ok: true };
 }
 
+export async function cancelAgentTaskAction(id: string) {
+  const task = await db.agentTask.findUnique({ where: { id } });
+  if (!task) return { ok: false, error: "Task bulunamadı" };
+
+  // PENDING ise direkt CANCELLED'a çek — worker hiç almadı zaten
+  if (task.status === "PENDING") {
+    await db.agentTask.update({
+      where: { id },
+      data: { status: "CANCELLED", completedAt: new Date() },
+    });
+    await emitAgentEvent({
+      taskId: id,
+      type: "STATUS",
+      summary: "Sıradan çıkarıldı (PENDING iken iptal).",
+      payload: { from: "PENDING", to: "CANCELLED" },
+    });
+    revalidatePath(`/admin/agent/${id}`);
+    revalidatePath("/admin/agent");
+    return { ok: true };
+  }
+
+  // Çalışıyorsa flag set — worker iteration arasında okuyup duracak
+  if (["PLANNING", "RUNNING", "TESTING"].includes(task.status)) {
+    if (task.cancelRequested) return { ok: false, error: "İptal zaten istenmiş" };
+    await db.agentTask.update({
+      where: { id },
+      data: { cancelRequested: true },
+    });
+    await emitAgentEvent({
+      taskId: id,
+      type: "STATUS",
+      summary: "Durdurma istendi — agent mevcut adımı bitirip duracak.",
+      payload: { cancelRequested: true },
+    });
+    revalidatePath(`/admin/agent/${id}`);
+    return { ok: true };
+  }
+
+  return { ok: false, error: `Bu durumda iptal edilemez (${task.status})` };
+}
+
 export async function deleteAgentTaskAction(id: string) {
   const task = await db.agentTask.findUnique({ where: { id } });
   if (!task) return { ok: false, error: "Task bulunamadı" };

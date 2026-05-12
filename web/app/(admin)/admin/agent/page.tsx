@@ -122,6 +122,7 @@ const STATUS_META: Record<AgentTaskStatus, { label: string; cls: string }> = {
   REVIEW: { label: "Onay bekliyor", cls: "bg-amber-500/15 text-amber-600 dark:text-amber-300" },
   MERGED: { label: "Yayında", cls: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" },
   REJECTED: { label: "Reddedildi", cls: "bg-rose-500/15 text-rose-600 dark:text-rose-300" },
+  CANCELLED: { label: "Durduruldu", cls: "bg-stone-500/15 text-stone-600 dark:text-stone-300" },
   FAILED: { label: "Hata", cls: "bg-rose-500/20 text-rose-700 dark:text-rose-300" },
 };
 
