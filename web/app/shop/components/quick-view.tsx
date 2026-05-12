@@ -28,17 +28,16 @@ export function QuickViewButton({ product }: { product: QuickViewData }) {
   const [open, setOpen] = useState(false);
   const { add, pending } = useCart();
 
-  // ESC ile kapan + scroll lock
+  // ESC ile kapan + scroll lock — restore her zaman "" (çift modal etkisini kır)
   useEffect(() => {
     if (!open) return;
-    const orig = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
     document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = orig;
+      document.body.style.overflow = "";
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);

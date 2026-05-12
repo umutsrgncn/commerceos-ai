@@ -12,17 +12,16 @@ import { cn } from "@/lib/cn";
 export function CartDrawer() {
   const { cart, drawerOpen, closeDrawer, update, remove, pending } = useCart();
 
-  // ESC kapanış + scroll lock
+  // ESC kapanış + scroll lock — restore her zaman "" (çift modal etkisini kır)
   useEffect(() => {
     if (!drawerOpen) return;
-    const orig = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") closeDrawer();
     }
     document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = orig;
+      document.body.style.overflow = "";
       document.removeEventListener("keydown", onKey);
     };
   }, [drawerOpen, closeDrawer]);

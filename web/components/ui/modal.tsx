@@ -79,14 +79,13 @@ export function Modal({
   // ESC ile kapan + body scroll kilidi
   useEffect(() => {
     if (!open) return;
-    const orig = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
     document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = orig;
+      document.body.style.overflow = "";
       document.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);

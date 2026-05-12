@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   addToCartAction,
   clearCartAction,
@@ -48,6 +49,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cart, setCart] = useState<CartState>(EMPTY);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const pathname = usePathname();
 
   const refresh = useCallback(async () => {
     const c = await getCartAction();
@@ -58,6 +60,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Route değişince drawer'ı kapat + scroll lock'u garantiye al
+  useEffect(() => {
+    setDrawerOpen(false);
+    document.body.style.overflow = "";
+  }, [pathname]);
 
   async function withPending<T>(fn: () => Promise<T>): Promise<T> {
     setPending(true);
