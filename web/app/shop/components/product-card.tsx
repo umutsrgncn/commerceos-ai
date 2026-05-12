@@ -19,9 +19,11 @@ export type ShopProductCardData = {
 export function ProductCard({
   product,
   priority = false,
+  isWishlisted = false,
 }: {
   product: ShopProductCardData;
   priority?: boolean;
+  isWishlisted?: boolean;
 }) {
   return (
     <article className="group relative">
@@ -77,10 +79,16 @@ export function ProductCard({
           <QuickViewButton product={product} />
         </div>
 
-        {/* Favori — sağ üst, z-10 */}
+        {/* Favori — sağ üst, z-10 (favoriliyse her zaman görünür) */}
         <WishlistButton
           productId={product.id}
-          className="absolute right-3 top-3 z-10 opacity-0 group-hover:opacity-100 max-sm:opacity-100"
+          initialActive={isWishlisted}
+          className={cn(
+            "absolute right-3 top-3 z-10 max-sm:opacity-100",
+            isWishlisted
+              ? "opacity-100"
+              : "opacity-0 group-hover:opacity-100",
+          )}
         />
       </div>
 

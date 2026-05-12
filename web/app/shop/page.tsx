@@ -155,7 +155,7 @@ export default async function ShopHomepage() {
                       {c.name}
                     </h3>
                   </div>
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/95 text-[color:var(--color-fg)] transition-transform group-hover:scale-110">
+                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-bg)] text-[color:var(--color-fg)] shadow-md transition-transform group-hover:scale-110">
                     <ArrowRight className="h-4 w-4" />
                   </span>
                 </div>

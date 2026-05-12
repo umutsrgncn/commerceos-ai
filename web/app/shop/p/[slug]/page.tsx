@@ -13,6 +13,7 @@ import {
   getShopProductBySlug,
   listRelatedProducts,
 } from "@/lib/shop/queries";
+import { isInWishlist } from "@/lib/shop/wishlist";
 import { BuyActions } from "../../components/buy-actions";
 import { Price } from "../../components/price";
 import { ProductCard } from "../../components/product-card";
@@ -50,6 +51,7 @@ export default async function ProductPage({
   if (!p) notFound();
 
   const related = await listRelatedProducts(p.id, p.category?.id ?? null, 4);
+  const wished = await isInWishlist(p.id);
 
   const stockText =
     p.stockQuantity === 0
@@ -158,7 +160,11 @@ export default async function ProductPage({
             </div>
 
             {/* CTA'lar */}
-            <BuyActions productId={p.id} outOfStock={p.stockQuantity === 0} />
+            <BuyActions
+              productId={p.id}
+              outOfStock={p.stockQuantity === 0}
+              initialWishlisted={wished}
+            />
 
             {/* Açıklama */}
             {p.description && (
