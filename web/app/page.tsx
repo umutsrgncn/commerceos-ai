@@ -45,6 +45,28 @@ import { MacbookScroll } from "@/components/aceternity/macbook-scroll";
 import { Spotlight } from "@/components/aceternity/spotlight";
 import { TextGenerateEffect } from "@/components/aceternity/text-generate";
 import { MovingBorderButton } from "@/components/aceternity/moving-border";
+import {
+  AuthIcon,
+  FastApiIcon,
+  GeminiIcon,
+  GibIcon,
+  GsapIcon,
+  HiggsfieldIcon,
+  IyzicoIcon,
+  LucideIcon,
+  MotionIcon,
+  NextIcon,
+  NodeIcon,
+  PlaywrightIcon,
+  PostgresIcon,
+  PrismaIcon,
+  PythonIcon,
+  ReactIcon,
+  RedisIcon,
+  TailwindIcon,
+  TypeScriptIcon,
+  VitestIcon,
+} from "@/components/landing/tech-icons";
 
 export const metadata = {
   title: "CommerceOS — AI-destekli e-ticaret yönetim paneli",
@@ -252,73 +274,81 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ─── Tech yığını — bento grid ─── */}
-        <section className="relative border-y border-white/[0.06] bg-gradient-to-b from-white/[0.01] to-transparent py-14">
+        {/* ─── Tech yığını — kategori bantları ─── */}
+        <section className="relative border-y border-white/[0.06] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_60%)] py-20">
           <div className="mx-auto max-w-6xl px-6">
-            <p className="text-center text-xs uppercase tracking-wider text-white/40">
-              Üzerine inşa edildi
-            </p>
-            <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-              <TechCell
-                title="Next.js 15"
-                desc="App Router · RSC · server actions"
-                accent="from-white/15 to-white/[0.02]"
-                logo={
-                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
-                    <path d="M11.572 0c-.176 0-.31.001-.358.007a19.76 19.76 0 0 1-.364.033C7.443.346 4.25 2.185 2.228 5.012a11.875 11.875 0 0 0-2.119 5.243c-.096.659-.108.854-.108 1.747s.012 1.089.108 1.748c.652 4.506 3.86 8.292 8.209 9.695.779.25 1.6.422 2.534.525.363.04 1.935.04 2.299 0 1.611-.178 2.977-.577 4.323-1.264.207-.106.247-.134.219-.158-.02-.013-.9-1.193-1.955-2.62l-1.919-2.592-2.404-3.558a338.739 338.739 0 0 0-2.422-3.556c-.009-.002-.018 1.579-.023 3.51-.007 3.38-.01 3.515-.052 3.595a.426.426 0 0 1-.206.214c-.075.037-.14.044-.495.044H7.81l-.108-.068a.438.438 0 0 1-.157-.171l-.05-.106.006-4.703.007-4.705.072-.092a.645.645 0 0 1 .174-.143c.096-.047.134-.051.54-.051.478 0 .558.018.682.154.035.038 1.337 1.999 2.895 4.361a10760.433 10760.433 0 0 0 4.735 7.17l1.9 2.879.096-.063a12.317 12.317 0 0 0 2.466-2.163 11.944 11.944 0 0 0 2.824-6.134c.096-.66.108-.854.108-1.748 0-.893-.012-1.088-.108-1.747-.652-4.506-3.859-8.292-8.208-9.695a12.597 12.597 0 0 0-2.499-.523A33.119 33.119 0 0 0 11.573 0zm4.069 7.217c.347 0 .408.005.486.047a.473.473 0 0 1 .237.277c.018.06.023 1.365.018 4.304l-.006 4.218-.744-1.14-.746-1.14v-3.066c0-1.982.01-3.097.023-3.15a.478.478 0 0 1 .233-.296c.096-.05.13-.054.5-.054z"/>
-                  </svg>
-                }
-              />
-              <TechCell
-                title="Gemini AI"
-                desc="Streaming · vision · tool use"
-                accent="from-fuchsia-500/20 to-indigo-500/10"
-                logo={
-                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none">
-                    <path
-                      d="M12 0 C12 6.627 17.373 12 24 12 C17.373 12 12 17.373 12 24 C12 17.373 6.627 12 0 12 C6.627 12 12 6.627 12 0 Z"
-                      fill="url(#g-gem)"
-                    />
-                    <defs>
-                      <linearGradient id="g-gem" x1="0" y1="0" x2="24" y2="24">
-                        <stop offset="0%" stopColor="#d946ef" />
-                        <stop offset="100%" stopColor="#6366f1" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                }
-              />
-              <TechCell
-                title="PostgreSQL"
-                desc="Prisma ORM · migrations · types"
-                accent="from-blue-500/20 to-cyan-500/10"
-                logo={
-                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="currentColor">
-                    <path d="M5.214 11.346c0 .85.69 1.54 1.54 1.54h.027c.85 0 1.54-.69 1.54-1.54v-1.04c0-.85-.69-1.54-1.54-1.54H6.755c-.851 0-1.541.69-1.541 1.54v1.04zM12 23.43c-3.66 0-6.787-2.246-8.094-5.434a12.93 12.93 0 0 1-.835-4.706c0-3.49 1.371-6.65 3.601-8.984A12.357 12.357 0 0 1 12 .57c6.557 0 11.876 5.32 11.876 11.876S18.557 23.43 12 23.43"/>
-                  </svg>
-                }
-                fg="text-blue-300"
-              />
-              <TechCell
-                title="iyzico"
-                desc="3DS · sandbox + üretim · Türkiye"
-                accent="from-rose-500/15 to-pink-500/10"
-                logo={
-                  <div className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-rose-500 to-pink-500 text-[9px] font-bold text-white">
-                    iyz
-                  </div>
-                }
-              />
-              <TechCell
-                title="GİB E-Fatura"
-                desc="Entegratör · e-arşiv · UBL XML"
-                accent="from-emerald-500/15 to-teal-500/10"
-                logo={
-                  <div className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-emerald-500 to-teal-500 text-[9px] font-bold text-white">
-                    GİB
-                  </div>
-                }
-              />
+            <div className="text-center">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.22em] text-white/55">
+                <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                Üzerine inşa edildi
+              </span>
+              <h2 className="mt-5 font-display text-3xl italic leading-tight sm:text-4xl">
+                Production-grade teknoloji yığını
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-white/55">
+                20+ teknoloji, dört disiplin: full-stack web, AI servisi, veri ve
+                ödeme. Hiçbiri vitrin değil — hepsi çalışıyor.
+              </p>
+            </div>
+
+            <div className="mt-14 grid gap-3 lg:grid-cols-2">
+              <TechCategory label="Framework & Runtime" accent="emerald">
+                <TechItem icon={<NextIcon />} name="Next.js" tag="15" iconClass="text-white" />
+                <TechItem icon={<ReactIcon />} name="React" tag="19" iconClass="text-sky-400" />
+                <TechItem icon={<TypeScriptIcon />} name="TypeScript" tag="5.7" iconClass="text-blue-400" />
+                <TechItem icon={<NodeIcon />} name="Node" tag="22 LTS" iconClass="text-green-400" />
+              </TechCategory>
+
+              <TechCategory label="Veri & Cache" accent="sky">
+                <TechItem icon={<PostgresIcon />} name="PostgreSQL" tag="16" iconClass="text-sky-300" />
+                <TechItem icon={<PrismaIcon />} name="Prisma" tag="6" iconClass="text-indigo-300" />
+                <TechItem icon={<RedisIcon />} name="Redis" tag="7" iconClass="text-rose-400" />
+              </TechCategory>
+
+              <TechCategory label="Yapay zeka" accent="fuchsia">
+                <TechItem
+                  icon={<GeminiIcon />}
+                  name="Gemini"
+                  tag="2.0 Flash"
+                  iconClass="text-transparent [&_path]:fill-[url(#tech-gem-grad)]"
+                  defs={
+                    <linearGradient id="tech-gem-grad" x1="0" y1="0" x2="24" y2="24">
+                      <stop offset="0%" stopColor="#d946ef" />
+                      <stop offset="100%" stopColor="#6366f1" />
+                    </linearGradient>
+                  }
+                />
+                <TechItem icon={<HiggsfieldIcon />} name="Higgsfield" tag="MCP" iconClass="text-fuchsia-300" />
+              </TechCategory>
+
+              <TechCategory label="AI servisi" accent="teal">
+                <TechItem icon={<FastApiIcon />} name="FastAPI" tag="0.115" iconClass="text-teal-300" />
+                <TechItem icon={<PythonIcon />} name="Python" tag="3.12" />
+              </TechCategory>
+
+              <TechCategory label="UI & Motion" accent="cyan">
+                <TechItem icon={<TailwindIcon />} name="Tailwind" tag="v4" iconClass="text-cyan-300" />
+                <TechItem icon={<MotionIcon />} name="Motion" tag="11" iconClass="text-white" />
+                <TechItem icon={<GsapIcon />} name="GSAP" tag="3" iconClass="text-lime-300" />
+                <TechItem icon={<LucideIcon />} name="Lucide" tag="icons" iconClass="text-stone-300" />
+              </TechCategory>
+
+              <TechCategory label="Güvenlik & Ödeme" accent="amber">
+                <TechItem icon={<AuthIcon />} name="Auth.js" tag="v5" iconClass="text-violet-300" />
+                <TechItem icon={<IyzicoIcon />} name="iyzico" tag="3DS" iconClass="text-rose-400" />
+                <TechItem icon={<GibIcon />} name="GİB E-Fatura" tag="UBL" iconClass="text-emerald-300" />
+              </TechCategory>
+            </div>
+
+            {/* Test & DX şeridi */}
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] px-5 py-4">
+              <span className="text-[10px] font-medium uppercase tracking-[0.22em] text-white/40">
+                Test & DX
+              </span>
+              <span className="h-3 w-px bg-white/10" />
+              <TechChip icon={<VitestIcon />} name="Vitest" iconClass="text-yellow-300" />
+              <TechChip icon={<PlaywrightIcon />} name="Playwright" iconClass="text-emerald-300" />
+              <TechChip icon={<PythonIcon />} name="pytest" iconClass="text-blue-300" />
             </div>
           </div>
         </section>
@@ -1199,34 +1229,88 @@ function PipelineCard() {
   );
 }
 
-function TechCell({
-  title,
-  desc,
-  logo,
+const TECH_ACCENT: Record<string, string> = {
+  emerald: "before:bg-emerald-400",
+  sky: "before:bg-sky-400",
+  fuchsia: "before:bg-fuchsia-400",
+  teal: "before:bg-teal-400",
+  cyan: "before:bg-cyan-400",
+  amber: "before:bg-amber-400",
+};
+
+function TechCategory({
+  label,
   accent,
-  fg,
+  children,
 }: {
-  title: string;
-  desc: string;
-  logo: React.ReactNode;
-  accent: string;
-  fg?: string;
+  label: string;
+  accent: keyof typeof TECH_ACCENT;
+  children: React.ReactNode;
 }) {
   return (
-    <div
-      className={`group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br ${accent} p-4 transition hover:border-white/20`}
-    >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.05),transparent_70%)]" />
-      <div className="relative flex items-start gap-3">
-        <span className={`shrink-0 ${fg ?? "text-white/90"}`}>{logo}</span>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold leading-tight">{title}</div>
-          <div className="mt-1 text-[10px] leading-snug text-white/55">
-            {desc}
-          </div>
-        </div>
+    <div className="relative rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 transition hover:border-white/[0.14] hover:bg-white/[0.03]">
+      <div className="flex items-center gap-2">
+        <span
+          className={`relative inline-block h-1.5 w-1.5 rounded-full before:absolute before:inset-0 before:rounded-full before:opacity-100 ${TECH_ACCENT[accent]}`}
+        />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/45">
+          {label}
+        </p>
       </div>
+      <div className="mt-4 flex flex-wrap gap-2">{children}</div>
     </div>
+  );
+}
+
+function TechItem({
+  icon,
+  name,
+  tag,
+  iconClass,
+  defs,
+}: {
+  icon: React.ReactNode;
+  name: string;
+  tag?: string;
+  iconClass?: string;
+  defs?: React.ReactNode;
+}) {
+  return (
+    <div className="group inline-flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.025] px-3 py-2 transition hover:border-white/20 hover:bg-white/[0.05]">
+      {defs && (
+        <svg className="absolute h-0 w-0" aria-hidden>
+          <defs>{defs}</defs>
+        </svg>
+      )}
+      <span className={`shrink-0 ${iconClass ?? "text-white/85"}`}>{icon}</span>
+      <span className="text-sm font-medium leading-none text-white/90">
+        {name}
+      </span>
+      {tag && (
+        <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-white/55">
+          {tag}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function TechChip({
+  icon,
+  name,
+  iconClass,
+}: {
+  icon: React.ReactNode;
+  name: string;
+  iconClass?: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-xs text-white/80">
+      <span className={`${iconClass ?? "text-white/85"} [&_svg]:h-3.5 [&_svg]:w-3.5`}>
+        {icon}
+      </span>
+      {name}
+    </span>
   );
 }
 
