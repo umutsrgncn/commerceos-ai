@@ -126,6 +126,25 @@ export function EventTimeline({
   );
 }
 
+function fmtValue(v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (typeof v === "object") {
+    // Nested object → flatten key:value with truncation
+    try {
+      const entries = Object.entries(v as Record<string, unknown>)
+        .slice(0, 3)
+        .map(([k, val]) => {
+          const s = typeof val === "object" ? JSON.stringify(val) : String(val);
+          return `${k}=${s.slice(0, 30)}`;
+        });
+      return entries.join(" ");
+    } catch {
+      return JSON.stringify(v).slice(0, 80);
+    }
+  }
+  return String(v).slice(0, 80);
+}
+
 function PayloadHints({ payload }: { payload: Record<string, unknown> }) {
   const entries = Object.entries(payload)
     .filter(([k]) => !["content", "diff", "code", "raw"].includes(k))
@@ -139,7 +158,7 @@ function PayloadHints({ payload }: { payload: Record<string, unknown> }) {
           className="inline-flex items-center gap-1 rounded border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.02] px-1.5 py-0.5 font-mono text-[10px] text-[color:var(--color-muted)]"
         >
           <span className="text-[color:var(--color-fg)]/50">{k}</span>
-          <span>{String(v).slice(0, 60)}</span>
+          <span>{fmtValue(v)}</span>
         </span>
       ))}
     </div>
