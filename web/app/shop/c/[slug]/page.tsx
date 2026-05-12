@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronRight, Package } from "lucide-react";
 
 import {
   getShopCategoryBySlug,
@@ -8,6 +8,7 @@ import {
   listShopProducts,
 } from "@/lib/shop/queries";
 import { ProductCard } from "../../components/product-card";
+import { ShopImage } from "../../components/shop-image";
 import { SortSelect } from "../../components/sort-select";
 import { cn } from "@/lib/cn";
 
@@ -21,18 +22,6 @@ const SORT_OPTIONS = [
 ] as const;
 
 type SortValue = (typeof SORT_OPTIONS)[number]["value"];
-
-// Kategori bazlı renk paleti — header'da accent vurgusu
-const CAT_ACCENT: Record<string, { bg: string; text: string; ring: string }> = {
-  tisort: { bg: "bg-[oklch(0.62_0.18_22)]/10", text: "text-[oklch(0.62_0.18_22)]", ring: "ring-[oklch(0.62_0.18_22)]/30" },
-  pantolon: { bg: "bg-[oklch(0.42_0.12_265)]/10", text: "text-[oklch(0.42_0.12_265)]", ring: "ring-[oklch(0.42_0.12_265)]/30" },
-  ayakkabi: { bg: "bg-[oklch(0.68_0.14_75)]/10", text: "text-[oklch(0.68_0.14_75)]", ring: "ring-[oklch(0.68_0.14_75)]/30" },
-  canta: { bg: "bg-[oklch(0.42_0.13_340)]/10", text: "text-[oklch(0.42_0.13_340)]", ring: "ring-[oklch(0.42_0.13_340)]/30" },
-  aksesuar: { bg: "bg-[oklch(0.65_0.15_15)]/10", text: "text-[oklch(0.65_0.15_15)]", ring: "ring-[oklch(0.65_0.15_15)]/30" },
-  "ev-tekstili": { bg: "bg-[oklch(0.55_0.13_45)]/10", text: "text-[oklch(0.55_0.13_45)]", ring: "ring-[oklch(0.55_0.13_45)]/30" },
-  bebek: { bg: "bg-[oklch(0.65_0.12_145)]/10", text: "text-[oklch(0.65_0.12_145)]", ring: "ring-[oklch(0.65_0.12_145)]/30" },
-  hediye: { bg: "bg-[oklch(0.58_0.14_295)]/10", text: "text-[oklch(0.58_0.14_295)]", ring: "ring-[oklch(0.58_0.14_295)]/30" },
-};
 
 export async function generateMetadata({
   params,
@@ -70,141 +59,235 @@ export default async function CategoryPage({
   ]);
 
   const totalPages = Math.ceil(total / pageSize);
-  const otherCats = allCats.filter((c) => c.slug !== slug).slice(0, 8);
-  const accent = CAT_ACCENT[slug] ?? {
-    bg: "bg-[color:var(--color-accent)]/10",
-    text: "text-[color:var(--color-accent)]",
-    ring: "ring-[color:var(--color-accent)]/30",
-  };
+  const otherCats = allCats.filter((c) => c.slug !== slug);
+  const currentSortLabel =
+    SORT_OPTIONS.find((o) => o.value === sort)?.label ?? "Yeniler";
 
   return (
-    <div className="mx-auto max-w-7xl px-6 py-10 lg:py-14">
-      {/* Breadcrumb */}
-      <nav className="mb-8 flex items-center gap-2 text-[11px] text-[color:var(--color-muted)]">
-        <Link href={"/shop" as never} className="hover:text-[color:var(--color-fg)]">
-          Ana sayfa
-        </Link>
-        <span>/</span>
-        <Link href={"/shop/c" as never} className="hover:text-[color:var(--color-fg)]">
-          Kategoriler
-        </Link>
-        <span>/</span>
-        <span className="text-[color:var(--color-fg)]">{cat.name}</span>
-      </nav>
+    <>
+      {/* ─── HERO BANNER — gerçek kategori görseli ─── */}
+      <section className="relative overflow-hidden border-b border-[color:var(--color-border)]">
+        {cat.imageUrl && (
+          <>
+            <ShopImage
+              src={cat.imageUrl}
+              alt={cat.name}
+              priority
+              className="absolute inset-0 h-full w-full object-cover"
+              sizes="100vw"
+            />
+            {/* Karartma overlay — text okunsun */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+          </>
+        )}
+        {!cat.imageUrl && (
+          <div className="absolute inset-0 bg-gradient-to-br from-[color:var(--color-accent)]/30 via-[color:var(--color-fg)]/[0.06] to-transparent" />
+        )}
 
-      {/* Header — kategori bazlı renkli banner */}
-      <header
-        className={`relative mb-12 overflow-hidden rounded-3xl ${accent.bg} ring-1 ring-inset ${accent.ring} p-8 sm:p-12`}
-      >
-        <div className="absolute inset-0 grain-bg opacity-30" />
-        <div className="relative grid gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-8">
-            <span
-              className={`inline-flex items-center gap-2 rounded-full bg-[color:var(--color-surface)]/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${accent.text}`}
+        <div className="relative mx-auto max-w-7xl px-6 py-20 lg:py-32">
+          {/* Breadcrumb */}
+          <nav className="mb-6 flex items-center gap-2 text-[11px] text-white/80">
+            <Link
+              href={"/shop" as never}
+              className="hover:text-white"
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${accent.text.replace("text-", "bg-")}`} />
-              Koleksiyon · {total} ürün
-            </span>
-            <h1 className="mt-5 font-display text-5xl italic leading-[0.95] sm:text-7xl lg:text-[88px]">
-              {cat.name}
-            </h1>
-            {cat.description && (
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-[color:var(--color-muted)]">
-                {cat.description}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap items-end gap-3 lg:col-span-4 lg:justify-end">
-            <SortSelect initial={sort} />
-          </div>
-        </div>
-      </header>
-
-      {/* Grid */}
-      {items.length === 0 ? (
-        <div className="grid place-items-center rounded-md border border-dashed border-[color:var(--color-border)] py-24 text-center">
-          <div>
-            <p className="font-display text-3xl italic">
-              Bu kategoride henüz ürün yok.
-            </p>
+              Ana sayfa
+            </Link>
+            <ChevronRight className="h-3 w-3" />
             <Link
               href={"/shop/c" as never}
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline"
+              className="hover:text-white"
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Diğer kategorileri gör
+              Kategoriler
             </Link>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-4 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-12">
-          {items.map((p) => (
-            <ProductCard
-              key={p.id}
-              product={{
-                id: p.id,
-                slug: p.slug,
-                name: p.name,
-                price: p.price,
-                compareAt: p.compareAt,
-                imageUrl: p.imageUrl,
-                outOfStock: !p.inStock,
-              }}
-            />
-          ))}
-        </div>
-      )}
+            <ChevronRight className="h-3 w-3" />
+            <span className="font-medium text-white">{cat.name}</span>
+          </nav>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <nav
-          className="mt-14 flex items-center justify-center gap-1"
-          aria-label="Sayfalama"
-        >
-          {Array.from({ length: totalPages }).map((_, i) => {
-            const p = i + 1;
-            const isCurrent = p === page;
-            return (
-              <Link
-                key={p}
-                href={`/shop/c/${slug}?sort=${sort}&page=${p}` as never}
-                className={cn(
-                  "grid h-9 w-9 place-items-center rounded-md text-xs font-medium",
-                  isCurrent
-                    ? "bg-[color:var(--color-fg)] text-[color:var(--color-bg)]"
-                    : "text-[color:var(--color-muted)] hover:bg-[color:var(--color-fg)]/[0.05] hover:text-[color:var(--color-fg)]",
-                )}
-                aria-current={isCurrent ? "page" : undefined}
-              >
-                {p}
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/85">
+            Koleksiyon · {total} ürün
+          </p>
+          <h1 className="mt-4 font-display text-6xl italic leading-[0.9] text-white sm:text-7xl lg:text-[112px]">
+            {cat.name}
+          </h1>
+          {cat.description && (
+            <p className="mt-6 max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">
+              {cat.description}
+            </p>
+          )}
+        </div>
+      </section>
 
-      {/* Diğer kategoriler */}
-      {otherCats.length > 0 && (
-        <section className="mt-24 border-t border-[color:var(--color-border)] pt-12">
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--color-muted)]">
-            Diğer kategoriler
-          </h2>
-          <div className="mt-5 flex flex-wrap gap-2">
-            {otherCats.map((c) => (
-              <Link
-                key={c.id}
-                href={`/shop/c/${c.slug}` as never}
-                className="rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-4 py-2 text-sm font-medium text-[color:var(--color-fg)]/85 transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
-              >
-                {c.name}
-                <span className="ml-2 text-[10px] text-[color:var(--color-muted)]">
-                  {c.productCount}
+      {/* ─── STICKY FİLTER BAR ─── */}
+      <div className="sticky top-16 z-30 border-b border-[color:var(--color-border)] bg-[color:var(--color-bg)]/95 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-3 sm:py-4">
+          <div className="flex items-center gap-2 overflow-x-auto text-xs">
+            <span className="shrink-0 font-mono tabular-nums text-[color:var(--color-muted)]">
+              {total} ürün
+            </span>
+            {total > 0 && (
+              <>
+                <span className="text-[color:var(--color-border)]">·</span>
+                <span className="shrink-0 text-[color:var(--color-muted)]">
+                  Sırala:{" "}
+                  <strong className="text-[color:var(--color-fg)]">
+                    {currentSortLabel}
+                  </strong>
                 </span>
+              </>
+            )}
+          </div>
+          <SortSelect initial={sort} />
+        </div>
+      </div>
+
+      {/* ─── ANA GRID ─── */}
+      <div className="mx-auto max-w-7xl px-6 py-12 lg:py-16">
+        {items.length === 0 ? (
+          <div className="grid place-items-center rounded-2xl border-2 border-dashed border-[color:var(--color-border)] py-24 text-center">
+            <div>
+              <Package className="mx-auto h-12 w-12 text-[color:var(--color-muted)]" />
+              <p className="mt-4 font-display text-3xl italic">
+                Bu kategoride henüz ürün yok
+              </p>
+              <p className="mt-2 text-sm text-[color:var(--color-muted)]">
+                Yakında yeni parçalar eklenecek.
+              </p>
+              <Link
+                href={"/shop/c" as never}
+                className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium underline underline-offset-4 hover:no-underline"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Diğer kategorileri gör
               </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-12 sm:gap-x-5 lg:grid-cols-3 lg:gap-x-6 lg:gap-y-16 xl:grid-cols-4">
+            {items.map((p, i) => (
+              <ProductCard
+                key={p.id}
+                priority={i < 4}
+                product={{
+                  id: p.id,
+                  slug: p.slug,
+                  name: p.name,
+                  price: p.price,
+                  compareAt: p.compareAt,
+                  imageUrl: p.imageUrl,
+                  outOfStock: !p.inStock,
+                }}
+              />
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <nav
+            className="mt-20 flex items-center justify-center gap-2"
+            aria-label="Sayfalama"
+          >
+            {page > 1 && (
+              <Link
+                href={`/shop/c/${slug}?sort=${sort}&page=${page - 1}` as never}
+                className="inline-flex items-center gap-1 rounded-md border border-[color:var(--color-border)] px-3 py-1.5 text-xs hover:bg-[color:var(--color-fg)]/[0.04]"
+              >
+                <ArrowLeft className="h-3 w-3" />
+                Önceki
+              </Link>
+            )}
+            {Array.from({ length: totalPages }).map((_, i) => {
+              const p = i + 1;
+              const isCurrent = p === page;
+              return (
+                <Link
+                  key={p}
+                  href={`/shop/c/${slug}?sort=${sort}&page=${p}` as never}
+                  className={cn(
+                    "grid h-9 w-9 place-items-center rounded-md text-xs font-medium tabular-nums",
+                    isCurrent
+                      ? "bg-[color:var(--color-fg)] text-[color:var(--color-bg)]"
+                      : "text-[color:var(--color-muted)] hover:bg-[color:var(--color-fg)]/[0.05] hover:text-[color:var(--color-fg)]",
+                  )}
+                  aria-current={isCurrent ? "page" : undefined}
+                >
+                  {p}
+                </Link>
+              );
+            })}
+            {page < totalPages && (
+              <Link
+                href={`/shop/c/${slug}?sort=${sort}&page=${page + 1}` as never}
+                className="inline-flex items-center gap-1 rounded-md border border-[color:var(--color-border)] px-3 py-1.5 text-xs hover:bg-[color:var(--color-fg)]/[0.04]"
+              >
+                Sonraki
+                <ArrowLeft className="h-3 w-3 rotate-180" />
+              </Link>
+            )}
+          </nav>
+        )}
+      </div>
+
+      {/* ─── DİĞER KATEGORİLER — görselli kartlar ─── */}
+      {otherCats.length > 0 && (
+        <section className="border-t border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
+          <div className="mx-auto max-w-7xl px-6 py-16 lg:py-24">
+            <div className="mb-10 max-w-2xl">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--color-muted)]">
+                Diğer koleksiyonlar
+              </p>
+              <h2 className="mt-3 font-display text-4xl italic leading-tight sm:text-5xl">
+                Devam et,{" "}
+                <em className="text-[color:var(--color-accent)]">keşfet</em>.
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              {otherCats.slice(0, 4).map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/shop/c/${c.slug}` as never}
+                  className="group relative aspect-[3/4] overflow-hidden rounded-sm bg-[color:var(--color-fg)]/[0.04]"
+                >
+                  {c.imageUrl && (
+                    <ShopImage
+                      src={c.imageUrl}
+                      alt={c.name}
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-[800ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.06]"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
+                  <div className="absolute inset-x-4 bottom-4 text-white">
+                    <p className="text-[10px] uppercase tracking-[0.2em] opacity-85">
+                      {c.productCount} ürün
+                    </p>
+                    <p className="mt-1 font-display text-2xl italic">{c.name}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {otherCats.length > 4 && (
+              <div className="mt-8 flex flex-wrap gap-2">
+                {otherCats.slice(4).map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/shop/c/${c.slug}` as never}
+                    className="inline-flex items-center gap-2 rounded-full border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-4 py-2 text-xs font-medium transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
+                  >
+                    {c.name}
+                    <span className="text-[10px] text-[color:var(--color-muted)]">
+                      {c.productCount}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
-    </div>
+    </>
   );
 }

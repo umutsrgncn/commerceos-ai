@@ -12,18 +12,14 @@ import { cn } from "@/lib/cn";
 export function CartDrawer() {
   const { cart, drawerOpen, closeDrawer, update, remove, pending } = useCart();
 
-  // ESC kapanış + scroll lock — restore her zaman "" (çift modal etkisini kır)
+  // ESC kapanış — scroll lock YOK (route bağımsız + bug riski yok)
   useEffect(() => {
     if (!drawerOpen) return;
-    document.body.style.overflow = "hidden";
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") closeDrawer();
     }
     document.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, [drawerOpen, closeDrawer]);
 
   if (!drawerOpen) return null;

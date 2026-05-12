@@ -61,9 +61,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     refresh();
   }, [refresh]);
 
-  // Route değişince drawer'ı kapat + scroll lock'u garantiye al
+  // Route değişince drawer'ı kapat (scroll lock kullanmıyoruz artık)
   useEffect(() => {
     setDrawerOpen(false);
+    // Defensive: eski bir scroll lock kalmışsa temizle
     document.body.style.overflow = "";
   }, [pathname]);
 
