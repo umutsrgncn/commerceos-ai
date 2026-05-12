@@ -74,13 +74,6 @@ export const metadata = {
     "Otopilot 7 farklı işi yönetir: yorum cevabı, e-fatura, stok sipariş, havale eşleştirme, fiyat, segmentasyon, anomali. Gemini AI + Türkiye'ye özel (KVKK, GİB, iyzico).",
 };
 
-const STATS = [
-  { value: "15+", label: "AI noktası", accent: "from-fuchsia-400 to-pink-400" },
-  { value: "7", label: "Otopilot kabiliyeti", accent: "from-indigo-400 to-cyan-400" },
-  { value: "20+", label: "Entegre modül", accent: "from-emerald-400 to-teal-400" },
-  { value: "Türkçe", label: "AI çıktıları", accent: "from-amber-400 to-orange-400" },
-];
-
 const MODULES = [
   { icon: ShoppingCart, title: "Sipariş", desc: "Stok rezervasyonu, kargo, durum geçişleri" },
   { icon: Package, title: "Ürün & envanter", desc: "AI açıklama + görsel, otomatik stok" },
@@ -350,25 +343,6 @@ export default function HomePage() {
               <TechChip icon={<PlaywrightIcon />} name="Playwright" iconClass="text-emerald-300" />
               <TechChip icon={<PythonIcon />} name="pytest" iconClass="text-blue-300" />
             </div>
-          </div>
-        </section>
-
-        {/* ─── Stats ─── */}
-        <section className="mx-auto max-w-6xl px-6 py-16">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {STATS.map((s) => (
-              <div
-                key={s.label}
-                className="rounded-2xl border border-white/[0.08] bg-white/[0.02] px-5 py-6"
-              >
-                <div
-                  className={`bg-gradient-to-br ${s.accent} bg-clip-text text-3xl font-semibold tabular-nums text-transparent sm:text-4xl`}
-                >
-                  {s.value}
-                </div>
-                <div className="mt-1 text-xs text-white/55">{s.label}</div>
-              </div>
-            ))}
           </div>
         </section>
 
