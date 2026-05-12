@@ -269,17 +269,36 @@ export default function HomePage() {
         <section className="relative border-y border-white/[0.06] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_60%)] py-20">
           <div className="mx-auto max-w-6xl px-6">
             <div className="text-center">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.22em] text-white/55">
-                <span className="h-1 w-1 rounded-full bg-emerald-400" />
-                Üzerine inşa edildi
-              </span>
-              <h2 className="mt-5 font-display text-3xl italic leading-tight sm:text-4xl">
-                Production-grade teknoloji yığını
+              <div className="inline-flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.36em] text-white/40">
+                <span className="h-px w-10 bg-gradient-to-r from-transparent to-white/25" />
+                Stack
+                <span className="h-px w-10 bg-gradient-to-l from-transparent to-white/25" />
+              </div>
+              <h2 className="mt-6 font-display text-5xl italic leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
+                Üzerine{" "}
+                <span className="bg-gradient-to-r from-white via-white to-white/40 bg-clip-text text-transparent">
+                  inşa edildi.
+                </span>
               </h2>
-              <p className="mx-auto mt-4 max-w-xl text-sm leading-relaxed text-white/55">
-                20+ teknoloji, dört disiplin: full-stack web, AI servisi, veri ve
-                ödeme. Hiçbiri vitrin değil — hepsi çalışıyor.
-              </p>
+              <div className="mx-auto mt-8 inline-flex items-center gap-3 rounded-full border border-white/[0.08] bg-white/[0.025] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-white/45 backdrop-blur">
+                <span className="tabular-nums text-base font-semibold text-white">
+                  19
+                </span>
+                <span>teknoloji</span>
+                <span className="h-3.5 w-px bg-white/15" />
+                <span className="tabular-nums text-base font-semibold text-white">
+                  5
+                </span>
+                <span>disiplin</span>
+                <span className="h-3.5 w-px bg-white/15" />
+                <span className="inline-flex items-center gap-1.5 text-emerald-300/90">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  </span>
+                  production
+                </span>
+              </div>
             </div>
 
             <div className="mt-14 grid gap-3 lg:grid-cols-2">
