@@ -49,10 +49,8 @@ import {
   AuthIcon,
   FastApiIcon,
   GeminiIcon,
-  GibIcon,
   GsapIcon,
   HiggsfieldIcon,
-  IyzicoIcon,
   LucideIcon,
   MotionIcon,
   NextIcon,
@@ -290,6 +288,7 @@ export default function HomePage() {
                 <TechItem icon={<ReactIcon />} name="React" tag="19" iconClass="text-sky-400" />
                 <TechItem icon={<TypeScriptIcon />} name="TypeScript" tag="5.7" iconClass="text-blue-400" />
                 <TechItem icon={<NodeIcon />} name="Node" tag="22 LTS" iconClass="text-green-400" />
+                <TechItem icon={<AuthIcon />} name="Auth.js" tag="v5" iconClass="text-violet-300" />
               </TechCategory>
 
               <TechCategory label="Veri & Cache" accent="sky">
@@ -326,11 +325,6 @@ export default function HomePage() {
                 <TechItem icon={<LucideIcon />} name="Lucide" tag="icons" iconClass="text-stone-300" />
               </TechCategory>
 
-              <TechCategory label="Güvenlik & Ödeme" accent="amber">
-                <TechItem icon={<AuthIcon />} name="Auth.js" tag="v5" iconClass="text-violet-300" />
-                <TechItem icon={<IyzicoIcon />} name="iyzico" tag="3DS" iconClass="text-rose-400" />
-                <TechItem icon={<GibIcon />} name="GİB E-Fatura" tag="UBL" iconClass="text-emerald-300" />
-              </TechCategory>
             </div>
 
             {/* Test & DX şeridi */}
