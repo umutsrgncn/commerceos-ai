@@ -770,6 +770,7 @@ enum AgentTaskStatus {
   REVIEW // tunnel açık, kullanıcı onayı bekleniyor
   MERGED // onaylandı, main'e merge edildi
   REJECTED // kullanıcı reddetti
+  CANCELLED // kullanıcı çalışırken durdurdu
   FAILED // hata — agent durduruldu
 }
 
@@ -794,22 +795,23 @@ enum AgentTestStatus {
 }
 
 model AgentTask {
-  id           String          @id @default(cuid())
-  title        String
-  prompt       String          @db.Text
-  status       AgentTaskStatus @default(PENDING)
-  branchName   String?
-  worktreePath String?
-  port         Int?
-  tunnelUrl    String?
-  planJson     Json?
-  tokensUsed   Int             @default(0)
-  iterations   Int             @default(0)
-  errorMsg     String?         @db.Text
-  startedAt    DateTime?
-  completedAt  DateTime?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id              String          @id @default(cuid())
+  title           String
+  prompt          String          @db.Text
+  status          AgentTaskStatus @default(PENDING)
+  branchName      String?
+  worktreePath    String?
+  port            Int?
+  tunnelUrl       String?
+  planJson        Json?
+  tokensUsed      Int             @default(0)
+  iterations      Int             @default(0)
+  errorMsg        String?         @db.Text
+  cancelRequested Boolean         @default(false)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   events      AgentEvent[]
   screenshots AgentScreenshot[]

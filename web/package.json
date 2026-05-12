@@ -14,7 +14,8 @@
 		"db:migrate": "prisma migrate dev",
 		"db:deploy": "prisma migrate deploy",
 		"db:studio": "prisma studio",
-		"db:seed": "tsx prisma/seed.ts"
+		"db:seed": "tsx prisma/seed.ts",
+		"agent:worker": "tsx --env-file=.env.local scripts/agent-worker.ts"
 	},
 	"prisma": {
 		"seed": "tsx prisma/seed.ts"
@@ -23,6 +24,7 @@
 		"@ark-ui/react": "^5.36.0",
 		"@auth/prisma-adapter": "^2.7.4",
 		"@base-ui/react": "^1.4.1",
+		"@google/generative-ai": "^0.24.1",
 		"@hookform/resolvers": "^3.10.0",
 		"@prisma/client": "^6.2.1",
 		"@tabler/icons-react": "^3.44.0",
@@ -41,6 +43,7 @@
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
 		"react-hook-form": "^7.54.2",
+		"server-only": "^0.0.1",
 		"shadcn": "^4.7.0",
 		"tailwind-merge": "^2.6.1",
 		"three": "^0.184.0",
