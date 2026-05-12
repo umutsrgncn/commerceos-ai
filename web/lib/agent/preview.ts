@@ -67,8 +67,13 @@ export async function startPreview(opts: {
   await fs.mkdir(logDir, { recursive: true });
   const devLog = path.join(logDir, "dev.log");
   const devLogFd = await fs.open(devLog, "w");
-  devProc.stdout?.on("data", (d) => devLogFd.write(d));
-  devProc.stderr?.on("data", (d) => devLogFd.write(d));
+  let devLogClosed = false;
+  const writeDev = (d: Buffer) => {
+    if (devLogClosed) return;
+    devLogFd.write(d).catch(() => {});
+  };
+  devProc.stdout?.on("data", writeDev);
+  devProc.stderr?.on("data", writeDev);
 
   // "Ready" sinyalini bekle
   const ready = await waitForReady(devProc, READY_TIMEOUT_MS);
@@ -95,8 +100,13 @@ export async function startPreview(opts: {
   );
   const tunnelLog = path.join(logDir, "tunnel.log");
   const tunnelLogFd = await fs.open(tunnelLog, "w");
-  tunnelProc.stdout?.on("data", (d) => tunnelLogFd.write(d));
-  tunnelProc.stderr?.on("data", (d) => tunnelLogFd.write(d));
+  let tunnelLogClosed = false;
+  const writeTunnel = (d: Buffer) => {
+    if (tunnelLogClosed) return;
+    tunnelLogFd.write(d).catch(() => {});
+  };
+  tunnelProc.stdout?.on("data", writeTunnel);
+  tunnelProc.stderr?.on("data", writeTunnel);
 
   const tunnelUrl = await waitForTunnelUrl(tunnelProc, TUNNEL_TIMEOUT_MS);
   if (tunnelUrl) {
@@ -131,6 +141,8 @@ export async function startPreview(opts: {
         devProc.kill("SIGKILL");
       } catch {}
     }, 5000).unref();
+    devLogClosed = true;
+    tunnelLogClosed = true;
     try {
       await devLogFd.close();
     } catch {}

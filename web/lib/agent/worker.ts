@@ -1,8 +1,10 @@
+import path from "node:path";
+
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
-import { getActivePreview, stopPreview } from "./preview";
+import { getActivePreview, startPreview, stopPreview } from "./preview";
 import { runTask } from "./runner";
-import { destroyWorktree, mergeBranchToMain } from "./worktree";
+import { destroyWorktree, mergeBranchToMain, type Worktree } from "./worktree";
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -54,46 +56,114 @@ export async function runWorkerLoop() {
 }
 
 async function handleActivePreview(): Promise<boolean> {
+  // Önce in-memory preview, yoksa DB'de REVIEW'da bekleyen var mı? (worker restart sonrası)
   const active = getActivePreview();
-  if (!active) return false;
+  let taskId: string | null = active?.taskId ?? null;
+
+  if (!taskId) {
+    const review = await db.agentTask.findFirst({
+      where: { status: "REVIEW", branchName: { not: null } },
+      orderBy: { startedAt: "desc" },
+      select: { id: true },
+    });
+    if (!review) return false;
+    taskId = review.id;
+  }
 
   const task = await db.agentTask.findUnique({
-    where: { id: active.taskId },
+    where: { id: taskId },
     select: { status: true, branchName: true, title: true },
   });
 
   if (!task) {
-    await stopPreview(active.taskId, "task silindi");
+    if (active) await stopPreview(taskId, "task silindi");
     return true;
   }
 
-  // Hâlâ inceleme bekliyor — döngüye dön
-  if (task.status === "REVIEW") return true;
-
-  // Onaylandı → main'e merge + cleanup
-  if (task.status === "MERGED") {
-    await stopPreview(active.taskId, "onaylandı, main'e merge ediliyor");
-    if (task.branchName) {
-      try {
-        await mergeBranchToMain(task.branchName, `merge: ${task.title}`);
+  // Hâlâ inceleme bekliyor
+  if (task.status === "REVIEW") {
+    // Worker restart sonrası in-memory preview yok ama task REVIEW — preview'ı yeniden başlat
+    if (!active && task.branchName) {
+      const worktreePath = `/tmp/agent-runs/${taskId}`;
+      const webPath = path.join(worktreePath, "web");
+      // worktree hâlâ disk'te mi?
+      const fs = await import("node:fs/promises");
+      const exists = await fs.stat(webPath).then(() => true).catch(() => false);
+      if (!exists) {
         await emitAgentEvent({
-          taskId: active.taskId,
-          type: "COMMIT",
-          summary: `main'e merge edildi: ${task.branchName}`,
-          payload: { branch: task.branchName },
+          taskId,
+          type: "ERROR",
+          summary: "Worktree disk'te yok — önizleme yeniden başlatılamıyor.",
         });
-        await destroyWorktree(active.taskId, task.branchName);
-        await emitAgentEvent({
-          taskId: active.taskId,
-          type: "NOTE",
-          summary: "Worktree ve branch temizlendi.",
+        await db.agentTask.update({
+          where: { id: taskId },
+          data: { tunnelUrl: null, port: null },
+        });
+        return true;
+      }
+      await emitAgentEvent({
+        taskId,
+        type: "NOTE",
+        summary: "Worker restart edildi — önizleme yeniden başlatılıyor…",
+      });
+      try {
+        const wt: Worktree = {
+          taskId,
+          branch: task.branchName,
+          path: worktreePath,
+          webPath,
+        };
+        const { port, tunnelUrl } = await startPreview({ taskId, wt });
+        await db.agentTask.update({
+          where: { id: taskId },
+          data: { port, tunnelUrl: tunnelUrl ?? null },
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         await emitAgentEvent({
-          taskId: active.taskId,
+          taskId,
+          type: "ERROR",
+          summary: `Önizleme başlatılamadı: ${msg.slice(0, 200)}`,
+        });
+      }
+    }
+    return true;
+  }
+
+  // Onaylandı → main'e merge + cleanup
+  if (task.status === "MERGED") {
+    if (active) await stopPreview(taskId, "onaylandı, main'e merge ediliyor");
+    if (task.branchName) {
+      try {
+        await mergeBranchToMain(task.branchName, `merge: ${task.title}`);
+        await emitAgentEvent({
+          taskId,
+          type: "COMMIT",
+          summary: `main'e merge edildi: ${task.branchName}`,
+          payload: { branch: task.branchName },
+        });
+        await destroyWorktree(taskId, task.branchName);
+        await emitAgentEvent({
+          taskId,
+          type: "NOTE",
+          summary: "Worktree ve branch temizlendi.",
+        });
+        // Task completedAt + tunnelUrl temizle ki bir daha sahiplenilmesin
+        await db.agentTask.update({
+          where: { id: taskId },
+          data: { tunnelUrl: null, port: null, completedAt: new Date() },
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await emitAgentEvent({
+          taskId,
           type: "ERROR",
           summary: `Merge hatası: ${msg.slice(0, 300)}`,
+        });
+        // Hata sonrası tekrar sahiplenmeyi engelle
+        await db.agentTask.update({
+          where: { id: taskId },
+          data: { tunnelUrl: null, port: null, errorMsg: msg },
         });
       }
     }
@@ -103,15 +173,19 @@ async function handleActivePreview(): Promise<boolean> {
   // Reddedildi veya iptal → cleanup, merge yok
   if (task.status === "REJECTED" || task.status === "CANCELLED") {
     const reason = task.status === "REJECTED" ? "reddedildi" : "iptal";
-    await stopPreview(active.taskId, reason);
+    if (active) await stopPreview(taskId, reason);
     if (task.branchName) {
-      await destroyWorktree(active.taskId, task.branchName);
+      await destroyWorktree(taskId, task.branchName);
       await emitAgentEvent({
-        taskId: active.taskId,
+        taskId,
         type: "NOTE",
         summary: "Worktree ve branch temizlendi.",
       });
     }
+    await db.agentTask.update({
+      where: { id: taskId },
+      data: { tunnelUrl: null, port: null, completedAt: new Date() },
+    });
     return true;
   }
 
