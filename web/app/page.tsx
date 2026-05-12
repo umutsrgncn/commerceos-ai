@@ -274,9 +274,9 @@ export default function HomePage() {
                 Stack
                 <span className="h-px w-10 bg-gradient-to-l from-transparent to-white/25" />
               </div>
-              <h2 className="mt-6 font-display text-5xl italic leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
+              <h2 className="mt-6 text-balance text-4xl font-semibold leading-[1.04] tracking-tight sm:text-5xl lg:text-6xl">
                 Üzerine{" "}
-                <span className="bg-gradient-to-r from-white via-white to-white/40 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-br from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">
                   inşa edildi.
                 </span>
               </h2>
