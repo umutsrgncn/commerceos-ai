@@ -58,6 +58,7 @@ export default async function AgentDetailPage({
           id={task.id}
           status={task.status}
           tunnelUrl={task.tunnelUrl}
+          port={task.port}
           cancelRequested={task.cancelRequested}
         />
       </div>

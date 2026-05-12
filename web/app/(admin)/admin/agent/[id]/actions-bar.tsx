@@ -15,11 +15,13 @@ export function ActionsBar({
   id,
   status,
   tunnelUrl,
+  port,
   cancelRequested,
 }: {
   id: string;
   status: AgentTaskStatus;
   tunnelUrl: string | null;
+  port: number | null;
   cancelRequested: boolean;
 }) {
   const [pending, start] = useTransition();
@@ -67,15 +69,28 @@ export function ActionsBar({
   return (
     <div className="flex flex-col items-stretch gap-2 sm:items-end">
       <div className="flex flex-wrap items-center gap-2">
+        {port && (
+          <a
+            href={`http://localhost:${port}/shop`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-xs font-medium hover:border-[color:var(--color-accent)]"
+            title="Worktree dev server (aynı makinede)"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Önizleme (lokal)
+          </a>
+        )}
         {tunnelUrl && (
           <a
             href={tunnelUrl}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-xs font-medium hover:border-[color:var(--color-accent)]"
+            title="Cloudflare tunnel (uzaktan erişim)"
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Önizlemeyi aç
+            Tunnel
           </a>
         )}
         {canCancel && (
