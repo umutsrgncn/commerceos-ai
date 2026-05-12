@@ -1,6 +1,7 @@
 import {
   Activity,
   BarChart3,
+  Bot,
   Boxes,
   Building,
   Building2,
@@ -52,6 +53,7 @@ export const NAV_ITEMS: NavItem[] = [
 
   { href: "/admin/ai", label: "AI Asistan", icon: MessageSquare, group: "ai" },
   { href: "/admin/autopilot", label: "Otopilot", icon: Sparkles, group: "ai" },
+  { href: "/admin/agent", label: "AI Geliştirici", icon: Bot, group: "ai" },
   { href: "/admin/activity", label: "Etkinlik", icon: Activity, group: "system" },
   { href: "/admin/users", label: "Ekip", icon: UsersRound, group: "system", minRole: "ADMIN" },
   { href: "/admin/data-requests", label: "KVKK", icon: Shield, group: "system", minRole: "ADMIN" },
