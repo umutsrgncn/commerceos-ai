@@ -502,6 +502,9 @@ async function seedOrders(
       orderDate.setMonth(orderDate.getMonth() - monthsAgo);
       orderDate.setDate(dayInMonth + 1);
       orderDate.setHours(randInt(8, 22), randInt(0, 59));
+      // Geleceğe sarkmasın — clamp to now (admin sıralamasını bozmasın)
+      const now = new Date();
+      if (orderDate > now) orderDate.setTime(now.getTime() - randInt(60, 3600) * 1000);
 
       // VIP/sadık müşteri %50 olasılıkla, yeni/risky %50
       const customer =
