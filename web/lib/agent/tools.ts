@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -8,6 +9,15 @@ import { canRead, canWrite } from "./scope";
 import type { AgentScope } from "./scopes";
 
 const exec = promisify(execFile);
+
+/** Bir dosyanın task içinde okunduğunu kanıtlayan snapshot */
+type ReadSnapshot = {
+  mtimeMs: number;
+  /** Tam dosya içeriği. Truncated read'lerde isFullRead=false → edit yasak. */
+  content: string;
+  isFullRead: boolean;
+  readAt: number; // task içi seq (kaçıncı tool call)
+};
 
 export type AgentContext = {
   taskId: string;
@@ -25,12 +35,22 @@ export type AgentContext = {
     summary: string,
     payload?: Record<string, unknown>,
   ) => Promise<void>;
+  /** Okunan dosya snapshot'ları — edit öncesi doğrulama için */
+  readFiles: Map<string, ReadSnapshot>;
+  /** Edit denemelerinin hash'i — semantic dedup */
+  editAttempts: Map<string, number>;
+  /** Tool call sayacı (state takibi) */
+  callCounter: { n: number };
 };
+
+export function makeReadFilesMap(): Map<string, ReadSnapshot> {
+  return new Map();
+}
 
 const MAX_READ_BYTES = 30_000;
 const MAX_GREP_HITS = 60;
 
-// ─── Schemas (Gemini function declarations) ───
+// ─── Schemas (function declarations) ───
 
 export const TOOL_DECLS: FunctionDeclaration[] = [
   {
@@ -48,7 +68,7 @@ export const TOOL_DECLS: FunctionDeclaration[] = [
   {
     name: "read_file",
     description:
-      "Bir dosyanın tüm içeriğini oku. .env dışında her dosya okunabilir. Max 80KB.",
+      "Bir dosyanın tüm içeriğini oku. Aynı dosya zaten okunduysa ve içerik değişmediyse 'değişmedi' özeti döner — tekrar okumana gerek yok. Max 30KB; daha büyükse truncated döner. ÖNEMLİ: edit_file çağırmadan ÖNCE mutlaka read_file çağırmalısın.",
     parameters: {
       type: "OBJECT" as SchemaType,
       properties: {
@@ -60,7 +80,7 @@ export const TOOL_DECLS: FunctionDeclaration[] = [
   {
     name: "grep",
     description:
-      "Repoda regex ile metin ara. Sonuçları file:line:text formatında döner. Max 80 satır.",
+      "Repoda regex ile metin ara. Sonuçları file:line:text formatında döner. Max 60 satır.",
     parameters: {
       type: "OBJECT" as SchemaType,
       properties: {
@@ -76,7 +96,7 @@ export const TOOL_DECLS: FunctionDeclaration[] = [
   {
     name: "write_file",
     description:
-      "Bir dosyayı **komple** yaz/üzerine yaz. Scope kilidi var: prisma, auth, db.ts, .env yazılamaz.",
+      "Bir dosyayı **komple** yaz/üzerine yaz. Scope kilidi var: prisma, auth, db.ts, .env yazılamaz. Mevcut dosyayı üzerine yazmadan ÖNCE read_file çağırmalısın.",
     parameters: {
       type: "OBJECT" as SchemaType,
       properties: {
@@ -89,13 +109,21 @@ export const TOOL_DECLS: FunctionDeclaration[] = [
   {
     name: "edit_file",
     description:
-      "Bir dosyada tek bir tam string'i başka bir string ile değiştir. old_string dosyada UNIQUE olmalı, yoksa hata.",
+      "Bir dosyada tek bir string'i başka bir string ile değiştir. KURALLAR:\n" +
+      "1) Bu dosyayı önce read_file ile okumuş olmalısın — yoksa hata.\n" +
+      "2) old_string dosyada UNIQUE olmalı. Birden çok yerde geçiyorsa: ya daha fazla bağlam ekle ya da replace_all=true ver.\n" +
+      "3) Aynı (path, old_string, new_string) edit'ini 2 kez deneme — DRY hata.\n" +
+      "4) Indentation'ı koru — old_string'deki boşluk/tab'ler new_string'de de aynı olmalı.",
     parameters: {
       type: "OBJECT" as SchemaType,
       properties: {
         path: { type: "STRING" as SchemaType },
-        old_string: { type: "STRING" as SchemaType, description: "Eşleştirilecek tam metin" },
+        old_string: { type: "STRING" as SchemaType, description: "Eşleştirilecek tam metin (indentation dahil)" },
         new_string: { type: "STRING" as SchemaType, description: "Yerine yazılacak metin" },
+        replace_all: {
+          type: "BOOLEAN" as SchemaType,
+          description: "true ise tüm eşleşmeleri değiştir (default false — tek eşleşme bekler)",
+        },
       },
       required: ["path", "old_string", "new_string"],
     },
@@ -125,6 +153,22 @@ function resolveSafe(ctx: AgentContext, relPath: string): string {
   return path.join(ctx.worktreePath, norm);
 }
 
+function normalizePath(p: string): string {
+  return p.replace(/^\/+/, "").replace(/\\/g, "/");
+}
+
+function hashEdit(relPath: string, oldStr: string, newStr: string, all: boolean): string {
+  return createHash("sha1")
+    .update(`${relPath}|${all ? 1 : 0}|${oldStr}|${newStr}`)
+    .digest("hex")
+    .slice(0, 16);
+}
+
+async function getMtime(absPath: string): Promise<number> {
+  const st = await fs.stat(absPath);
+  return st.mtimeMs;
+}
+
 // ─── Tool implementations ───
 
 export async function execTool(
@@ -132,6 +176,7 @@ export async function execTool(
   name: string,
   args: Record<string, unknown>,
 ): Promise<{ ok: boolean; result?: unknown; error?: string; finish?: { summary: string } }> {
+  ctx.callCounter.n += 1;
   try {
     switch (name) {
       case "list_dir":
@@ -151,12 +196,12 @@ export async function execTool(
       case "edit_file":
         return {
           ok: true,
-          result: await editFile(
-            ctx,
-            String(args.path ?? ""),
-            String(args.old_string ?? ""),
-            String(args.new_string ?? ""),
-          ),
+          result: await editFile(ctx, {
+            path: String(args.path ?? ""),
+            old_string: String(args.old_string ?? ""),
+            new_string: String(args.new_string ?? ""),
+            replace_all: args.replace_all === true,
+          }),
         };
       case "finish":
         return { ok: true, finish: { summary: String(args.summary ?? "Tamamlandı.") } };
@@ -183,13 +228,37 @@ async function listDir(ctx: AgentContext, relPath: string) {
 
 async function readFile(ctx: AgentContext, relPath: string) {
   if (!canRead(relPath)) throw new Error(`okuma yasak: ${relPath}`);
+  const norm = normalizePath(relPath);
   const full = resolveSafe(ctx, relPath);
+
+  // Dedup: aynı dosya + mtime değişmediyse stub
+  const mtime = await getMtime(full);
+  const prev = ctx.readFiles.get(norm);
+  if (prev && prev.mtimeMs === mtime) {
+    return {
+      path: relPath,
+      content: `[Bu dosya değişmedi — seq #${prev.readAt}'te okuduğun içerik geçerli. Tekrar okumana gerek yok, mevcut bilgiyle ilerle.]`,
+      truncated: false,
+      unchanged: true,
+    };
+  }
+
   const buf = await fs.readFile(full);
-  if (buf.length > MAX_READ_BYTES) {
-    const text = buf.slice(0, MAX_READ_BYTES).toString("utf8");
+  const isFull = buf.length <= MAX_READ_BYTES;
+  const text = isFull ? buf.toString("utf8") : buf.slice(0, MAX_READ_BYTES).toString("utf8");
+
+  // Snapshot kaydı (edit guard için)
+  ctx.readFiles.set(norm, {
+    mtimeMs: mtime,
+    content: text,
+    isFullRead: isFull,
+    readAt: ctx.callCounter.n,
+  });
+
+  if (!isFull) {
     return { path: relPath, content: text, truncated: true, totalBytes: buf.length };
   }
-  return { path: relPath, content: buf.toString("utf8"), truncated: false };
+  return { path: relPath, content: text, truncated: false };
 }
 
 async function grep(ctx: AgentContext, pattern: string, relPath?: string) {
@@ -219,7 +288,6 @@ async function grep(ctx: AgentContext, pattern: string, relPath?: string) {
       .map((ln) => (ln.startsWith(rootPrefix) ? ln.slice(rootPrefix.length) : ln));
     return { pattern, hits: lines.length, lines };
   } catch (err) {
-    // grep exit 1 = no match
     if (err && typeof err === "object" && "code" in err && (err as { code: number }).code === 1) {
       return { pattern, hits: 0, lines: [] };
     }
@@ -233,13 +301,33 @@ async function writeFile(ctx: AgentContext, relPath: string, content: string) {
     await ctx.emit("ERROR", `Yazma reddedildi: ${relPath}`, { reason: check.reason });
     throw new Error(`yazma yasak: ${check.reason}`);
   }
+  const norm = normalizePath(relPath);
   const full = resolveSafe(ctx, relPath);
   await fs.mkdir(path.dirname(full), { recursive: true });
   const exists = await fs
     .stat(full)
     .then(() => true)
     .catch(() => false);
+
+  // ÜZERİNE yazma değil, mevcut dosya varsa read-before-write guard
+  // (sıfırdan dosya oluşturma her zaman OK)
+  if (exists && !ctx.readFiles.has(norm)) {
+    throw new Error(
+      "Mevcut bir dosyayı write_file ile üzerine yazmadan ÖNCE read_file ile okumalısın. Bu, içeriği yanlışlıkla kaybetmeni engeller.",
+    );
+  }
+
   await fs.writeFile(full, content, "utf8");
+
+  // Post-write: snapshot güncelle (edit guard için)
+  const mtime = await getMtime(full);
+  ctx.readFiles.set(norm, {
+    mtimeMs: mtime,
+    content,
+    isFullRead: true,
+    readAt: ctx.callCounter.n,
+  });
+
   await ctx.emit("FILE_WRITE", `${exists ? "Güncellendi" : "Oluşturuldu"}: ${relPath}`, {
     path: relPath,
     bytes: Buffer.byteLength(content, "utf8"),
@@ -250,10 +338,11 @@ async function writeFile(ctx: AgentContext, relPath: string, content: string) {
 
 async function editFile(
   ctx: AgentContext,
-  relPath: string,
-  oldStr: string,
-  newStr: string,
+  args: { path: string; old_string: string; new_string: string; replace_all: boolean },
 ) {
+  const { path: relPath, old_string: oldStr, new_string: newStr, replace_all: replaceAll } = args;
+
+  // Scope check
   const check = canWrite(relPath, ctx.scopes);
   if (!check.ok) {
     await ctx.emit("ERROR", `Edit reddedildi: ${relPath}`, { reason: check.reason });
@@ -262,24 +351,78 @@ async function editFile(
   if (!oldStr) throw new Error("old_string boş olamaz");
   if (oldStr === newStr) throw new Error("old_string ve new_string aynı");
 
+  const norm = normalizePath(relPath);
   const full = resolveSafe(ctx, relPath);
-  const content = await fs.readFile(full, "utf8");
-  const idx = content.indexOf(oldStr);
-  if (idx === -1) {
-    throw new Error("old_string dosyada bulunamadı (tam eşleşme arıyorum)");
-  }
-  const lastIdx = content.lastIndexOf(oldStr);
-  if (lastIdx !== idx) {
+
+  // 1) Read-before-edit guard
+  const snapshot = ctx.readFiles.get(norm);
+  if (!snapshot) {
     throw new Error(
-      "old_string birden çok yerde geçiyor — daha fazla bağlam ekleyip unique yap",
+      `Bu dosyayı önce read_file ile okumalısın: ${relPath}. Edit hayalet referansla yapılamaz.`,
     );
   }
-  const next = content.replace(oldStr, newStr);
+  if (!snapshot.isFullRead) {
+    throw new Error(
+      `${relPath} truncated okunmuştu (dosya çok büyük). Edit için tam içerik gerekli — bu dosyayı şu an edit edemezsin.`,
+    );
+  }
+
+  // 2) Stale check — dosya başka biri tarafından değiştirildi mi?
+  const currentMtime = await getMtime(full);
+  if (currentMtime !== snapshot.mtimeMs) {
+    // Worktree'de hiç değişiklik olmamalı (sadece agent yazıyor), yine de defansif
+    throw new Error(
+      `${relPath} son read'inden sonra değişmiş (mtime mismatch). Önce yeniden read_file çağır.`,
+    );
+  }
+
+  // 3) Semantic dedup — aynı edit'i 2. kez deneme
+  const editHash = hashEdit(norm, oldStr, newStr, replaceAll);
+  const prevAttempts = ctx.editAttempts.get(editHash) ?? 0;
+  if (prevAttempts > 0) {
+    throw new Error(
+      `Bu edit (${relPath}, aynı old/new) zaten yapıldı veya denendi. Tekrar etme — farklı bir değişiklik gerekiyorsa farklı argümanlar kullan.`,
+    );
+  }
+  ctx.editAttempts.set(editHash, 1);
+
+  // 4) Match analizi
+  const content = await fs.readFile(full, "utf8");
+  let occurrences = 0;
+  let idx = -1;
+  while ((idx = content.indexOf(oldStr, idx + 1)) !== -1) occurrences += 1;
+
+  if (occurrences === 0) {
+    throw new Error(
+      `old_string ${relPath} dosyasında bulunamadı (tam eşleşme arıyorum, whitespace ve quote tipleri dahil).`,
+    );
+  }
+  if (occurrences > 1 && !replaceAll) {
+    throw new Error(
+      `old_string ${occurrences} farklı yerde geçiyor. Çözüm: ya replace_all=true ver (hepsini değiştir), ya da old_string'e daha fazla bağlam ekleyip UNIQUE yap.`,
+    );
+  }
+
+  // 5) Değiştir
+  const next = replaceAll
+    ? content.split(oldStr).join(newStr)
+    : content.replace(oldStr, newStr);
   await fs.writeFile(full, next, "utf8");
-  await ctx.emit("FILE_WRITE", `Edit: ${relPath}`, {
+
+  // 6) Post-edit: snapshot güncelle
+  const newMtime = await getMtime(full);
+  ctx.readFiles.set(norm, {
+    mtimeMs: newMtime,
+    content: next,
+    isFullRead: true,
+    readAt: ctx.callCounter.n,
+  });
+
+  await ctx.emit("FILE_WRITE", `Edit: ${relPath}${replaceAll ? ` (${occurrences} yer)` : ""}`, {
     path: relPath,
     oldBytes: Buffer.byteLength(oldStr, "utf8"),
     newBytes: Buffer.byteLength(newStr, "utf8"),
+    replacements: replaceAll ? occurrences : 1,
   });
-  return { path: relPath, replaced: 1 };
+  return { path: relPath, replaced: replaceAll ? occurrences : 1 };
 }

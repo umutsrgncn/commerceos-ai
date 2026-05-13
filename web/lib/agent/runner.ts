@@ -11,7 +11,7 @@ import { formatIssuesForAgent, lintChangedFiles } from "./rsc-lint";
 import { startPreview, stopPreview } from "./preview";
 import { buildScopeBriefing, getE2eSpecsForScopes, getScopesByIds, type AgentScope } from "./scopes";
 import { resetTestData } from "./test-db";
-import { execTool, TOOL_DECLS, type AgentContext } from "./tools";
+import { execTool, makeReadFilesMap, TOOL_DECLS, type AgentContext } from "./tools";
 import { filterAgentRelevantErrors, runTsc } from "./tsc-gate";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
@@ -44,6 +44,9 @@ function makeCtx(taskId: string, wt: Worktree, scopes: AgentScope[]): AgentConte
     emit: async (type, summary, payload) => {
       await emitAgentEvent({ taskId, type, summary, payload: payload ?? undefined });
     },
+    readFiles: makeReadFilesMap(),
+    editAttempts: new Map(),
+    callCounter: { n: 0 },
   };
 }
 
