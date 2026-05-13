@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   Brain,
@@ -46,6 +47,7 @@ export function EventTimeline({
   const [events, setEvents] = useState<Ev[]>(initialEvents);
   const [live, setLive] = useState(false);
   const ref = useRef<HTMLOListElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const sinceSeq = events[events.length - 1]?.seq ?? 0;
@@ -53,6 +55,15 @@ export function EventTimeline({
     const es = new EventSource(url);
     es.onopen = () => setLive(true);
     es.onerror = () => setLive(false);
+
+    // Status değişiklikleri sayfa server component'lerini de güncellesin
+    // (action bar, hero, tunnel link, vs.). 800ms debounce ile spam'i azalt.
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => router.refresh(), 800);
+    };
+
     es.addEventListener("event", (e) => {
       try {
         const data = JSON.parse((e as MessageEvent).data) as Ev;
@@ -60,9 +71,21 @@ export function EventTimeline({
           if (prev.some((p) => p.id === data.id)) return prev;
           return [...prev, data];
         });
+        if (data.type === "STATUS" || data.type === "TUNNEL" || data.type === "COMMIT") {
+          scheduleRefresh();
+        }
       } catch {}
     });
-    return () => es.close();
+
+    es.addEventListener("done", () => {
+      // Terminal status — bir kez refresh et
+      scheduleRefresh();
+    });
+
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      es.close();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskId]);
 
