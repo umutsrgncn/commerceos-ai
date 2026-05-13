@@ -381,6 +381,12 @@ async function writeFile(ctx: AgentContext, relPath: string, content: string) {
 
   await fs.writeFile(full, content, "utf8");
 
+  // Post-write: duplicate detector
+  const dupWarning = detectDuplicateLines(content);
+  if (dupWarning) {
+    await ctx.emit("NOTE", `Uyarı: ${relPath}'te ${dupWarning}`, { warning: dupWarning });
+  }
+
   // Post-write: snapshot güncelle (edit guard için)
   const mtime = await getMtime(full);
   ctx.readFiles.set(norm, {
@@ -395,7 +401,12 @@ async function writeFile(ctx: AgentContext, relPath: string, content: string) {
     bytes: Buffer.byteLength(content, "utf8"),
     created: !exists,
   });
-  return { path: relPath, bytes: Buffer.byteLength(content, "utf8"), created: !exists };
+  return {
+    path: relPath,
+    bytes: Buffer.byteLength(content, "utf8"),
+    created: !exists,
+    ...(dupWarning ? { warning: dupWarning } : {}),
+  };
 }
 
 async function editFile(
@@ -476,7 +487,13 @@ async function editFile(
     : content.replace(oldStr, newStr);
   await fs.writeFile(full, next, "utf8");
 
-  // 6) Post-edit: snapshot güncelle
+  // 6) Post-edit: duplicate import / line check
+  const dupWarning = detectDuplicateLines(next);
+  if (dupWarning) {
+    await ctx.emit("NOTE", `Uyarı: ${relPath}'te ${dupWarning}`, { warning: dupWarning });
+  }
+
+  // 7) Post-edit: snapshot güncelle
   const newMtime = await getMtime(full);
   ctx.readFiles.set(norm, {
     mtimeMs: newMtime,
@@ -491,5 +508,33 @@ async function editFile(
     newBytes: Buffer.byteLength(newStr, "utf8"),
     replacements: replaceAll ? occurrences : 1,
   });
-  return { path: relPath, replaced: replaceAll ? occurrences : 1 };
+  return {
+    path: relPath,
+    replaced: replaceAll ? occurrences : 1,
+    ...(dupWarning ? { warning: dupWarning } : {}),
+  };
+}
+
+/**
+ * Edit sonrası ortaya çıkan en sık hata: agent aynı satırı (özellikle import)
+ * iki kez ekler. Yakalayıp uyarı döner — agent bir sonraki iter'de düzeltir.
+ */
+function detectDuplicateLines(content: string): string | null {
+  const lines = content.split("\n");
+  const seen = new Map<string, number>();
+  const duplicates: string[] = [];
+  for (const ln of lines) {
+    const t = ln.trim();
+    // İlginç olan satırlar: import, type, export
+    if (!t.startsWith("import ") && !t.startsWith("export ") && !t.startsWith("type ")) continue;
+    if (t.length < 8) continue;
+    const count = (seen.get(t) ?? 0) + 1;
+    seen.set(t, count);
+    if (count === 2 && !duplicates.includes(t)) duplicates.push(t);
+  }
+  if (duplicates.length === 0) return null;
+  return `${duplicates.length} duplicate satır var (büyük olasılıkla TypeScript Identifier hatası verir): ${duplicates
+    .slice(0, 3)
+    .map((d) => `"${d.slice(0, 80)}"`)
+    .join(", ")}. Birini sil veya edit'ini geri al.`;
 }

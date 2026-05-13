@@ -253,6 +253,9 @@ export async function runTask(taskId: string): Promise<void> {
     let diminishingStreak = 0;
     // Compact cooldown — bir kez compact ettikten sonra hemen tekrar tetiklenmesin
     let lastCompactAtEstimate = 0;
+    // Sticky context — aktif tsc hatası varsa her iter'de hatırlat, compact silmesin
+    let activeTscError: string | null = null;
+    let activeRscError: string | null = null;
     // Tool dedup — aynı read tool'unu 3. kez çağrıyorsa engel
     const callCounts = new Map<string, number>();
     const READ_TOOLS = new Set(["read_file", "list_dir", "grep"]);
@@ -358,6 +361,16 @@ export async function runTask(taskId: string): Promise<void> {
 
       // History trimming — token tasarrufu için eski iter'leri özetle
       trimHistoryInPlace(history);
+
+      // Sticky context — aktif hata varsa son user turn'üne prepend et
+      // (compact/trim onu silse bile agent her iter'de görür)
+      if (activeTscError || activeRscError) {
+        const lastUserIdx = findLastUserTurnIndex(history);
+        if (lastUserIdx >= 0) {
+          const sticky = buildStickyErrorBlock(activeTscError, activeRscError);
+          injectStickyIntoTurn(history, lastUserIdx, sticky);
+        }
+      }
 
       const result = await generateWithRetry(
         model,
@@ -467,9 +480,13 @@ export async function runTask(taskId: string): Promise<void> {
         if (out.finish) {
           // ── RSC lint (hızlı, deterministik) — server/client karıştırma
           const rscResult = await lintChangedFiles(wt.path);
+          if (rscResult.ok) {
+            activeRscError = null;
+          }
           if (!rscResult.ok) {
             tscRetries += 1;
             const issuesText = formatIssuesForAgent(rscResult.issues);
+            activeRscError = issuesText;
             if (tscRetries >= MAX_TSC_RETRIES) {
               await emitAgentEvent({
                 taskId,
@@ -507,6 +524,8 @@ export async function runTask(taskId: string): Promise<void> {
           });
           const tscResult = await runTsc(wt.webPath);
           if (tscResult.ok) {
+            // tsc temiz → sticky error temizle
+            activeTscError = null;
             finished = true;
             finalSummary = out.finish.summary;
             await emitAgentEvent({
@@ -535,6 +554,8 @@ export async function runTask(taskId: string): Promise<void> {
             break;
           }
 
+          // Sticky context — bu hatayı her iter'de hatırlatacağız
+          activeTscError = errBody;
           await emitAgentEvent({
             taskId,
             type: "ERROR",
@@ -859,6 +880,62 @@ const PERSISTENT_TOOLS = new Set(["write_file", "edit_file", "finish"]);
  * History'deki tüm part'ların toplam karakter sayısı / 4 ≈ token tahmini.
  * Gemini usageMetadata accumulator değil — şu anki conversation state büyüklüğü.
  */
+/**
+ * Aktif hatalar için sticky context — son user turn'üne baştan ek olarak prepend edilir.
+ * Compact/trim history'yi temizlerken bile bu blok son turn'de durur.
+ */
+function buildStickyErrorBlock(
+  tsc: string | null,
+  rsc: string | null,
+): string {
+  const blocks: string[] = ["━━━ AKTİF HATA — bunu düzeltmeden finish çağırma ━━━"];
+  if (rsc) {
+    blocks.push(`\n[RSC kuralı ihlali]\n${rsc.slice(0, 1500)}`);
+  }
+  if (tsc) {
+    blocks.push(`\n[TypeScript hataları]\n${tsc.slice(0, 2500)}`);
+  }
+  blocks.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  return blocks.join("\n");
+}
+
+function findLastUserTurnIndex(history: Content[]): number {
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === "user") return i;
+  }
+  return -1;
+}
+
+function injectStickyIntoTurn(history: Content[], idx: number, sticky: string) {
+  const turn = history[idx];
+  // Sticky bloğunu yalnızca text part'larında prepend et — functionResponse'lara dokunma
+  const stickyTag = "━━━ AKTİF HATA";
+  const parts = turn.parts ?? [];
+  let textPartFound = false;
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if ("text" in p && typeof p.text === "string") {
+      // Mevcut sticky'i kaldır (her iter'de yenilenir)
+      let cleaned = p.text;
+      const tagIdx = cleaned.indexOf(stickyTag);
+      if (tagIdx >= 0) {
+        const endTag = cleaned.indexOf("━━━━━", tagIdx + stickyTag.length);
+        if (endTag >= 0) {
+          cleaned = cleaned.slice(0, tagIdx) + cleaned.slice(endTag + 60);
+          cleaned = cleaned.trim();
+        }
+      }
+      parts[i] = { text: `${sticky}\n\n${cleaned}` };
+      textPartFound = true;
+      break;
+    }
+  }
+  if (!textPartFound) {
+    // functionResponse'lardan oluşan turn — başa text ekle
+    parts.unshift({ text: sticky });
+  }
+}
+
 function estimateHistoryTokens(history: Content[]): number {
   let chars = 0;
   for (const m of history) {
