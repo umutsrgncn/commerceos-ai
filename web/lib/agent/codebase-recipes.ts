@@ -76,66 +76,26 @@ useFormStatus (pending state):
   const { pending } = useFormStatus();
 
 ────────────────────────────────────────
-8) KVKK / HESAP SİLME TALEBİ ÖRNEĞİ
+8) KVKK / HESAP SİLME TALEBİ — gerçek schema
 ────────────────────────────────────────
-DataRequest modeli ZATEN VAR. Admin tarafında /admin/data-requests sayfası da var.
-Müşterinin "Hesabımı sil" akışı:
+DataModels listesindeki MODEL ADI ve ALAN ADLARI HER ZAMAN OTORİTEDİR.
+"db.dataDeletionRequest" gibi adlar tahmin değil — yukarıdaki listede aynen var.
 
-a) Client component (form):
-   "use client";
-   import { useActionState } from "react";
-   import { useFormStatus } from "react-dom";
-   import { requestAccountDeletion } from "./actions";
+Müşteri ayarlar → admin onayına talep akışı için:
 
-   export function DeleteAccountForm() {
-     const [state, action] = useActionState(requestAccountDeletion, null);
-     return (
-       <form action={action}>
-         <textarea name="reason" />
-         <SubmitButton />
-         {state?.ok && <p>{state.message}</p>}
-         {state?.ok === false && <p>{state.error}</p>}
-       </form>
-     );
-   }
+a) Client component (form): "use client" + useActionState
+b) Server action: "use server" + db.<model>.create({...})
+c) Server component (page.tsx): formu yerleştir
+d) revalidatePath ile admin sayfasını tazele
 
-b) Server action (./actions.ts):
-   "use server";
-   import { db } from "@/lib/db";
-   import { requireCustomer } from "@/lib/shop/auth";
-   import { revalidatePath } from "next/cache";
+DOĞRU YAKLAŞIM — pattern yerine yapı:
+- Hangi modeli kullanacağını DATA MODELS listesinden seç (yukarıda gerçek schema'dan üretildi).
+- Mevcut admin sayfası benzer iş yapıyorsa onun query/mutation kodlarını OKU, alanları kopyala.
+- TS hata varsa, model/alan adlarını tahmin etme — schema listesinden veya admin kodundan kopyala.
 
-   type State = { ok: true; message: string } | { ok: false; error: string } | null;
-
-   export async function requestAccountDeletion(
-     _prev: State,
-     formData: FormData,
-   ): Promise<State> {
-     const customer = await requireCustomer();
-     const reason = (formData.get("reason") as string | null)?.trim() || "Kullanıcı isteği";
-     // Zaten bekleyen talep var mı?
-     const existing = await db.dataRequest.findFirst({
-       where: { email: customer.email, type: "DELETE", status: "PENDING" },
-     });
-     if (existing) {
-       return { ok: false, error: "Zaten bekleyen bir silme talebin var." };
-     }
-     await db.dataRequest.create({
-       data: {
-         email: customer.email,
-         type: "DELETE",
-         reason,
-         status: "PENDING",
-       },
-     });
-     revalidatePath("/admin/data-requests");
-     return { ok: true, message: "Talebin admin'e iletildi, 7 gün içinde dönüş yapacağız." };
-   }
-
-c) Server component (page.tsx):
-   import { DeleteAccountForm } from "./delete-account-form";
-   ...
-   <DeleteAccountForm />
+REFERANSLAR (oku, model + alan adlarını gör):
+  web/app/(admin)/admin/data-requests/page.tsx  — admin KVKK panelinin nasıl listelediği
+  web/prisma/schema.prisma                       — model + alan + enum tam tanımı
 
 ────────────────────────────────────────
 9) ÖNEMLİ UYARILAR
