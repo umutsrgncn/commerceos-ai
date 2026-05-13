@@ -2,6 +2,8 @@ import type { Content, FunctionCall, Part } from "@google/generative-ai";
 
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
+import { filterTestable, getChangedPages } from "./changed-pages";
+import { runDynamicE2e } from "./dynamic-e2e";
 import { runE2eGate, summarizeE2eResult } from "./e2e-gate";
 import { agentModel, generateWithRetry, plannerModel } from "./gemini";
 import { buildAgentTurnPrompt, buildPlannerPrompt, SYSTEM_PROMPT } from "./prompts";
@@ -567,8 +569,8 @@ export async function runTask(taskId: string): Promise<void> {
             await emitAgentEvent({
               taskId,
               type: "SCREENSHOT",
-              summary: `${e2e.screenshots.length} ekran görüntüsü alındı.`,
-              payload: { count: e2e.screenshots.length },
+              summary: `${e2e.screenshots.length} ekran görüntüsü alındı (scope spec'leri).`,
+              payload: { count: e2e.screenshots.length, source: "scope" },
             });
           }
         } catch (testErr) {
@@ -579,6 +581,51 @@ export async function runTask(taskId: string): Promise<void> {
             summary: `e2e gate hatası: ${msg.slice(0, 200)}`,
           });
         }
+      }
+
+      // ─── 7b) Dinamik e2e — agent'ın değiştirdiği SAYFAlar için ───
+      try {
+        const allChanged = await getChangedPages(wt.path);
+        const changedPages = filterTestable(allChanged);
+        if (allChanged.length > 0) {
+          await emitAgentEvent({
+            taskId,
+            type: "STATUS",
+            summary: `Değişen ${allChanged.length} sayfa için anlık test + screenshot…`,
+            payload: {
+              pages: allChanged.map((p) => p.url),
+              dynamicSkipped: allChanged.length - changedPages.length,
+            },
+          });
+          if (changedPages.length > 0) {
+            const dyn = await runDynamicE2e({
+              taskId,
+              port: previewPort,
+              pages: changedPages,
+            });
+            await emitAgentEvent({
+              taskId,
+              type: "TEST_RUN",
+              summary: `Dinamik: ${dyn.passed}/${dyn.total} sayfa OK${
+                dyn.failed > 0 ? `, ${dyn.failed} başarısız` : ""
+              }`,
+              payload: dyn,
+            });
+            await emitAgentEvent({
+              taskId,
+              type: "SCREENSHOT",
+              summary: `${dyn.pages.filter((p) => p.screenshotUrl).length} sayfa ekran görüntüsü alındı (değişiklik yapılanlar).`,
+              payload: { count: dyn.pages.length, source: "dynamic" },
+            });
+          }
+        }
+      } catch (dynErr) {
+        const msg = dynErr instanceof Error ? dynErr.message : String(dynErr);
+        await emitAgentEvent({
+          taskId,
+          type: "ERROR",
+          summary: `Dinamik e2e hatası: ${msg.slice(0, 200)}`,
+        });
       }
     }
 

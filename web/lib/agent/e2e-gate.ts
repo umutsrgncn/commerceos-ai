@@ -9,6 +9,8 @@ const exec = promisify(execFile);
 
 const E2E_TIMEOUT_MS = 180_000; // 3 dakika tüm specs
 const RESULTS_DIR = ".agent-logs/e2e";
+const REPO_ROOT = process.env.AGENT_REPO_ROOT ?? "/opt/commerceos";
+const PUBLIC_SCREENSHOT_ROOT = path.join(REPO_ROOT, "web/public/agent-screenshots");
 
 export type E2eRunResult = {
   ok: boolean;
@@ -142,17 +144,28 @@ export async function runE2eGate(opts: {
     } catch {}
   }
 
+  // Screenshot'ları public/agent-screenshots/<taskId>/ altına kopyala → web'den serve edilebilsin
+  const publicDir = path.join(PUBLIC_SCREENSHOT_ROOT, opts.taskId);
+  try {
+    await fs.mkdir(publicDir, { recursive: true });
+  } catch {}
+
   for (const rel of screenshots) {
+    const baseName = path.basename(rel);
+    const dest = path.join(publicDir, `scope-${baseName}`);
+    const publicUrl = `/agent-screenshots/${opts.taskId}/scope-${baseName}`;
     try {
+      await fs.copyFile(rel, dest);
       await db.agentScreenshot.create({
         data: {
           taskId: opts.taskId,
           label: path.basename(rel, ".png"),
-          // path: worktree-relatif (UI bunu okumayı sonra yapacak — şimdilik path olarak sakla)
-          path: rel,
+          path: publicUrl,
         },
       });
-    } catch {}
+    } catch {
+      // kopyalama başarısız → kaydı atla
+    }
   }
 
   const output = (stdoutText + "\n" + stderrText).slice(-5000);
