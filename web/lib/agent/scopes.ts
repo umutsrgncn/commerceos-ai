@@ -163,7 +163,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Ürün yönetimi sayfaları. Dosya: web/app/(admin)/admin/products/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/products\//],
-    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts", "tests/e2e/specs/admin-smoke/admin-detail-routes.spec.ts"],
   },
   {
     id: "admin_inventory",
@@ -184,7 +184,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       "Sipariş yönetimi sayfaları. Dosya: web/app/(admin)/admin/orders/. Queries: web/lib/queries/orders.ts.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/orders\//],
     libGlobs: [/^web\/lib\/queries\/orders/],
-    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts", "tests/e2e/specs/admin-smoke/admin-detail-routes.spec.ts"],
   },
   {
     id: "admin_customers",
@@ -195,7 +195,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       "Müşteri yönetimi. Dosya: web/app/(admin)/admin/customers/. Queries: web/lib/queries/customers*.ts.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/customers\//],
     libGlobs: [/^web\/lib\/queries\/(customer|customers)/],
-    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts", "tests/e2e/specs/admin-smoke/admin-detail-routes.spec.ts"],
   },
   {
     id: "admin_categories",
@@ -205,7 +205,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Kategori yönetimi. Dosya: web/app/(admin)/admin/categories/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/categories\//],
-    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts", "tests/e2e/specs/admin-smoke/admin-detail-routes.spec.ts"],
   },
   {
     id: "admin_discounts",
@@ -224,7 +224,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Finans, gelecek ödemeler, AI Turnaround insight. Dosya: web/app/(admin)/admin/finance/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/finance\//],
-    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts", "tests/e2e/specs/admin-smoke/admin-detail-routes.spec.ts"],
   },
   {
     id: "admin_analytics",

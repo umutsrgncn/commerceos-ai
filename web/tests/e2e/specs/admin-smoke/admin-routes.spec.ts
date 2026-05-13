@@ -10,6 +10,12 @@ import { expect, test } from "@playwright/test";
 const ADMIN_ROUTES: Record<string, string> = {
   admin_dashboard: "/admin",
   admin_products: "/admin/products",
+  admin_products_new: "/admin/products/new",
+  admin_orders_new: "/admin/orders/new",
+  admin_profile: "/admin/profile",
+  admin_reviews: "/admin/reviews",
+  admin_suppliers: "/admin/suppliers",
+  admin_suppliers_new: "/admin/suppliers/new",
   admin_inventory: "/admin/inventory",
   admin_orders: "/admin/orders",
   admin_customers: "/admin/customers",

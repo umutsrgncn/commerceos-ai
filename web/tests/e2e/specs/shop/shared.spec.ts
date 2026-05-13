@@ -22,4 +22,28 @@ test.describe("shared · landing + brand", () => {
       fullPage: false,
     });
   });
+
+  test("/watch landing showcase build hatasız", async ({ page }) => {
+    const resp = await page.goto("/watch");
+    expect(resp?.status() ?? 0).toBeLessThan(500);
+    await page.screenshot({
+      path: `${test.info().outputDir}/watch.png`,
+      fullPage: false,
+    });
+  });
+});
+
+test.describe("shared · public auth (login/signup)", () => {
+  for (const url of ["/login", "/signup"]) {
+    test(`${url} render eder`, async ({ page }) => {
+      const resp = await page.goto(url);
+      expect(resp?.status() ?? 0).toBeLessThan(500);
+      await expect(page.locator("body")).toBeVisible();
+      const safe = url.replace(/[\/]/g, "_");
+      await page.screenshot({
+        path: `${test.info().outputDir}/public${safe}.png`,
+        fullPage: false,
+      });
+    });
+  }
 });
