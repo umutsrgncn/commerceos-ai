@@ -241,6 +241,28 @@ export async function runTask(taskId: string): Promise<void> {
     const ctx = makeCtx(taskId, wt, scopes);
     const model = agentModel(TOOL_DECLS);
 
+    // ── State (loop'a girmeden önce hepsini tanımla — TDZ önler) ──
+    let iteration = 0;
+    let finished = false;
+    let totalTokens = 0;
+    let tscRetries = 0;
+    // Diminishing returns takibi — agent dönüp duruyorsa otomatik bitir
+    let lastTotalTokens = 0;
+    let diminishingStreak = 0;
+    // Tool dedup — aynı read tool'unu 3. kez çağrıyorsa engel
+    const callCounts = new Map<string, number>();
+    const READ_TOOLS = new Set(["read_file", "list_dir", "grep"]);
+    const callKey = (name: string, args: unknown): string => {
+      if (!args || typeof args !== "object") return name;
+      const a = args as Record<string, unknown>;
+      const sig = a.path ?? a.pattern ?? JSON.stringify(a).slice(0, 100);
+      return `${name}:${sig}`;
+    };
+    // Pre-read edilen dosyalar için sayacı 2 yap → 1 daha çağırırsa kabul, 2. denemede engel
+    const seedPreReadCounts = (paths: string[]) => {
+      for (const p of paths) callCounts.set(`read_file:${p}`, 2);
+    };
+
     // Pre-read: planner'ın expected_files'ını agent görmeden önce oku
     // → grep/list_dir iterasyonları azalır, token tasarrufu
     const preReadFiles: Array<{ path: string; content: string; truncated: boolean }> = [];
@@ -289,27 +311,6 @@ export async function runTask(taskId: string): Promise<void> {
         parts: [{ text: buildAgentTurnPrompt({ plan, iteration: 1 }) + preReadBlock }],
       },
     ];
-
-    let iteration = 0;
-    let finished = false;
-    let totalTokens = 0;
-    let tscRetries = 0;
-    // Diminishing returns takibi — agent dönüp duruyorsa otomatik bitir
-    let lastTotalTokens = 0;
-    let diminishingStreak = 0;
-    // Tool dedup — aynı read tool'unu 3. kez çağrıyorsa engel
-    const callCounts = new Map<string, number>();
-    const READ_TOOLS = new Set(["read_file", "list_dir", "grep"]);
-    const callKey = (name: string, args: unknown): string => {
-      if (!args || typeof args !== "object") return name;
-      const a = args as Record<string, unknown>;
-      const sig = a.path ?? a.pattern ?? JSON.stringify(a).slice(0, 100);
-      return `${name}:${sig}`;
-    };
-    // Pre-read edilen dosyalar için sayacı 2 yap → 1 daha çağırırsa kabul, 2. denemede engel
-    const seedPreReadCounts = (paths: string[]) => {
-      for (const p of paths) callCounts.set(`read_file:${p}`, 2);
-    };
 
     while (iteration < MAX_ITERATIONS && !finished) {
       iteration += 1;
