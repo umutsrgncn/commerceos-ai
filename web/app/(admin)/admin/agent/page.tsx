@@ -252,8 +252,13 @@ const STATUS_META: Record<AgentTaskStatus, { label: string; cls: string; dot?: s
     cls: "bg-stone-500/15 text-stone-600 dark:text-stone-300",
     dot: "bg-stone-500",
   },
+  REFUSED: {
+    label: "Yapılamadı",
+    cls: "bg-orange-500/15 text-orange-600 dark:text-orange-300",
+    dot: "bg-orange-500",
+  },
   FAILED: {
-    label: "Hata",
+    label: "Sistem hatası",
     cls: "bg-rose-500/20 text-rose-700 dark:text-rose-300",
     dot: "bg-rose-600",
   },

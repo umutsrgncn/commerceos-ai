@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowLeft,
   Bot,
   CheckCircle2,
@@ -8,6 +9,7 @@ import {
   Hash,
   Hourglass,
   ScrollText,
+  ShieldAlert,
   Target,
   XCircle,
 } from "lucide-react";
@@ -151,15 +153,54 @@ export default async function AgentDetailPage({
         />
       </div>
 
-      {task.errorMsg && (
-        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/[0.05] p-4">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-300">
-            <XCircle className="h-3.5 w-3.5" />
-            Hata
+      {task.errorMsg && task.status === "REFUSED" && (
+        <div className="overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/[0.06] to-amber-500/[0.04]">
+          <div className="flex items-start gap-3 p-5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-orange-500/15 text-orange-600 dark:text-orange-300">
+              <ShieldAlert className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                Bu görev yapılmadı
+              </h3>
+              <p className="mt-0.5 text-[11px] uppercase tracking-wider text-orange-600/70 dark:text-orange-400/70">
+                Agent kasıtlı olarak reddetti — güvenlik veya scope kuralı
+              </p>
+              <div className="mt-3 rounded-lg border border-orange-500/15 bg-[color:var(--color-bg)] p-3.5">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted)]">
+                  Gerekçe
+                </div>
+                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-[color:var(--color-fg)]/90">
+                  {task.errorMsg}
+                </p>
+              </div>
+              <p className="mt-3 text-xs text-[color:var(--color-muted)]">
+                Bu bir sistem hatası değil. Görevi yeniden formüle edip tekrar
+                deneyebilirsin.
+              </p>
+            </div>
           </div>
-          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-rose-700 dark:text-rose-300">
-            {task.errorMsg}
-          </pre>
+        </div>
+      )}
+
+      {task.errorMsg && task.status === "FAILED" && (
+        <div className="overflow-hidden rounded-2xl border border-rose-500/30 bg-rose-500/[0.05]">
+          <div className="flex items-start gap-3 p-5">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-300">
+              <AlertTriangle className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-sm font-semibold text-rose-700 dark:text-rose-300">
+                Sistem hatası
+              </h3>
+              <p className="mt-0.5 text-[11px] uppercase tracking-wider text-rose-600/70 dark:text-rose-400/70">
+                Beklenmeyen teknik hata — agent durduruldu
+              </p>
+              <pre className="mt-3 whitespace-pre-wrap break-words rounded-lg border border-rose-500/15 bg-[color:var(--color-bg)] p-3.5 font-mono text-xs text-rose-700 dark:text-rose-300">
+                {task.errorMsg}
+              </pre>
+            </div>
+          </div>
         </div>
       )}
 
@@ -338,8 +379,15 @@ const STATUS_META: Record<
     heroBg: "bg-gradient-to-br from-stone-500/[0.05] via-[color:var(--color-bg)] to-[color:var(--color-bg)]",
     heroBlur: "bg-stone-400/10",
   },
+  REFUSED: {
+    label: "Yapılamadı",
+    cls: "bg-orange-500/15 text-orange-600 dark:text-orange-300",
+    dot: "bg-orange-500",
+    heroBg: "bg-gradient-to-br from-orange-500/[0.08] via-[color:var(--color-bg)] to-[color:var(--color-bg)]",
+    heroBlur: "bg-orange-400/15",
+  },
   FAILED: {
-    label: "Hata",
+    label: "Sistem hatası",
     cls: "bg-rose-500/20 text-rose-700 dark:text-rose-300",
     dot: "bg-rose-600",
     heroBg: "bg-gradient-to-br from-rose-500/[0.08] via-[color:var(--color-bg)] to-[color:var(--color-bg)]",
