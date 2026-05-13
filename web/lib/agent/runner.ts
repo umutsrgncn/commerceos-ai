@@ -68,54 +68,68 @@ export async function runTask(taskId: string): Promise<void> {
 
     await ensureNotCancelled(taskId);
 
-    // ─── 2) Planlama ───
+    // ─── 2) Planlama (triage + scope seçimi) ───
     await db.agentTask.update({ where: { id: taskId }, data: { status: "PLANNING" } });
-    await emitAgentEvent({ taskId, type: "STATUS", summary: "Plan çıkarılıyor (Gemini)…" });
-
-    // Scope'ları çöz
-    const scopeIds = Array.isArray(task.targetScopes)
-      ? (task.targetScopes as string[])
-      : [];
-    const scopes = getScopesByIds(scopeIds);
+    await emitAgentEvent({
+      taskId,
+      type: "STATUS",
+      summary: "Planlama: kod keşfi + sayfa seçimi yapılıyor…",
+    });
 
     const planner = plannerModel();
     const planRes = await planner.generateContent(
-      buildPlannerPrompt({
-        title: task.title,
-        prompt: task.prompt,
-        scopes,
-      }),
+      buildPlannerPrompt({ title: task.title, prompt: task.prompt }),
     );
     const planText = planRes.response.text();
     let plan: Record<string, unknown> = {};
     try {
       plan = JSON.parse(planText);
     } catch {
-      plan = { summary: "Plan JSON parse edilemedi", raw: planText.slice(0, 500) };
+      plan = {
+        summary: "Plan JSON parse edilemedi",
+        feasible: false,
+        reason_if_not_feasible: "Planner geçersiz JSON döndürdü.",
+        raw: planText.slice(0, 500),
+      };
     }
+
+    // Plan içinden agent scope'larını çek
+    const chosenScopeIds = Array.isArray(plan.selected_scopes)
+      ? (plan.selected_scopes as unknown[]).filter((x): x is string => typeof x === "string")
+      : [];
+    const scopes = getScopesByIds(chosenScopeIds);
 
     await db.agentTask.update({
       where: { id: taskId },
-      data: { planJson: plan as never },
+      data: {
+        planJson: plan as never,
+        targetScopes: chosenScopeIds.length > 0 ? chosenScopeIds : [],
+      },
     });
+
     const planSummary = (plan.summary as string | undefined) ?? "Plan hazır";
+    const kind = (plan.kind as string | undefined) ?? "ui";
     await emitAgentEvent({
       taskId,
       type: "THINK",
       summary: planSummary,
       payload: {
         feasible: plan.feasible,
+        kind,
         steps: Array.isArray(plan.steps) ? (plan.steps as string[]).length : 0,
+        scopes: chosenScopeIds.length,
       },
     });
 
     if (plan.feasible === false) {
-      const reason = String(plan.reason_if_not_feasible ?? "Görev güvenlik/scope kurallarını ihlal ediyor.");
+      const reason = String(
+        plan.reason_if_not_feasible ?? "Görev güvenlik/scope kurallarını ihlal ediyor.",
+      );
       await emitAgentEvent({
         taskId,
         type: "NOTE",
         summary: `Görev reddedildi: ${reason.slice(0, 200)}`,
-        payload: { kind: "refusal" },
+        payload: { kind: "refusal", reason_kind: kind },
       });
       await db.agentTask.update({
         where: { id: taskId },
@@ -127,6 +141,29 @@ export async function runTask(taskId: string): Promise<void> {
       });
       return;
     }
+
+    if (scopes.length === 0) {
+      const reason =
+        "Planner bir scope seçemedi — talep katalogla eşleşmedi. Daha net yaz veya farklı bir görev iste.";
+      await emitAgentEvent({
+        taskId,
+        type: "NOTE",
+        summary: `Görev reddedildi: ${reason}`,
+        payload: { kind: "no_scope" },
+      });
+      await db.agentTask.update({
+        where: { id: taskId },
+        data: { status: "REFUSED", errorMsg: reason, completedAt: new Date() },
+      });
+      return;
+    }
+
+    await emitAgentEvent({
+      taskId,
+      type: "NOTE",
+      summary: `AI ${scopes.length} sayfa seçti: ${scopes.map((s) => s.label).join(", ")}`,
+      payload: { kind, scopes: chosenScopeIds },
+    });
 
     await ensureNotCancelled(taskId);
 

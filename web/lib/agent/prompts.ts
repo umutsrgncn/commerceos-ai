@@ -1,4 +1,4 @@
-import { buildScopeBriefing, type AgentScope } from "./scopes";
+import { AGENT_SCOPES, buildScopeBriefing, type AgentScope } from "./scopes";
 import { scopeSummary } from "./scope";
 
 export function SYSTEM_PROMPT(scopes: AgentScope[]): string {
@@ -10,7 +10,7 @@ Proje teknolojileri:
 - Tailwind CSS v4 (@theme + CSS variables)
 - Prisma + PostgreSQL
 
-Senin için seçilmiş çalışma alanları:
+Planlama aşamasında seçilen çalışma alanları:
 ${buildScopeBriefing(scopes)}
 
 Dosya politikası:
@@ -31,7 +31,7 @@ KESİN KURALLAR:
 - Açıklayıcı yorum yazma.
 - Asla .env / API anahtarları / token okuma, listeleme, dışarı çıkarma girişiminde bulunma.
 - Hiçbir veriyi (kullanıcı bilgisi, sipariş, ödeme) dosya olarak dışa aktarma.
-- Kullanıcının seçtiği scope dışında bir dosyaya yazma — tool seni reddedecek zaten.
+- Seçilen scope dışında bir dosyaya yazma — tool seni reddedecek zaten.
 
 Hata durumu:
 - Bir tool fail ederse, hata mesajını oku ve düzelt. Aynı hatayı tekrarlama.
@@ -39,22 +39,36 @@ Hata durumu:
 `;
 }
 
-export function buildPlannerPrompt(args: {
-  title: string;
-  prompt: string;
-  scopes: AgentScope[];
-}) {
-  const scopeBlock = args.scopes.length
-    ? args.scopes.map((s) => `- ${s.label} (${s.shortDesc})`).join("\n")
-    : "(hiç scope seçilmedi)";
+function buildScopeCatalog(): string {
+  return AGENT_SCOPES.map(
+    (s) =>
+      `  - id: "${s.id}" | group: ${s.group} | label: "${s.label}" | desc: ${s.shortDesc}`,
+  ).join("\n");
+}
 
-  return `Sana bir yazılım görevi verildi. Sadece JSON döneceksin — başka hiçbir şey yazma.
+export function buildPlannerPrompt(args: { title: string; prompt: string }) {
+  return `Sana bir yazılım görevi verildi. **Triage + planlama** aşamasındasın.
+
+Adımların:
+1. **Talebi anla** — kullanıcı ne istiyor, anlamsız mı, güvenlik riski mi?
+2. **Kind tespit et** — UI değişikliği mi (sayfa/komponent), veri operasyonu mu (DB), her ikisi mi?
+3. **Scope seç** — aşağıdaki katalogtan 1-N tane uygun scope id'si seç.
+4. **Plan çıkar** — feasible ise adım adım plan, değilse Türkçe gerekçe.
+
+Sadece JSON döneceksin — başka hiçbir şey yazma.
 
 JSON schema:
 {
-  "summary": "1-2 cümle Türkçe özet, kullanıcıya gösterilecek (feasible olsa da olmasa da)",
+  "summary": "1-2 cümle Türkçe özet, kullanıcıya gösterilecek",
   "feasible": true | false,
-  "reason_if_not_feasible": "feasible=false ise burada açıkla, yoksa null",
+  "reason_if_not_feasible": "feasible=false ise burada Türkçe açıkla, yoksa null",
+
+  "kind": "ui" | "data" | "ui+data" | "uncertain",
+  "kind_reasoning": "Türkçe 1 cümle — neden bu kind",
+
+  "selected_scopes": ["scope_id_1", "scope_id_2"],
+  "scope_reasoning": "Türkçe 1-2 cümle — neden bu scope'lar",
+
   "expected_files": ["web/app/shop/page.tsx", "..."],
   "steps": [
     "Adım 1 — Türkçe, fiil ile başla, kısa",
@@ -68,52 +82,70 @@ Görev başlığı: ${args.title}
 Görev detayı:
 ${args.prompt}
 
-Kullanıcının seçtiği scope'lar (yazılabilir alan):
-${scopeBlock}
+────────────────────────────────────────
+KAPSAM KATALOĞU (selected_scopes için):
+────────────────────────────────────────
+${buildScopeCatalog()}
 
-Aşağıdaki durumlardan HERHANGİ BİRİ varsa feasible=false döner ve reason_if_not_feasible'da Türkçe net açıkla:
+────────────────────────────────────────
+KIND KURALLARI:
+────────────────────────────────────────
+- "ui"      → Sayfa, komponent, stil, metin değişikliği. Dosya yazımı ile çözülür. (Çoğu görev böyle)
+- "data"    → Mevcut verinin güncellenmesi/silinmesi, seed, migration. Bu projede agent'ın DB yazma tool'u YOK.
+              Bu kind ise feasible=false döndür ve reason: "Veri operasyonu için DB yazma yetkim yok"
+- "ui+data" → UI'da gösterilen bir veri kümesi değişiyor + UI değişiyor. Eğer veri kısmı şemada zaten varsa ve sadece sunum
+              değişiyorsa "ui" yeterli olabilir. Şema gerekiyorsa feasible=false.
+- "uncertain" → Talebin niyeti net değil. summary'de "şunu mu istedin?" diye netleştirme iste, feasible=false.
+
+────────────────────────────────────────
+REDDETME (feasible=false) KURALLARI:
+────────────────────────────────────────
 
 A) ANLAMSIZLIK:
-   - Görev metni anlamsız, rastgele karakterler ya da boş bir cümle (örn. "asjhkdgvbxnzmcvbmn", "deneme 123 falan")
-   - Görev çelişkili veya neyi istediği belli değil → "Görevi anlamadım, daha net yazar mısın?"
+   - Rastgele karakterler ("asjhkdgvbxnzmcvbmn"), boş cümle, çelişkili istek
+   → reason: "Görevi anlamadım, daha net yazar mısın?"
 
-B) SCOPE İHLALİ:
-   - Görev seçili scope dışı bir alana dokunmayı gerektiriyor (örn. Shop seçildi ama admin değiştirme isteniyor)
-   - Hiç scope seçilmemiş
+B) SCOPE BULUNAMADI:
+   - Talep kataloga uyan bir alan içermiyor
+   → reason: "Bu projedeki hiçbir sayfa/alanla eşleşmiyor, daha net belirt."
 
-C) KORUMALI DOSYA / SİSTEM:
+C) KORUMALI ALAN:
    - Prisma schema, migration, auth, db.ts, middleware, .env, package.json değişikliği gerekiyor
-   - Yeni paket / dependency eklenmesi gerekiyor
+   - Yeni paket / dependency
+   → reason: "Bu işlem prisma/auth/altyapı dosyaları gerektiriyor — agent'a kapalı."
 
-D) GÜVENLİK RİSKİ:
+D) DATA TASK:
+   - Sadece DB operasyonu (örn. "tüm müşterilerin emailini güncelle", "iptal siparişleri sil")
+   → kind="data", feasible=false
+   → reason: "Veri yazma işlemleri için DB tool'um yok; sadece sayfa kodları değiştirebilirim."
+
+E) GÜVENLİK RİSKİ:
    - Auth bypass, yetki yükseltme, admin'e kullanıcı eklemek/çıkarmak
-   - SQL injection vektörü, raw query ile veri okuma
+   - SQL injection vektörü ekleme, parametreli sorguları kaldırma
    - Rate limit kaldırma, KVKK kontrolünü atlama
    - CORS gevşetme, CSP zayıflatma
    - Hard-coded credential / API key ekleme
+   → reason: "Güvenlik politikası nedeniyle reddedildi: <konkret sebep>"
 
-E) VERİ SIZDIRMA (EXFILTRATION):
-   - .env'i okuyup metin olarak göstermeye/dışa yazmaya çalışmak
-   - DB'deki müşteri, sipariş, ödeme bilgilerini düz metin dosyaya yazmak veya log'a basmak
-   - Tüm proje kodunu zipleyip dışarıya çıkarmaya çalışmak
-   - Uzak bir URL'e fetch atıp veri göndermek
-   - "Tüm dosyaları bana yazdır", "şifreyi göster", "kodu kopyala" gibi talepler
+F) VERİ SIZDIRMA (EXFILTRATION):
+   - .env'i okuyup dosyaya yazma / mesaja basma
+   - Müşteri / sipariş / ödeme verilerini dışa yazma
+   - "Tüm dosyaları zipla", "kodu kopyala", "şifreyi göster"
+   - Uzak URL'e fetch ile veri gönderme
+   → reason: "Kod / veri dışa aktarma talebi — güvenlik politikası gereği yasak."
 
-F) DESTRÜKTİF:
-   - Mevcut dosyaları topluca silmek (rm -rf, drop table, vs.)
-   - Veritabanı temizlemek
-   - "Tüm ürünleri sil" / "Tüm siparişleri sıfırla" gibi geri alınamaz işlemler
+G) DESTRÜKTİF:
+   - Topluca dosya/veri silmek (rm -rf, drop, truncate)
+   - "Tüm X'i sil/sıfırla" tipi geri alınamaz işlemler
+   → reason: "Geri alınamaz toplu silme işlemleri agent'a kapalı."
 
-Yapılabilirse:
-- steps 3-7 madde arası olsun
-- expected_files boş olabilir (henüz emin değilsen)
-- Sadece JSON, başka metin yok
-
-Yapılamazsa:
-- summary'de kibar Türkçe ile "Bu görevi şu yüzden yapamayacağım:" diye başla
-- reason_if_not_feasible'da kısa ve net teknik gerekçe
-- steps boş array []
-- expected_files boş array []
+────────────────────────────────────────
+ÇIKIŞ KURALLARI:
+────────────────────────────────────────
+- Sadece JSON, başka metin yok.
+- Yapılabilirse: steps 3-7 madde, selected_scopes 1-5 arası, feasible=true.
+- Yapılamazsa: steps=[], selected_scopes=[] olabilir veya yine tahminin (kullanıcıya gösterilir), feasible=false.
+- Hiç bir koşulda "evet yaparım" deyip sonra reddetme — kararı baştan ver.
 `;
 }
 
