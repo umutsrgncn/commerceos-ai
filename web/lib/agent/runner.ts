@@ -22,9 +22,11 @@ const MAX_TSC_RETRIES = 5;
 const DIMINISHING_TOKEN_DELTA = 500;
 /** 3 iterasyon üst üste diminishing → otomatik finish. */
 const MAX_DIMINISHING_STREAK = 3;
-/** History'nin yaklaşık token sayısı bunu aşarsa LLM compact tetiklenir. */
-const COMPACT_TRIGGER_TOKENS = 90_000;
+/** Şu anki history'nin yaklaşık (char/4) token tahmini bunu aşarsa compact. */
+const COMPACT_TRIGGER_TOKENS = 60_000;
 const COMPACT_TARGET_HISTORY = 12; // compact sonrası kalan eleman sayısı
+/** Compact'tan sonra TEKRAR tetiklenmek için en az bu kadar artış olmalı. */
+const COMPACT_COOLDOWN_TOKENS = 30_000;
 
 class CancelledError extends Error {
   constructor() {
@@ -249,6 +251,8 @@ export async function runTask(taskId: string): Promise<void> {
     // Diminishing returns takibi — agent dönüp duruyorsa otomatik bitir
     let lastTotalTokens = 0;
     let diminishingStreak = 0;
+    // Compact cooldown — bir kez compact ettikten sonra hemen tekrar tetiklenmesin
+    let lastCompactAtEstimate = 0;
     // Tool dedup — aynı read tool'unu 3. kez çağrıyorsa engel
     const callCounts = new Map<string, number>();
     const READ_TOOLS = new Set(["read_file", "list_dir", "grep"]);
@@ -267,7 +271,7 @@ export async function runTask(taskId: string): Promise<void> {
     // → grep/list_dir iterasyonları azalır, token tasarrufu
     const preReadFiles: Array<{ path: string; content: string; truncated: boolean }> = [];
     const expectedFiles = Array.isArray(plan.expected_files)
-      ? (plan.expected_files as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 6)
+      ? (plan.expected_files as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 3)
       : [];
     if (expectedFiles.length > 0) {
       await emitAgentEvent({
@@ -296,7 +300,7 @@ export async function runTask(taskId: string): Promise<void> {
         ? `\n\nPlanner expected_files OKUNDU (bunları tekrar read_file ile çağırma):\n${preReadFiles
             .map(
               (f) =>
-                `\n--- ${f.path} ${f.truncated ? "(truncated)" : ""} ---\n${f.content.slice(0, 8000)}`,
+                `\n--- ${f.path} ${f.truncated ? "(truncated)" : ""} ---\n${f.content.slice(0, 4000)}`,
             )
             .join("\n")}`
         : "";
@@ -316,18 +320,23 @@ export async function runTask(taskId: string): Promise<void> {
       iteration += 1;
       await ensureNotCancelled(taskId);
 
-      // LLM-based compact — token bütçesi sınırına yaklaştık mı?
-      if (totalTokens > COMPACT_TRIGGER_TOKENS && history.length > COMPACT_TARGET_HISTORY) {
+      // LLM-based compact — şu anki history büyüklüğüne göre, lifetime accumulator DEĞİL
+      const estimatedNow = estimateHistoryTokens(history);
+      const sinceLastCompact = estimatedNow - lastCompactAtEstimate;
+      if (
+        estimatedNow > COMPACT_TRIGGER_TOKENS &&
+        history.length > COMPACT_TARGET_HISTORY &&
+        (lastCompactAtEstimate === 0 || sinceLastCompact > COMPACT_COOLDOWN_TOKENS)
+      ) {
         await emitAgentEvent({
           taskId,
           type: "NOTE",
-          summary: `Token bütçesi yüksek (${totalTokens}) — geçmiş özetlenip sıkıştırılıyor…`,
-          payload: { tokens: totalTokens, historyLen: history.length },
+          summary: `Bağlam büyüdü (~${estimatedNow} tok) — geçmiş özetlenip sıkıştırılıyor…`,
+          payload: { estimated: estimatedNow, historyLen: history.length },
         });
         const summary = await compactHistory(history);
         if (summary) {
           const summaryText = summaryToText(summary);
-          // History'i restart et: prefix + summary + ack + son N turn
           const prefix = history.slice(0, HISTORY_PREFIX);
           const recent = history.slice(history.length - 6);
           history.length = 0;
@@ -338,10 +347,11 @@ export async function runTask(taskId: string): Promise<void> {
             parts: [{ text: "Özet alındı, kaldığım yerden devam ediyorum." }],
           });
           history.push(...recent);
+          lastCompactAtEstimate = estimateHistoryTokens(history);
           await emitAgentEvent({
             taskId,
             type: "NOTE",
-            summary: `Compact tamam — history ${history.length} elemente düştü.`,
+            summary: `Compact tamam — history ${history.length} eleman, ~${lastCompactAtEstimate} tok.`,
           });
         }
       }
@@ -844,6 +854,26 @@ const HISTORY_RECENT_TURNS = 10;
 const EPHEMERAL_TOOLS = new Set(["read_file", "list_dir", "grep"]);
 /** Bu tool'ların çağrı + sonucu kalıcı — silinmemeli */
 const PERSISTENT_TOOLS = new Set(["write_file", "edit_file", "finish"]);
+
+/**
+ * History'deki tüm part'ların toplam karakter sayısı / 4 ≈ token tahmini.
+ * Gemini usageMetadata accumulator değil — şu anki conversation state büyüklüğü.
+ */
+function estimateHistoryTokens(history: Content[]): number {
+  let chars = 0;
+  for (const m of history) {
+    for (const p of m.parts ?? []) {
+      if ("text" in p && p.text) chars += p.text.length;
+      if ("functionCall" in p && p.functionCall) {
+        chars += JSON.stringify(p.functionCall).length;
+      }
+      if ("functionResponse" in p && p.functionResponse) {
+        chars += JSON.stringify(p.functionResponse).length;
+      }
+    }
+  }
+  return Math.ceil(chars / 4);
+}
 
 function trimHistoryInPlace(history: Content[]) {
   // 1) Selektif: eski ephemeral tool result'larını stub'la

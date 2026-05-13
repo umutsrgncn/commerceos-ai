@@ -169,6 +169,68 @@ async function getMtime(absPath: string): Promise<number> {
   return st.mtimeMs;
 }
 
+/**
+ * Hedef metin bulunamadıysa: dosyada en yakın benzer satır pasajını döner.
+ * Whitespace/quote farkını işaret eder ki agent doğru old_string'i oluşturabilsin.
+ */
+function findClosestSnippet(
+  content: string,
+  needle: string,
+): { line: number; text: string; diffNote: string } | null {
+  const needleLines = needle.split("\n");
+  const firstNeedleLine = needleLines[0].trim();
+  if (firstNeedleLine.length < 5) return null;
+
+  const lines = content.split("\n");
+  let bestLine = -1;
+  let bestScore = 0;
+
+  // İlk satırın trimmed versiyonuna en yakın eşleşmeyi bul
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (trimmed === firstNeedleLine) {
+      bestLine = i;
+      bestScore = 100;
+      break;
+    }
+    // Substring kontrolü
+    if (trimmed.length > 0 && firstNeedleLine.includes(trimmed.slice(0, 15))) {
+      if (bestScore < 50) {
+        bestLine = i;
+        bestScore = 50;
+      }
+    }
+    if (firstNeedleLine.includes(trimmed) && trimmed.length > 10) {
+      if (bestScore < 70) {
+        bestLine = i;
+        bestScore = 70;
+      }
+    }
+  }
+
+  if (bestLine === -1) return null;
+
+  // Yakın eşleşmeyi ve fark notu döndür
+  const window = lines
+    .slice(bestLine, Math.min(bestLine + needleLines.length + 1, lines.length))
+    .join("\n");
+
+  let diffNote = "bilinmiyor";
+  const actualFirst = lines[bestLine];
+  const expectedFirst = needleLines[0];
+  if (actualFirst.trim() === expectedFirst.trim() && actualFirst !== expectedFirst) {
+    diffNote = "indentation/whitespace farkı (boşluk/tab sayısı eşleşmiyor)";
+  } else if (
+    actualFirst.replace(/['"`""'']/g, '"') === expectedFirst.replace(/['"`""'']/g, '"')
+  ) {
+    diffNote = "quote stili farkı (düz \" vs curly “ ” gibi)";
+  } else {
+    diffNote = "metin biraz farklı — dosyadaki pasajı KOPYALAYIP old_string'e ver";
+  }
+
+  return { line: bestLine + 1, text: window.slice(0, 400), diffNote };
+}
+
 // ─── Tool implementations ───
 
 export async function execTool(
@@ -393,8 +455,13 @@ async function editFile(
   while ((idx = content.indexOf(oldStr, idx + 1)) !== -1) occurrences += 1;
 
   if (occurrences === 0) {
+    // Yakın eşleşme bulmaya çalış — agent'a "şuna mı dedin?" ipucu
+    const hint = findClosestSnippet(content, oldStr);
+    const hintMsg = hint
+      ? `\n\nDosyada en yakın benzer pasaj (satır ${hint.line}):\n${hint.text}\n\nFark muhtemelen: ${hint.diffNote}`
+      : "";
     throw new Error(
-      `old_string ${relPath} dosyasında bulunamadı (tam eşleşme arıyorum, whitespace ve quote tipleri dahil).`,
+      `old_string ${relPath} dosyasında bulunamadı (tam eşleşme, whitespace ve quote tipleri dahil).${hintMsg}`,
     );
   }
   if (occurrences > 1 && !replaceAll) {
