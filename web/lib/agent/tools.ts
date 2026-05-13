@@ -27,8 +27,8 @@ export type AgentContext = {
   ) => Promise<void>;
 };
 
-const MAX_READ_BYTES = 80_000;
-const MAX_GREP_HITS = 80;
+const MAX_READ_BYTES = 30_000;
+const MAX_GREP_HITS = 60;
 
 // ─── Schemas (Gemini function declarations) ───
 

@@ -230,24 +230,79 @@ export async function runTask(taskId: string): Promise<void> {
     const ctx = makeCtx(taskId, wt, scopes);
     const model = agentModel(TOOL_DECLS);
 
+    // Pre-read: planner'ın expected_files'ını agent görmeden önce oku
+    // → grep/list_dir iterasyonları azalır, token tasarrufu
+    const preReadFiles: Array<{ path: string; content: string; truncated: boolean }> = [];
+    const expectedFiles = Array.isArray(plan.expected_files)
+      ? (plan.expected_files as unknown[]).filter((x): x is string => typeof x === "string").slice(0, 6)
+      : [];
+    if (expectedFiles.length > 0) {
+      await emitAgentEvent({
+        taskId,
+        type: "NOTE",
+        summary: `Pre-read: planner'ın işaret ettiği ${expectedFiles.length} dosya okunuyor…`,
+        payload: { files: expectedFiles },
+      });
+      for (const rel of expectedFiles) {
+        try {
+          const r = await execTool(ctx, "read_file", { path: rel });
+          if (r.ok && r.result && typeof r.result === "object" && "content" in r.result) {
+            const v = r.result as { path: string; content: string; truncated: boolean };
+            preReadFiles.push(v);
+          }
+        } catch {
+          // Dosya yok ya da scope dışı — agent kendi keşfedecek
+        }
+      }
+      seedPreReadCounts(preReadFiles.map((f) => f.path));
+    }
+
     // Conversation state
+    const preReadBlock =
+      preReadFiles.length > 0
+        ? `\n\nPlanner expected_files OKUNDU (bunları tekrar read_file ile çağırma):\n${preReadFiles
+            .map(
+              (f) =>
+                `\n--- ${f.path} ${f.truncated ? "(truncated)" : ""} ---\n${f.content.slice(0, 8000)}`,
+            )
+            .join("\n")}`
+        : "";
     const history: Content[] = [
       { role: "user", parts: [{ text: SYSTEM_PROMPT(scopes) }] },
       {
         role: "model",
         parts: [{ text: "Anladım. Tool'ları kullanarak görevi tamamlayacağım." }],
       },
-      { role: "user", parts: [{ text: buildAgentTurnPrompt({ plan, iteration: 1 }) }] },
+      {
+        role: "user",
+        parts: [{ text: buildAgentTurnPrompt({ plan, iteration: 1 }) + preReadBlock }],
+      },
     ];
 
     let iteration = 0;
     let finished = false;
     let totalTokens = 0;
     let tscRetries = 0;
+    // Tool dedup — aynı read tool'unu 3. kez çağrıyorsa engel
+    const callCounts = new Map<string, number>();
+    const READ_TOOLS = new Set(["read_file", "list_dir", "grep"]);
+    const callKey = (name: string, args: unknown): string => {
+      if (!args || typeof args !== "object") return name;
+      const a = args as Record<string, unknown>;
+      const sig = a.path ?? a.pattern ?? JSON.stringify(a).slice(0, 100);
+      return `${name}:${sig}`;
+    };
+    // Pre-read edilen dosyalar için sayacı 2 yap → 1 daha çağırırsa kabul, 2. denemede engel
+    const seedPreReadCounts = (paths: string[]) => {
+      for (const p of paths) callCounts.set(`read_file:${p}`, 2);
+    };
 
     while (iteration < MAX_ITERATIONS && !finished) {
       iteration += 1;
       await ensureNotCancelled(taskId);
+
+      // History trimming — token tasarrufu için eski iter'leri özetle
+      trimHistoryInPlace(history);
 
       const result = await generateWithRetry(
         model,
@@ -320,6 +375,31 @@ export async function runTask(taskId: string): Promise<void> {
       // Tool'ları çalıştır
       const responseParts: Part[] = [];
       for (const call of functionCalls) {
+        // Dedup — aynı read'i 3. kez engelle
+        if (READ_TOOLS.has(call.name)) {
+          const key = callKey(call.name, call.args);
+          const n = (callCounts.get(key) ?? 0) + 1;
+          callCounts.set(key, n);
+          if (n >= 3) {
+            await emitAgentEvent({
+              taskId,
+              type: "NOTE",
+              summary: `Aynı ${call.name} çağrısı 3. kez — agent başka yol denesin.`,
+              payload: { tool: call.name, count: n },
+            });
+            responseParts.push({
+              functionResponse: {
+                name: call.name,
+                response: {
+                  ok: false,
+                  error: `Bu çağrıyı (${key}) zaten yaptın. Sonuçları tekrar isteme — mevcut bilgiyle ilerle, farklı bir dosya/pattern dene, veya finish çağır.`,
+                },
+              },
+            });
+            continue;
+          }
+        }
+
         await emitAgentEvent({
           taskId,
           type: "TOOL_CALL",
@@ -679,6 +759,58 @@ export async function runTask(taskId: string): Promise<void> {
 
 // ─── Helpers ───
 
+/**
+ * Conversation history'ı token tasarrufu için kırp.
+ * Sabit prefix: 3 element (SYSTEM_PROMPT user + ack model + task user)
+ * Son N iter aktif (~6 turn).
+ * Aradakileri tek özet "user" message'a sıkıştır.
+ */
+const HISTORY_PREFIX = 3;
+const HISTORY_RECENT_TURNS = 10; // tur sayısı (~5 iter, her iter 2 element)
+
+function trimHistoryInPlace(history: Content[]) {
+  const max = HISTORY_PREFIX + HISTORY_RECENT_TURNS + 1; // +1 özet için
+  if (history.length <= max) return;
+
+  const prefix = history.slice(0, HISTORY_PREFIX);
+  const recent = history.slice(history.length - HISTORY_RECENT_TURNS);
+  const middle = history.slice(HISTORY_PREFIX, history.length - HISTORY_RECENT_TURNS);
+
+  // Middle'da function call'ların özetini çıkar
+  const toolCalls: string[] = [];
+  for (const m of middle) {
+    if (m.role !== "model") continue;
+    for (const p of m.parts ?? []) {
+      if ("functionCall" in p && p.functionCall) {
+        const fc = p.functionCall;
+        const argHint =
+          fc.args && typeof fc.args === "object"
+            ? Object.entries(fc.args as Record<string, unknown>)
+                .map(([k, v]) => {
+                  if (k === "content" || k === "new_string" || k === "old_string") {
+                    return `${k}=<${Buffer.byteLength(String(v))}B>`;
+                  }
+                  return `${k}=${String(v).slice(0, 40)}`;
+                })
+                .join(" ")
+            : "";
+        toolCalls.push(`${fc.name}(${argHint})`);
+      }
+    }
+  }
+
+  const summaryText =
+    toolCalls.length > 0
+      ? `[Önceki ${middle.length / 2} tur sıkıştırıldı. Yapılan tool çağrıları:\n- ${toolCalls.slice(0, 12).join("\n- ")}\n${toolCalls.length > 12 ? `(+${toolCalls.length - 12} daha)` : ""}]`
+      : `[Önceki ${middle.length / 2} tur sıkıştırıldı.]`;
+
+  history.length = 0;
+  history.push(...prefix);
+  history.push({ role: "user", parts: [{ text: summaryText }] });
+  history.push({ role: "model", parts: [{ text: "Anlaşıldı, devam ediyorum." }] });
+  history.push(...recent);
+}
+
 function summarizeArgs(args: unknown): string {
   if (!args || typeof args !== "object") return "";
   const obj = args as Record<string, unknown>;
@@ -725,8 +857,8 @@ function clampResult(result: unknown): unknown {
   if (!result) return result;
   if (typeof result === "object" && result !== null && "content" in result) {
     const r = result as { content: string; [k: string]: unknown };
-    if (typeof r.content === "string" && r.content.length > 60_000) {
-      return { ...r, content: r.content.slice(0, 60_000), truncated: true };
+    if (typeof r.content === "string" && r.content.length > 25_000) {
+      return { ...r, content: r.content.slice(0, 25_000), truncated: true };
     }
   }
   return result;
