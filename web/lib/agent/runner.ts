@@ -2,11 +2,12 @@ import type { Content, FunctionCall, Part } from "@google/generative-ai";
 
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
+import { runE2eGate, summarizeE2eResult } from "./e2e-gate";
 import { agentModel, generateWithRetry, plannerModel } from "./gemini";
 import { buildAgentTurnPrompt, buildPlannerPrompt, SYSTEM_PROMPT } from "./prompts";
 import { formatIssuesForAgent, lintChangedFiles } from "./rsc-lint";
 import { startPreview, stopPreview } from "./preview";
-import { buildScopeBriefing, getScopesByIds, type AgentScope } from "./scopes";
+import { buildScopeBriefing, getE2eSpecsForScopes, getScopesByIds, type AgentScope } from "./scopes";
 import { resetTestData } from "./test-db";
 import { execTool, TOOL_DECLS, type AgentContext } from "./tools";
 import { filterAgentRelevantErrors, runTsc } from "./tsc-gate";
@@ -57,18 +58,49 @@ export async function runTask(taskId: string): Promise<void> {
 
   try {
     // ─── 1) Worktree hazırla ───
-    await emitAgentEvent({ taskId, type: "STATUS", summary: "Worktree hazırlanıyor…" });
-    wt = await createWorktree(taskId, task.title);
+    const isIteration = !!task.branchName;
+    await emitAgentEvent({
+      taskId,
+      type: "STATUS",
+      summary: isIteration
+        ? `Önceki iterasyon devam ediyor — branch ${task.branchName} reuse ediliyor.`
+        : "Worktree hazırlanıyor…",
+    });
+    wt = await createWorktree(taskId, task.title, {
+      existingBranch: task.branchName ?? null,
+    });
     await db.agentTask.update({
       where: { id: taskId },
       data: { branchName: wt.branch, worktreePath: wt.path },
     });
-    await emitAgentEvent({
-      taskId,
-      type: "STATUS",
-      summary: `Branch hazır: ${wt.branch}`,
-      payload: { branch: wt.branch },
+    if (!isIteration) {
+      await emitAgentEvent({
+        taskId,
+        type: "STATUS",
+        summary: `Branch hazır: ${wt.branch}`,
+        payload: { branch: wt.branch },
+      });
+    }
+
+    // Önceki feedback'leri topla (iterasyon için)
+    const feedbackEvents = await db.agentEvent.findMany({
+      where: {
+        taskId,
+        type: "NOTE",
+      },
+      orderBy: { seq: "asc" },
     });
+    const feedbacks = feedbackEvents
+      .filter((e) => {
+        if (!e.payload || typeof e.payload !== "object") return false;
+        const p = e.payload as { kind?: string };
+        return p.kind === "user_feedback";
+      })
+      .map((e) => {
+        const p = e.payload as { feedback?: string };
+        return p.feedback ?? "";
+      })
+      .filter(Boolean);
 
     await ensureNotCancelled(taskId);
 
@@ -80,10 +112,18 @@ export async function runTask(taskId: string): Promise<void> {
       summary: "Planlama: kod keşfi + sayfa seçimi yapılıyor…",
     });
 
+    // Feedback varsa, görev prompt'una ekle — planner bunu da kıymetlendirsin
+    const promptWithFeedback =
+      feedbacks.length > 0
+        ? `${task.prompt}\n\n--- KULLANICI GERİ BİLDİRİMLERİ (sırasıyla) ---\n${feedbacks
+            .map((f, i) => `${i + 1}. ${f}`)
+            .join("\n")}\n\nMevcut çalışmayı geri bildirimlere göre revize et.`
+        : task.prompt;
+
     const planner = plannerModel();
     const planRes = await generateWithRetry(
       planner,
-      buildPlannerPrompt({ title: task.title, prompt: task.prompt }),
+      buildPlannerPrompt({ title: task.title, prompt: promptWithFeedback }),
       {
         onRetry: async ({ attempt, delayMs, reason }) => {
           await emitAgentEvent({
@@ -467,9 +507,11 @@ export async function runTask(taskId: string): Promise<void> {
     }
 
     // ─── 6) Önizleme aç (worktree dev + cloudflared tunnel) ───
+    let previewPort: number | null = null;
     if (commit.ok) {
       try {
         const { port, tunnelUrl } = await startPreview({ taskId, wt });
+        previewPort = port;
         await db.agentTask.update({
           where: { id: taskId },
           data: { port, tunnelUrl: tunnelUrl ?? null },
@@ -490,7 +532,57 @@ export async function runTask(taskId: string): Promise<void> {
       });
     }
 
-    // ─── 7) REVIEW status'una geç ───
+    // ─── 7) e2e test gate ───
+    if (commit.ok && previewPort) {
+      const specs = getE2eSpecsForScopes(scopes);
+      if (specs.length > 0) {
+        await db.agentTask.update({ where: { id: taskId }, data: { status: "TESTING" } });
+        await emitAgentEvent({
+          taskId,
+          type: "STATUS",
+          summary: `e2e testleri çalışıyor (${specs.length} spec)…`,
+          payload: { specs },
+        });
+        try {
+          const e2e = await runE2eGate({
+            taskId,
+            worktreePath: wt.path,
+            webPath: wt.webPath,
+            port: previewPort,
+            specs,
+          });
+          await emitAgentEvent({
+            taskId,
+            type: "TEST_RUN",
+            summary: summarizeE2eResult(e2e),
+            payload: {
+              passed: e2e.passed,
+              failed: e2e.failed,
+              skipped: e2e.skipped,
+              total: e2e.total,
+              durationMs: e2e.durationMs,
+            },
+          });
+          if (e2e.screenshots.length > 0) {
+            await emitAgentEvent({
+              taskId,
+              type: "SCREENSHOT",
+              summary: `${e2e.screenshots.length} ekran görüntüsü alındı.`,
+              payload: { count: e2e.screenshots.length },
+            });
+          }
+        } catch (testErr) {
+          const msg = testErr instanceof Error ? testErr.message : String(testErr);
+          await emitAgentEvent({
+            taskId,
+            type: "ERROR",
+            summary: `e2e gate hatası: ${msg.slice(0, 200)}`,
+          });
+        }
+      }
+    }
+
+    // ─── 8) REVIEW status'una geç ───
     await db.agentTask.update({
       where: { id: taskId },
       data: {

@@ -56,6 +56,45 @@ export async function createAgentTaskAction(
   redirect(`/admin/agent/${task.id}`);
 }
 
+export async function iterateAgentTaskAction(id: string, feedback: string) {
+  const v = feedback.trim();
+  if (v.length < 5) return { ok: false, error: "Geri bildirim çok kısa (en az 5 karakter)" };
+  if (v.length > 2000) return { ok: false, error: "Geri bildirim çok uzun (max 2000)" };
+
+  const task = await db.agentTask.findUnique({ where: { id } });
+  if (!task) return { ok: false, error: "Task bulunamadı" };
+  if (task.status !== "REVIEW") {
+    return { ok: false, error: `Geri besleme sadece REVIEW durumunda alınır (mevcut: ${task.status})` };
+  }
+
+  // Feedback'i event'e yaz — runner bunu okuyup prompt'a ekleyecek
+  await emitAgentEvent({
+    taskId: id,
+    type: "NOTE",
+    summary: `Kullanıcı geri bildirimi: ${v}`,
+    payload: { kind: "user_feedback", feedback: v },
+  });
+
+  // Status'u PENDING'e çek — worker sahiplenecek, mevcut worktree korunur
+  await db.agentTask.update({
+    where: { id },
+    data: {
+      status: "PENDING",
+      cancelRequested: false,
+      completedAt: null,
+      errorMsg: null,
+    },
+  });
+  await emitAgentEvent({
+    taskId: id,
+    type: "STATUS",
+    summary: "Yeni iterasyon başlıyor — agent geri bildirimi alıp düzenleme yapacak.",
+  });
+
+  revalidatePath(`/admin/agent/${id}`);
+  return { ok: true };
+}
+
 export async function approveAgentTaskAction(id: string) {
   const task = await db.agentTask.findUnique({ where: { id } });
   if (!task) return { ok: false, error: "Task bulunamadı" };

@@ -21,6 +21,8 @@ export type AgentScope = {
   writeGlobs: RegExp[];
   /** Regex'ler — opsiyonel backend (lib/ vs.) dosyaları. UI ile birlikte mantıklı server action / helper yazılması için. */
   libGlobs?: RegExp[];
+  /** Bu scope etkilendiğinde çalıştırılacak Playwright spec dosyaları (web/ kök referansla). */
+  e2eSpecs?: string[];
 };
 
 export const AGENT_SCOPES: AgentScope[] = [
@@ -36,6 +38,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       /^web\/app\/shop\/page\.tsx$/,
       /^web\/app\/shop\/components\/(hero|featured|home-|landing)/,
     ],
+    e2eSpecs: ["tests/e2e/specs/shop/home.spec.ts"],
   },
   {
     id: "shop_category",
@@ -47,6 +50,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     writeGlobs: [
       /^web\/app\/shop\/c\//,
     ],
+    e2eSpecs: ["tests/e2e/specs/shop/category.spec.ts"],
   },
   {
     id: "shop_product",
@@ -60,6 +64,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       /^web\/app\/shop\/components\/(buy-actions|product-)/,
     ],
     libGlobs: [/^web\/lib\/shop\/wishlist/],
+    e2eSpecs: ["tests/e2e/specs/shop/product.spec.ts"],
   },
   {
     id: "shop_cart_checkout",
@@ -87,6 +92,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       /^web\/lib\/shop\/account/,
       /^web\/lib\/shop\/address/,
     ],
+    e2eSpecs: ["tests/e2e/specs/shop/account.spec.ts"],
   },
   {
     id: "shop_auth",
@@ -100,6 +106,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       /^web\/app\/shop\/auth\/.+\.tsx$/,
     ],
     libGlobs: [/^web\/lib\/shop\/auth-actions\.ts$/],
+    e2eSpecs: ["tests/e2e/specs/shop/auth-info-footer.spec.ts"],
   },
   {
     id: "shop_info",
@@ -109,6 +116,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Footer'daki bilgi sayfaları: /shop/yardim, /shop/iade, /shop/kargo, /shop/kvkk, /shop/iletisim. Dosya: web/app/shop/(info)/.",
     writeGlobs: [/^web\/app\/shop\/\(info\)\//],
+    e2eSpecs: ["tests/e2e/specs/shop/auth-info-footer.spec.ts"],
   },
   {
     id: "shop_footer_header",
@@ -118,6 +126,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Shop'un tüm sayfalarında görünen üst header ve alt footer. Dosyalar: web/app/shop/components/shop-header.tsx, shop-footer.tsx.",
     writeGlobs: [/^web\/app\/shop\/components\/shop-(header|footer)\.tsx$/],
+    e2eSpecs: ["tests/e2e/specs/shop/auth-info-footer.spec.ts", "tests/e2e/specs/shop/home.spec.ts"],
   },
   {
     id: "shop_theme",
@@ -307,4 +316,15 @@ export function buildScopeBriefing(scopes: AgentScope[]): string {
 
 export function listScopeIds(): string[] {
   return AGENT_SCOPES.map((s) => s.id);
+}
+
+/**
+ * Verilen scope'lar için çalıştırılacak benzersiz e2e spec dosyalarını döner.
+ */
+export function getE2eSpecsForScopes(scopes: AgentScope[]): string[] {
+  const set = new Set<string>();
+  for (const s of scopes) {
+    for (const spec of s.e2eSpecs ?? []) set.add(spec);
+  }
+  return Array.from(set);
 }

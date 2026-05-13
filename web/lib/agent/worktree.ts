@@ -25,10 +25,27 @@ export type Worktree = {
   webPath: string; // worktree/web
 };
 
-export async function createWorktree(taskId: string, title: string): Promise<Worktree> {
-  const slug = `${slugify(title) || "task"}-${taskId.slice(-6)}`;
-  const branch = `agent/${slug}`;
+export async function createWorktree(
+  taskId: string,
+  title: string,
+  opts: { existingBranch?: string | null } = {},
+): Promise<Worktree> {
   const wt = path.join(BASE, taskId);
+  const webPath = path.join(wt, "web");
+
+  // ── Reuse path ── feedback iterasyonu için
+  if (opts.existingBranch) {
+    const exists = await fs
+      .stat(webPath)
+      .then(() => true)
+      .catch(() => false);
+    if (exists) {
+      return { taskId, branch: opts.existingBranch, path: wt, webPath };
+    }
+  }
+
+  const slug = `${slugify(title) || "task"}-${taskId.slice(-6)}`;
+  const branch = opts.existingBranch ?? `agent/${slug}`;
 
   await fs.mkdir(BASE, { recursive: true });
 
@@ -50,7 +67,6 @@ export async function createWorktree(taskId: string, title: string): Promise<Wor
     maxBuffer: 1024 * 1024 * 4,
   });
 
-  const webPath = path.join(wt, "web");
 
   // node_modules paylaşım: symlink (build hızı için)
   const nm = path.join(webPath, "node_modules");
