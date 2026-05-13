@@ -24,6 +24,7 @@ import { getScopesByIds } from "@/lib/agent/scopes";
 import { formatRelativeTime } from "@/lib/format";
 import { ActionsBar } from "./actions-bar";
 import { EventTimeline } from "./event-timeline";
+import { FeedbackForm } from "./feedback-form";
 
 export const dynamic = "force-dynamic";
 
@@ -303,6 +304,9 @@ export default async function AgentDetailPage({
           </div>
         </section>
       )}
+
+      {/* Geri besleme formu — sadece REVIEW'da görünür */}
+      {task.status === "REVIEW" && <FeedbackForm id={task.id} />}
 
       {/* Event timeline */}
       <section className="overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)]">
