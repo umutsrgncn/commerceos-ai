@@ -79,6 +79,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       /^web\/app\/shop\/components\/cart-/,
     ],
     libGlobs: [/^web\/lib\/shop\/cart/],
+    e2eSpecs: ["tests/e2e/specs/shop/cart-checkout.spec.ts"],
   },
   {
     id: "shop_account",
@@ -139,6 +140,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       /^web\/app\/shop\/layout\.tsx$/,
       /^web\/app\/shop\/theme-toggle\.tsx$/,
     ],
+    e2eSpecs: ["tests/e2e/specs/shop/theme.spec.ts", "tests/e2e/specs/shop/home.spec.ts"],
   },
 
   // ─── ADMIN (yönetici tarafı) ───
@@ -151,6 +153,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       "Admin paneli açılış sayfası. KPI kartları, satış grafiği, son siparişler. Dosya: web/app/(admin)/admin/page.tsx. Queries: web/lib/queries/dashboard.ts.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/page\.tsx$/],
     libGlobs: [/^web\/lib\/queries\/dashboard/],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_products",
@@ -160,6 +163,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Ürün yönetimi sayfaları. Dosya: web/app/(admin)/admin/products/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/products\//],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_inventory",
@@ -169,6 +173,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Envanter ve stok yönetimi. Dosya: web/app/(admin)/admin/inventory/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/inventory\//],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_orders",
@@ -179,6 +184,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       "Sipariş yönetimi sayfaları. Dosya: web/app/(admin)/admin/orders/. Queries: web/lib/queries/orders.ts.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/orders\//],
     libGlobs: [/^web\/lib\/queries\/orders/],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_customers",
@@ -189,6 +195,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       "Müşteri yönetimi. Dosya: web/app/(admin)/admin/customers/. Queries: web/lib/queries/customers*.ts.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/customers\//],
     libGlobs: [/^web\/lib\/queries\/(customer|customers)/],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_categories",
@@ -198,6 +205,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Kategori yönetimi. Dosya: web/app/(admin)/admin/categories/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/categories\//],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_discounts",
@@ -206,6 +214,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     shortDesc: "Kupon yönetimi",
     agentBriefing: "İndirim kuponları sayfası. Dosya: web/app/(admin)/admin/discounts/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/discounts\//],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_finance",
@@ -215,6 +224,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Finans, gelecek ödemeler, AI Turnaround insight. Dosya: web/app/(admin)/admin/finance/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/finance\//],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_analytics",
@@ -223,6 +233,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     shortDesc: "Satış grafiği, raporlar",
     agentBriefing: "Analitik sayfası. Dosya: web/app/(admin)/admin/analytics/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/analytics\//],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_autopilot",
@@ -232,6 +243,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Otopilot durumu, canlı feed, kabiliyetler. Dosya: web/app/(admin)/admin/autopilot/.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/autopilot\//],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
     id: "admin_sidebar",
@@ -244,6 +256,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       /^web\/components\/layout\/(sidebar|topbar)\.tsx$/,
       /^web\/lib\/nav\.ts$/,
     ],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
 
   // ─── SHARED ───
@@ -258,6 +271,7 @@ export const AGENT_SCOPES: AgentScope[] = [
       /^web\/app\/page\.tsx$/,
       /^web\/components\/landing\//,
     ],
+    e2eSpecs: ["tests/e2e/specs/shop/shared.spec.ts"],
   },
   {
     id: "shared_ui",
@@ -267,6 +281,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Tüm projede kullanılan UI primitive'leri. Dosya: web/components/ui/.",
     writeGlobs: [/^web\/components\/ui\//],
+    e2eSpecs: ["tests/e2e/specs/shop/shared.spec.ts"],
   },
   {
     id: "shared_brand",
@@ -276,6 +291,7 @@ export const AGENT_SCOPES: AgentScope[] = [
     agentBriefing:
       "Marka bileşenleri (logo). Dosya: web/components/brand/.",
     writeGlobs: [/^web\/components\/brand\//],
+    e2eSpecs: ["tests/e2e/specs/shop/shared.spec.ts"],
   },
 ];
 
