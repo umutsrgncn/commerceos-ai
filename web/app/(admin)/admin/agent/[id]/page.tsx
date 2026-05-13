@@ -4,10 +4,14 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bot,
+  Brain,
   CheckCircle2,
+  Database,
   GitBranch,
   Hash,
+  HelpCircle,
   Hourglass,
+  LayoutGrid,
   ScrollText,
   ShieldAlert,
   Target,
@@ -81,35 +85,82 @@ export default async function AgentDetailPage({
         </div>
       </div>
 
-      {/* Scope chips */}
-      {Array.isArray(task.targetScopes) && task.targetScopes.length > 0 && (
-        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-5">
-          <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-muted)]">
-            <Target className="h-3.5 w-3.5" />
-            Etkilenen sayfalar
-          </h2>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {getScopesByIds(task.targetScopes as string[]).map((s) => (
-              <span
-                key={s.id}
-                className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.03] px-2.5 py-1 text-xs"
-                title={s.shortDesc}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    s.group === "shop"
-                      ? "bg-emerald-500"
-                      : s.group === "admin"
-                      ? "bg-indigo-500"
-                      : "bg-amber-500"
-                  }`}
-                />
-                {s.label}
-              </span>
-            ))}
+      {/* AI'ın triage kararı */}
+      {(() => {
+        const plan = (task.planJson ?? null) as null | {
+          kind?: string;
+          kind_reasoning?: string;
+          scope_reasoning?: string;
+          selected_scopes?: string[];
+        };
+        const scopeIds = Array.isArray(task.targetScopes)
+          ? (task.targetScopes as string[])
+          : [];
+        if (scopeIds.length === 0 && !plan?.kind_reasoning && !plan?.scope_reasoning) {
+          return null;
+        }
+        const kind = plan?.kind;
+        const kindBadge = KIND_META[kind ?? ""] ?? null;
+        return (
+          <div className="overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/[0.04] via-[color:var(--color-bg)] to-[color:var(--color-bg)]">
+            <div className="flex items-center justify-between border-b border-indigo-500/10 px-5 py-3">
+              <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-300">
+                <Brain className="h-3.5 w-3.5" />
+                AI'ın değerlendirmesi
+              </h2>
+              {kindBadge}
+            </div>
+            <div className="space-y-4 px-5 py-4">
+              {scopeIds.length > 0 && (
+                <div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted)]">
+                    <Target className="h-3 w-3" />
+                    Seçilen sayfalar
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {getScopesByIds(scopeIds).map((s) => (
+                      <span
+                        key={s.id}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-2.5 py-1 text-xs"
+                        title={s.shortDesc}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            s.group === "shop"
+                              ? "bg-emerald-500"
+                              : s.group === "admin"
+                              ? "bg-indigo-500"
+                              : "bg-amber-500"
+                          }`}
+                        />
+                        {s.label}
+                      </span>
+                    ))}
+                  </div>
+                  {plan?.scope_reasoning && (
+                    <p className="mt-2 text-[11px] leading-relaxed text-[color:var(--color-muted)]">
+                      <span className="font-semibold text-[color:var(--color-fg)]/80">
+                        Neden:
+                      </span>{" "}
+                      {plan.scope_reasoning}
+                    </p>
+                  )}
+                </div>
+              )}
+              {plan?.kind_reasoning && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted)]">
+                    İşlem türü gerekçesi
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[color:var(--color-muted)]">
+                    {plan.kind_reasoning}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Prompt */}
       <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-5">
@@ -318,6 +369,33 @@ function MetaTile({
     </div>
   );
 }
+
+const KIND_META: Record<string, React.ReactNode> = {
+  ui: (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+      <LayoutGrid className="h-3 w-3" />
+      UI değişikliği
+    </span>
+  ),
+  data: (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-fuchsia-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-700 dark:text-fuchsia-300">
+      <Database className="h-3 w-3" />
+      Veri işlemi
+    </span>
+  ),
+  "ui+data": (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-300">
+      <LayoutGrid className="h-3 w-3" />
+      UI + Veri
+    </span>
+  ),
+  uncertain: (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-stone-700 dark:text-stone-300">
+      <HelpCircle className="h-3 w-3" />
+      Belirsiz
+    </span>
+  ),
+};
 
 const STATUS_META: Record<
   AgentTaskStatus,

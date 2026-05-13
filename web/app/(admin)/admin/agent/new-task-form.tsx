@@ -2,10 +2,9 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { ArrowRight, Lightbulb, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Brain, Lightbulb, Loader2, Sparkles } from "lucide-react";
 
 import { createAgentTaskAction, type CreateState } from "@/lib/agent/actions";
-import { ScopePicker } from "./scope-picker";
 
 const PROMPT_MAX = 4000;
 const TITLE_MAX = 120;
@@ -17,7 +16,6 @@ export function NewAgentTaskForm() {
   );
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
-  const [scopes, setScopes] = useState<string[]>([]);
 
   const titleLen = title.length;
   const promptLen = prompt.length;
@@ -40,8 +38,8 @@ export function NewAgentTaskForm() {
           <div>
             <div className="text-base font-semibold">Yeni geliştirme görevi</div>
             <p className="text-xs text-[color:var(--color-muted)]">
-              Ne yapmasını istediğini doğal dilde yaz. Agent ilgili dosyaları kendi
-              bulur, planlar, uygular ve onayına sunar.
+              Ne yapmasını istediğini doğal dilde anlat. Agent ilgili sayfaları
+              kendi keşfeder, planlar ve onayına sunar.
             </p>
           </div>
         </div>
@@ -78,9 +76,6 @@ export function NewAgentTaskForm() {
             />
           </div>
 
-          {/* Scope picker */}
-          <ScopePicker selected={scopes} onChange={setScopes} />
-
           {/* Prompt */}
           <div>
             <div className="flex items-baseline justify-between">
@@ -110,13 +105,11 @@ export function NewAgentTaskForm() {
               onChange={(e) => setPrompt(e.target.value)}
               placeholder={`Ne yapılacak? Olabildiğince net yaz:
 
-• Hangi öğe / bölüm değişecek?
-• Yeni davranış / görünüm ne olmalı?
-• Eklenecek metin, renk, konum?
-• Atlanmasını istemediğin detay?
+• Hangi sayfada / bölümde / akışta?
+• Yeni davranış veya görünüm ne olmalı?
+• Eklenecek metin, renk, konum, edge-case?
 
-Sayfa seçimini yukarıdan yaptın — burada SADECE ne yapılacağını anlat.
-Agent dosya isimlerini kendi keşfedecek.`}
+Agent ilgili dosyaları okuyup uygun sayfaları kendisi seçer.`}
               className="mt-1.5 block w-full resize-y rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2.5 font-mono text-[13px] leading-relaxed placeholder:font-normal placeholder:text-[color:var(--color-muted)]/40 focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/20"
             />
             {/* Progress bar */}
@@ -135,13 +128,23 @@ Agent dosya isimlerini kendi keşfedecek.`}
           </div>
         </div>
 
-        {/* Hints row */}
-        <div className="mt-5 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] px-3 py-2.5">
+        {/* AI triage info */}
+        <div className="mt-5 flex items-start gap-2 rounded-lg border border-indigo-500/20 bg-indigo-500/[0.04] px-3 py-2.5">
+          <Brain className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-600 dark:text-indigo-300" />
+          <div className="text-[11px] leading-relaxed text-[color:var(--color-fg)]/80">
+            <strong>AI önce keşif yapar:</strong> kodları tarayıp hangi sayfaların etkileneceğini ve değişikliğin türünü
+            (UI / veri / her ikisi) kendi belirler. Detay sayfasında bu kararı ve gerekçesini görebilirsin.
+          </div>
+        </div>
+
+        {/* Hint */}
+        <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] px-3 py-2.5">
           <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="text-[11px] leading-relaxed text-[color:var(--color-fg)]/80">
-            <strong>İpucu:</strong> Agent <code className="rounded bg-[color:var(--color-fg)]/[0.06] px-1 py-0.5 font-mono text-[10px]">/shop</code> ve admin UI dosyalarına yazabilir.{" "}
-            <code className="rounded bg-[color:var(--color-fg)]/[0.06] px-1 py-0.5 font-mono text-[10px]">prisma</code>, auth, db.ts, .env dokunulmaz.
-            Yeni paket isteyen veya schema değiştiren işleri planlama aşamasında reddeder.
+            <strong>Güvenli alan:</strong> Agent yalnız UI/sayfa dosyalarına yazar.{" "}
+            <code className="rounded bg-[color:var(--color-fg)]/[0.06] px-1 py-0.5 font-mono text-[10px]">prisma</code>,
+            auth, db, .env <strong>her zaman</strong> kapalı. Schema değişikliği gerektiren veya kod sızdırma
+            niyetli talepler reddedilir.
           </div>
         </div>
 
