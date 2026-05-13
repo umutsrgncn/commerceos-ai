@@ -110,16 +110,18 @@ export async function runTask(taskId: string): Promise<void> {
     });
 
     if (plan.feasible === false) {
+      const reason = String(plan.reason_if_not_feasible ?? "Görev güvenlik/scope kurallarını ihlal ediyor.");
       await emitAgentEvent({
         taskId,
-        type: "ERROR",
-        summary: `Yapılamaz: ${plan.reason_if_not_feasible ?? "scope dışı"}`,
+        type: "NOTE",
+        summary: `Görev reddedildi: ${reason.slice(0, 200)}`,
+        payload: { kind: "refusal" },
       });
       await db.agentTask.update({
         where: { id: taskId },
         data: {
-          status: "FAILED",
-          errorMsg: String(plan.reason_if_not_feasible ?? "scope dışı"),
+          status: "REFUSED",
+          errorMsg: reason,
           completedAt: new Date(),
         },
       });

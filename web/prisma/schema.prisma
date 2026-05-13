@@ -771,7 +771,8 @@ enum AgentTaskStatus {
   MERGED // onaylandı, main'e merge edildi
   REJECTED // kullanıcı reddetti
   CANCELLED // kullanıcı çalışırken durdurdu
-  FAILED // hata — agent durduruldu
+  REFUSED // planner görev güvenlik/scope/anlam nedeniyle reddetti (HATA DEĞİL)
+  FAILED // teknik hata — agent crash, model down, tool exception
 }
 
 enum AgentEventType {
