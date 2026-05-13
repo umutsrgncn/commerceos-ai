@@ -17,8 +17,10 @@ export type AgentScope = {
   shortDesc: string; // kullanıcıya, satır altı
   /** Agent system prompt'una eklenir — bu sayfanın ne olduğunu açıklar */
   agentBriefing: string;
-  /** Regex'ler — bu scope seçildiğinde yazılabilen dosyalar */
+  /** Regex'ler — bu scope seçildiğinde yazılabilen UI dosyaları */
   writeGlobs: RegExp[];
+  /** Regex'ler — opsiyonel backend (lib/ vs.) dosyaları. UI ile birlikte mantıklı server action / helper yazılması için. */
+  libGlobs?: RegExp[];
 };
 
 export const AGENT_SCOPES: AgentScope[] = [
@@ -52,11 +54,12 @@ export const AGENT_SCOPES: AgentScope[] = [
     label: "Shop · Ürün detay",
     shortDesc: "/shop/p/[slug] — galeri, varyant, sepete ekle",
     agentBriefing:
-      "Ürün detay sayfası — görsel galeri, varyant seçimi, sepete ekle butonu. Dosya: web/app/shop/p/[slug]/page.tsx + buy-actions.tsx.",
+      "Ürün detay sayfası — görsel galeri, varyant seçimi, sepete ekle butonu. Dosya: web/app/shop/p/[slug]/page.tsx + buy-actions.tsx. Backend: web/lib/shop/wishlist*.ts.",
     writeGlobs: [
       /^web\/app\/shop\/p\//,
       /^web\/app\/shop\/components\/(buy-actions|product-)/,
     ],
+    libGlobs: [/^web\/lib\/shop\/wishlist/],
   },
   {
     id: "shop_cart_checkout",
@@ -64,21 +67,26 @@ export const AGENT_SCOPES: AgentScope[] = [
     label: "Shop · Sepet & checkout",
     shortDesc: "Sepet drawer, /shop/cart, /shop/checkout, başarı sayfası",
     agentBriefing:
-      "Sepet ve checkout akışı. Dosyalar: web/app/shop/cart/, web/app/shop/checkout/, web/app/shop/components/cart-*.tsx.",
+      "Sepet ve checkout akışı. Dosyalar: web/app/shop/cart/, web/app/shop/checkout/, web/app/shop/components/cart-*.tsx. Server actions: web/lib/shop/cart-*.ts.",
     writeGlobs: [
       /^web\/app\/shop\/cart\//,
       /^web\/app\/shop\/checkout\//,
       /^web\/app\/shop\/components\/cart-/,
     ],
+    libGlobs: [/^web\/lib\/shop\/cart/],
   },
   {
     id: "shop_account",
     group: "shop",
     label: "Shop · Hesap",
-    shortDesc: "/shop/account — profil, siparişler, adresler, favoriler",
+    shortDesc: "/shop/account — profil, siparişler, adresler, favoriler, ayarlar",
     agentBriefing:
-      "Müşteri hesap merkezi. Profil, sipariş geçmişi, adresler, favoriler. Dosya: web/app/shop/account/.",
+      "Müşteri hesap merkezi. Profil, sipariş geçmişi, adresler, favoriler, ayarlar. Dosya: web/app/shop/account/. Server actions: web/lib/shop/account-actions.ts, address-actions.ts.",
     writeGlobs: [/^web\/app\/shop\/account\//],
+    libGlobs: [
+      /^web\/lib\/shop\/account/,
+      /^web\/lib\/shop\/address/,
+    ],
   },
   {
     id: "shop_auth",
@@ -86,11 +94,12 @@ export const AGENT_SCOPES: AgentScope[] = [
     label: "Shop · Giriş / Kayıt",
     shortDesc: "/shop/auth — login, register formları",
     agentBriefing:
-      "Müşteri auth formları (UI). Login ve register sayfaları. Dosya: web/app/shop/auth/. Backend (lib/shop/auth-actions.ts) dokunulmaz.",
+      "Müşteri auth formları (UI). Login ve register sayfaları. Dosya: web/app/shop/auth/. Server actions: web/lib/shop/auth-actions.ts (sadece form-side, NextAuth dokunulmaz).",
     writeGlobs: [
       /^web\/app\/shop\/auth\/.+\/page\.tsx$/,
       /^web\/app\/shop\/auth\/.+\.tsx$/,
     ],
+    libGlobs: [/^web\/lib\/shop\/auth-actions\.ts$/],
   },
   {
     id: "shop_info",
@@ -130,8 +139,9 @@ export const AGENT_SCOPES: AgentScope[] = [
     label: "Admin · Dashboard",
     shortDesc: "Ana özet kartları, son siparişler, KPI'lar",
     agentBriefing:
-      "Admin paneli açılış sayfası. KPI kartları, satış grafiği, son siparişler. Dosya: web/app/(admin)/admin/page.tsx.",
+      "Admin paneli açılış sayfası. KPI kartları, satış grafiği, son siparişler. Dosya: web/app/(admin)/admin/page.tsx. Queries: web/lib/queries/dashboard.ts.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/page\.tsx$/],
+    libGlobs: [/^web\/lib\/queries\/dashboard/],
   },
   {
     id: "admin_products",
@@ -157,8 +167,9 @@ export const AGENT_SCOPES: AgentScope[] = [
     label: "Admin · Siparişler",
     shortDesc: "Sipariş listesi, durum, kargo, iade",
     agentBriefing:
-      "Sipariş yönetimi sayfaları. Dosya: web/app/(admin)/admin/orders/.",
+      "Sipariş yönetimi sayfaları. Dosya: web/app/(admin)/admin/orders/. Queries: web/lib/queries/orders.ts.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/orders\//],
+    libGlobs: [/^web\/lib\/queries\/orders/],
   },
   {
     id: "admin_customers",
@@ -166,8 +177,9 @@ export const AGENT_SCOPES: AgentScope[] = [
     label: "Admin · Müşteriler",
     shortDesc: "Müşteri listesi, segmentasyon, profil",
     agentBriefing:
-      "Müşteri yönetimi. Dosya: web/app/(admin)/admin/customers/.",
+      "Müşteri yönetimi. Dosya: web/app/(admin)/admin/customers/. Queries: web/lib/queries/customers*.ts.",
     writeGlobs: [/^web\/app\/\(admin\)\/admin\/customers\//],
+    libGlobs: [/^web\/lib\/queries\/(customer|customers)/],
   },
   {
     id: "admin_categories",
@@ -266,12 +278,18 @@ export function getScopesByIds(ids: string[]): AgentScope[] {
 
 /**
  * Path verilen scope'ların yazılabilir glob'larıyla eşleşiyor mu?
+ * Hem writeGlobs (UI dosyaları) hem libGlobs (backend dosyaları) kontrol edilir.
  */
 export function pathInScopes(p: string, scopes: AgentScope[]): boolean {
   const norm = p.replace(/^\/+/, "").replace(/\\/g, "/");
   for (const s of scopes) {
     for (const re of s.writeGlobs) {
       if (re.test(norm)) return true;
+    }
+    if (s.libGlobs) {
+      for (const re of s.libGlobs) {
+        if (re.test(norm)) return true;
+      }
     }
   }
   return false;

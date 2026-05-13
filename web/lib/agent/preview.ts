@@ -4,6 +4,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 
 import { emitAgentEvent } from "./events";
+import { getTestDatabaseUrl } from "./test-db";
 import type { Worktree } from "./worktree";
 
 /**
@@ -49,6 +50,13 @@ export async function startPreview(opts: {
     payload: { port },
   });
   // Turbopack symlink'li node_modules'u reddediyor — webpack mode + explicit flag'ler.
+  // DATABASE_URL → commerceos_test schema (canlı public DB izole).
+  let testDbUrl: string | null = null;
+  try {
+    testDbUrl = getTestDatabaseUrl();
+  } catch {
+    testDbUrl = null;
+  }
   const devProc = spawn(
     "pnpm",
     ["exec", "next", "dev", "--port", String(port), "--hostname", "127.0.0.1"],
@@ -56,6 +64,7 @@ export async function startPreview(opts: {
       cwd: opts.wt.webPath,
       env: {
         ...process.env,
+        ...(testDbUrl ? { DATABASE_URL: testDbUrl } : {}),
         NEXT_TELEMETRY_DISABLED: "1",
       },
       stdio: ["ignore", "pipe", "pipe"],

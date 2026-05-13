@@ -6,6 +6,7 @@ import { agentModel, plannerModel } from "./gemini";
 import { buildAgentTurnPrompt, buildPlannerPrompt, SYSTEM_PROMPT } from "./prompts";
 import { startPreview, stopPreview } from "./preview";
 import { buildScopeBriefing, getScopesByIds, type AgentScope } from "./scopes";
+import { resetTestData } from "./test-db";
 import { execTool, TOOL_DECLS, type AgentContext } from "./tools";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
@@ -337,7 +338,31 @@ export async function runTask(taskId: string): Promise<void> {
       });
     }
 
-    // ─── 5) Önizleme aç (worktree dev + cloudflared tunnel) ───
+    // ─── 5) Test DB'yi taze veriye sıfırla ───
+    if (commit.ok) {
+      await emitAgentEvent({
+        taskId,
+        type: "STATUS",
+        summary: "Test veritabanı taze veriyle hazırlanıyor (canlı veri izole)…",
+      });
+      try {
+        await resetTestData();
+        await emitAgentEvent({
+          taskId,
+          type: "NOTE",
+          summary: "Test schema hazır — önizleme commerceos_test üzerinde çalışacak.",
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        await emitAgentEvent({
+          taskId,
+          type: "ERROR",
+          summary: `Test DB hazırlanamadı: ${msg.slice(0, 200)} — önizleme yine de açılacak ama canlı DB'ye yazar.`,
+        });
+      }
+    }
+
+    // ─── 6) Önizleme aç (worktree dev + cloudflared tunnel) ───
     if (commit.ok) {
       try {
         const { port, tunnelUrl } = await startPreview({ taskId, wt });
@@ -361,7 +386,7 @@ export async function runTask(taskId: string): Promise<void> {
       });
     }
 
-    // ─── 6) REVIEW status'una geç ───
+    // ─── 7) REVIEW status'una geç ───
     await db.agentTask.update({
       where: { id: taskId },
       data: {
