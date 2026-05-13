@@ -8,6 +8,7 @@ import { startPreview, stopPreview } from "./preview";
 import { buildScopeBriefing, getScopesByIds, type AgentScope } from "./scopes";
 import { resetTestData } from "./test-db";
 import { execTool, TOOL_DECLS, type AgentContext } from "./tools";
+import { filterAgentRelevantErrors, runTsc } from "./tsc-gate";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
 const MAX_ITERATIONS = 15;
@@ -262,15 +263,44 @@ export async function runTask(taskId: string): Promise<void> {
         const out = await execTool(ctx, call.name, (call.args ?? {}) as Record<string, unknown>);
 
         if (out.finish) {
-          finished = true;
-          finalSummary = out.finish.summary;
+          // ── tsc gate ── finish öncesi TypeScript doğrulaması
           await emitAgentEvent({
             taskId,
-            type: "NOTE",
-            summary: `Bitti: ${finalSummary}`,
-            payload: { summary: finalSummary },
+            type: "STATUS",
+            summary: "Finish öncesi TypeScript kontrolü…",
           });
-          break;
+          const tscResult = await runTsc(wt.webPath);
+          if (tscResult.ok) {
+            finished = true;
+            finalSummary = out.finish.summary;
+            await emitAgentEvent({
+              taskId,
+              type: "NOTE",
+              summary: `Bitti: ${finalSummary} (tsc temiz)`,
+              payload: { summary: finalSummary, tsc: "clean" },
+            });
+            break;
+          }
+          // tsc fail → agent'a hataları geri besle
+          const relevantErrors = filterAgentRelevantErrors(tscResult.errors);
+          const errBody = (relevantErrors || tscResult.errors).slice(0, 3500);
+          await emitAgentEvent({
+            taskId,
+            type: "ERROR",
+            summary: `TypeScript hatası (${tscResult.errorCount}) — finish geri alındı, agent düzeltecek.`,
+            payload: { tsc: "fail", errorCount: tscResult.errorCount },
+          });
+          responseParts.push({
+            functionResponse: {
+              name: "finish",
+              response: {
+                ok: false,
+                error: `Finish reddedildi: TypeScript hataları var. Bu hataları düzelt, sonra finish'i tekrar çağır.\n\n${errBody}`,
+              },
+            },
+          });
+          // finished = false bırak — döngü devam etsin
+          continue;
         }
 
         if (out.ok) {
