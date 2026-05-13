@@ -1,3 +1,4 @@
+import { DATA_MODELS_SUMMARY } from "./data-models";
 import { AGENT_SCOPES, buildScopeBriefing, type AgentScope } from "./scopes";
 import { scopeSummary } from "./scope";
 
@@ -83,6 +84,8 @@ Görev detayı:
 ${args.prompt}
 
 ────────────────────────────────────────
+${DATA_MODELS_SUMMARY}
+────────────────────────────────────────
 KAPSAM KATALOĞU (selected_scopes için):
 ────────────────────────────────────────
 ${buildScopeCatalog()}
@@ -90,12 +93,19 @@ ${buildScopeCatalog()}
 ────────────────────────────────────────
 KIND KURALLARI:
 ────────────────────────────────────────
-- "ui"      → Sayfa, komponent, stil, metin değişikliği. Dosya yazımı ile çözülür. (Çoğu görev böyle)
-- "data"    → Mevcut verinin güncellenmesi/silinmesi, seed, migration. Bu projede agent'ın DB yazma tool'u YOK.
-              Bu kind ise feasible=false döndür ve reason: "Veri operasyonu için DB yazma yetkim yok"
-- "ui+data" → UI'da gösterilen bir veri kümesi değişiyor + UI değişiyor. Eğer veri kısmı şemada zaten varsa ve sadece sunum
-              değişiyorsa "ui" yeterli olabilir. Şema gerekiyorsa feasible=false.
+- "ui"      → Sadece sayfa/komponent/stil/metin değişikliği. (Çoğu görev böyle.)
+- "ui+data" → UI ekleyip mevcut bir modelle veri yazıyor/okuyor (server action ile).
+              Örn: "Hesap silme talebi" → UI + DataRequest.create() server action. **Bu YAPILABİLİR** (feasible=true).
+              Schema'da yeni alan/model GEREKMİYORSA mutlaka feasible=true ver.
+- "data"    → Sadece toplu DB operasyonu, UI dokunulmuyor (örn. "tüm müşterilerin emailini güncelle").
+              Agent UI üzerinden çalışır, doğrudan DB toplu update yetkisi yok. feasible=false.
+              reason: "Toplu veri güncelleme için UI-bağımsız DB tool'um yok — admin paneline yazılabilir bir UI talep et."
 - "uncertain" → Talebin niyeti net değil. summary'de "şunu mu istedin?" diye netleştirme iste, feasible=false.
+
+ÖNEMLİ AYIRT ETME:
+- "müşteri kendini silsin" → ui+data (DataRequest oluştur, admin onayına gönder) — YAPILABİLİR
+- "tüm müşterileri sil" → data — YAPILMAZ
+- "yeni 'isVip' alanı ekle" → schema değişikliği — YAPILMAZ (mevcut alanlar yeterli mi diye dikkatlice bak)
 
 ────────────────────────────────────────
 REDDETME (feasible=false) KURALLARI:
@@ -110,14 +120,19 @@ B) SCOPE BULUNAMADI:
    → reason: "Bu projedeki hiçbir sayfa/alanla eşleşmiyor, daha net belirt."
 
 C) KORUMALI ALAN:
-   - Prisma schema, migration, auth, db.ts, middleware, .env, package.json değişikliği gerekiyor
-   - Yeni paket / dependency
-   → reason: "Bu işlem prisma/auth/altyapı dosyaları gerektiriyor — agent'a kapalı."
+   - Prisma schema/migration değişikliği GEREKİYORSA (yeni model, yeni alan, alan tipi değişimi)
+   - Auth/middleware/db.ts/.env/package.json değişikliği gerekiyorsa
+   - Yeni paket / dependency gerekiyor
+   → reason: "Bu işlem prisma/auth/altyapı değişikliği gerektiriyor — agent'a kapalı."
 
-D) DATA TASK:
-   - Sadece DB operasyonu (örn. "tüm müşterilerin emailini güncelle", "iptal siparişleri sil")
+   DİKKAT: Mevcut model + alan yeterliyse bu kategori değil. Önce DATA MODELS özetini incele,
+   gerçekten yeni alan/model gerekiyor mu emin ol.
+
+D) TOPLU DATA OPERASYONU:
+   - UI'siz toplu veritabanı işlemi (örn. "tüm müşterilerin emailini güncelle", "iptal siparişleri sil")
+   - Tek bir kayıt için server action OLABİLİR (ui+data), toplu UI-bağımsız işlem OLMAZ.
    → kind="data", feasible=false
-   → reason: "Veri yazma işlemleri için DB tool'um yok; sadece sayfa kodları değiştirebilirim."
+   → reason: "UI-bağımsız toplu DB operasyonu yetkim yok; admin paneline kontrol UI'ı ekleyebilirim."
 
 E) GÜVENLİK RİSKİ:
    - Auth bypass, yetki yükseltme, admin'e kullanıcı eklemek/çıkarmak
