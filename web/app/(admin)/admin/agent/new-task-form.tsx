@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { ArrowRight, Lightbulb, Loader2, Sparkles } from "lucide-react";
 
 import { createAgentTaskAction, type CreateState } from "@/lib/agent/actions";
+import { ScopePicker } from "./scope-picker";
 
 const PROMPT_MAX = 4000;
 const TITLE_MAX = 120;
@@ -16,6 +17,7 @@ export function NewAgentTaskForm() {
   );
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [scopes, setScopes] = useState<string[]>([]);
 
   const titleLen = title.length;
   const promptLen = prompt.length;
@@ -76,6 +78,9 @@ export function NewAgentTaskForm() {
             />
           </div>
 
+          {/* Scope picker */}
+          <ScopePicker selected={scopes} onChange={setScopes} />
+
           {/* Prompt */}
           <div>
             <div className="flex items-baseline justify-between">
@@ -103,14 +108,15 @@ export function NewAgentTaskForm() {
               maxLength={PROMPT_MAX}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder={`Mesela:
+              placeholder={`Ne yapılacak? Olabildiğince net yaz:
 
-• Hangi sayfada / bileşende?
-• Ne eklensin / kaldırılsın / değişsin?
-• Görsel bir referans varsa (renk, konum, davranış)
-• Edge case'ler
+• Hangi öğe / bölüm değişecek?
+• Yeni davranış / görünüm ne olmalı?
+• Eklenecek metin, renk, konum?
+• Atlanmasını istemediğin detay?
 
-Net yaz, ama uzun olmasından çekinme — agent her şeyi okur.`}
+Sayfa seçimini yukarıdan yaptın — burada SADECE ne yapılacağını anlat.
+Agent dosya isimlerini kendi keşfedecek.`}
               className="mt-1.5 block w-full resize-y rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2.5 font-mono text-[13px] leading-relaxed placeholder:font-normal placeholder:text-[color:var(--color-muted)]/40 focus:border-[color:var(--color-accent)] focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)]/20"
             />
             {/* Progress bar */}

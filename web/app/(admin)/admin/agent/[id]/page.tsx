@@ -8,11 +8,13 @@ import {
   Hash,
   Hourglass,
   ScrollText,
+  Target,
   XCircle,
 } from "lucide-react";
 import type { AgentTaskStatus } from "@prisma/client";
 
 import { getAgentTask } from "@/lib/agent/queries";
+import { getScopesByIds } from "@/lib/agent/scopes";
 import { formatRelativeTime } from "@/lib/format";
 import { ActionsBar } from "./actions-bar";
 import { EventTimeline } from "./event-timeline";
@@ -76,6 +78,36 @@ export default async function AgentDetailPage({
           />
         </div>
       </div>
+
+      {/* Scope chips */}
+      {Array.isArray(task.targetScopes) && task.targetScopes.length > 0 && (
+        <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-5">
+          <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--color-muted)]">
+            <Target className="h-3.5 w-3.5" />
+            Etkilenen sayfalar
+          </h2>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {getScopesByIds(task.targetScopes as string[]).map((s) => (
+              <span
+                key={s.id}
+                className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-fg)]/[0.03] px-2.5 py-1 text-xs"
+                title={s.shortDesc}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    s.group === "shop"
+                      ? "bg-emerald-500"
+                      : s.group === "admin"
+                      ? "bg-indigo-500"
+                      : "bg-amber-500"
+                  }`}
+                />
+                {s.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Prompt */}
       <div className="rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] p-5">
