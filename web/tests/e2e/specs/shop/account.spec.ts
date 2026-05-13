@@ -21,4 +21,22 @@ test.describe("shop · hesap (auth gate)", () => {
       fullPage: false,
     });
   });
+
+  // Account alt sayfaları — build error yakalamak için
+  const subPages = [
+    "/shop/account/orders",
+    "/shop/account/addresses",
+    "/shop/account/wishlist",
+  ];
+  for (const url of subPages) {
+    test(`${url} build hatasız`, async ({ page }) => {
+      const resp = await page.goto(url);
+      expect(resp?.status() ?? 0, `${url} → ${resp?.status()}`).toBeLessThan(500);
+      const safeName = url.replace(/[\/\\]/g, "_");
+      await page.screenshot({
+        path: `${test.info().outputDir}/shop${safeName}.png`,
+        fullPage: false,
+      });
+    });
+  }
 });

@@ -13,9 +13,13 @@ const ADMIN_ROUTES: Record<string, string> = {
   admin_inventory: "/admin/inventory",
   admin_orders: "/admin/orders",
   admin_customers: "/admin/customers",
+  admin_customers_new: "/admin/customers/new",
+  admin_customers_campaign: "/admin/customers/campaign",
   admin_categories: "/admin/categories",
   admin_discounts: "/admin/discounts",
+  admin_discounts_new: "/admin/discounts/new",
   admin_finance: "/admin/finance",
+  admin_finance_scheduled: "/admin/finance/scheduled",
   admin_analytics: "/admin/analytics",
   admin_autopilot: "/admin/autopilot",
   admin_ai: "/admin/ai",
@@ -24,7 +28,9 @@ const ADMIN_ROUTES: Record<string, string> = {
   admin_settings: "/admin/settings",
   admin_data_requests: "/admin/data-requests",
   admin_bank: "/admin/bank",
+  admin_bank_import: "/admin/bank/import",
   admin_expenses: "/admin/expenses",
+  admin_expenses_new: "/admin/expenses/new",
   admin_invoices: "/admin/invoices",
 };
 

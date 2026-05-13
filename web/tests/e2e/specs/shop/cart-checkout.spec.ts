@@ -29,4 +29,13 @@ test.describe("shop · sepet & checkout", () => {
       fullPage: false,
     });
   });
+
+  test("/shop/checkout/payment render eder", async ({ page }) => {
+    const resp = await page.goto("/shop/checkout/payment");
+    expect(resp?.status() ?? 0).toBeLessThan(500);
+    await page.screenshot({
+      path: `${test.info().outputDir}/shop-checkout-payment.png`,
+      fullPage: false,
+    });
+  });
 });
