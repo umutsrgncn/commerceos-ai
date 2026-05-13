@@ -3,6 +3,7 @@ import type { Content, FunctionCall, Part } from "@google/generative-ai";
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
 import { filterTestable, getChangedPages } from "./changed-pages";
+import { compactHistory, summaryToText } from "./compact";
 import { runDynamicE2e } from "./dynamic-e2e";
 import { runE2eGate, summarizeE2eResult } from "./e2e-gate";
 import { agentModel, generateWithRetry, plannerModel } from "./gemini";
@@ -17,6 +18,13 @@ import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "
 
 const MAX_ITERATIONS = 25;
 const MAX_TSC_RETRIES = 5;
+/** Bir iterasyonda <500 token harcanırsa "ilerleme yok" sayılır. */
+const DIMINISHING_TOKEN_DELTA = 500;
+/** 3 iterasyon üst üste diminishing → otomatik finish. */
+const MAX_DIMINISHING_STREAK = 3;
+/** History'nin yaklaşık token sayısı bunu aşarsa LLM compact tetiklenir. */
+const COMPACT_TRIGGER_TOKENS = 90_000;
+const COMPACT_TARGET_HISTORY = 12; // compact sonrası kalan eleman sayısı
 
 class CancelledError extends Error {
   constructor() {
@@ -286,6 +294,9 @@ export async function runTask(taskId: string): Promise<void> {
     let finished = false;
     let totalTokens = 0;
     let tscRetries = 0;
+    // Diminishing returns takibi — agent dönüp duruyorsa otomatik bitir
+    let lastTotalTokens = 0;
+    let diminishingStreak = 0;
     // Tool dedup — aynı read tool'unu 3. kez çağrıyorsa engel
     const callCounts = new Map<string, number>();
     const READ_TOOLS = new Set(["read_file", "list_dir", "grep"]);
@@ -303,6 +314,36 @@ export async function runTask(taskId: string): Promise<void> {
     while (iteration < MAX_ITERATIONS && !finished) {
       iteration += 1;
       await ensureNotCancelled(taskId);
+
+      // LLM-based compact — token bütçesi sınırına yaklaştık mı?
+      if (totalTokens > COMPACT_TRIGGER_TOKENS && history.length > COMPACT_TARGET_HISTORY) {
+        await emitAgentEvent({
+          taskId,
+          type: "NOTE",
+          summary: `Token bütçesi yüksek (${totalTokens}) — geçmiş özetlenip sıkıştırılıyor…`,
+          payload: { tokens: totalTokens, historyLen: history.length },
+        });
+        const summary = await compactHistory(history);
+        if (summary) {
+          const summaryText = summaryToText(summary);
+          // History'i restart et: prefix + summary + ack + son N turn
+          const prefix = history.slice(0, HISTORY_PREFIX);
+          const recent = history.slice(history.length - 6);
+          history.length = 0;
+          history.push(...prefix);
+          history.push({ role: "user", parts: [{ text: summaryText }] });
+          history.push({
+            role: "model",
+            parts: [{ text: "Özet alındı, kaldığım yerden devam ediyorum." }],
+          });
+          history.push(...recent);
+          await emitAgentEvent({
+            taskId,
+            type: "NOTE",
+            summary: `Compact tamam — history ${history.length} elemente düştü.`,
+          });
+        }
+      }
 
       // History trimming — token tasarrufu için eski iter'leri özetle
       trimHistoryInPlace(history);
@@ -535,6 +576,27 @@ export async function runTask(taskId: string): Promise<void> {
       if (responseParts.length) {
         history.push({ role: "user", parts: responseParts });
       }
+
+      // Diminishing returns check — agent dönüp duruyor mu?
+      const delta = totalTokens - lastTotalTokens;
+      lastTotalTokens = totalTokens;
+      if (iteration >= 3 && delta < DIMINISHING_TOKEN_DELTA) {
+        diminishingStreak += 1;
+        if (diminishingStreak >= MAX_DIMINISHING_STREAK) {
+          await emitAgentEvent({
+            taskId,
+            type: "NOTE",
+            summary: `${MAX_DIMINISHING_STREAK} iter üst üste <${DIMINISHING_TOKEN_DELTA} token harcandı — ilerleme yok, otomatik bitirme.`,
+            payload: { iteration, diminishingStreak, delta },
+          });
+          finished = true;
+          finalSummary =
+            "Mevcut değişikliklerle bitirildi — agent yeni adım üretemiyordu.";
+          break;
+        }
+      } else {
+        diminishingStreak = 0;
+      }
     }
 
     if (!finished) {
@@ -764,23 +826,39 @@ export async function runTask(taskId: string): Promise<void> {
 
 /**
  * Conversation history'ı token tasarrufu için kırp.
- * Sabit prefix: 3 element (SYSTEM_PROMPT user + ack model + task user)
- * Son N iter aktif (~6 turn).
- * Aradakileri tek özet "user" message'a sıkıştır.
+ *
+ * İki katmanlı strateji (token bütçesini agresif kontrol altında tutar):
+ *
+ * 1) SELEKTİF TRIM (her iter'de) — eski iter'lerde:
+ *    - read_file/list_dir/grep sonuçları "[okuma sonucu temizlendi]" stub'ı
+ *    - write_file/edit_file çağrıları + sonuçları AYNEN kalır (kalıcı değişiklik)
+ *    - finish çağrıları kalır
+ *
+ * 2) HARD CAP (history çok şişerse) — eski middle'ı tek özet'e sıkıştır
  */
+
 const HISTORY_PREFIX = 3;
-const HISTORY_RECENT_TURNS = 10; // tur sayısı (~5 iter, her iter 2 element)
+const HISTORY_RECENT_TURNS = 10;
+/** Bu tool'lar geçici keşif — eski result'ları silinebilir */
+const EPHEMERAL_TOOLS = new Set(["read_file", "list_dir", "grep"]);
+/** Bu tool'ların çağrı + sonucu kalıcı — silinmemeli */
+const PERSISTENT_TOOLS = new Set(["write_file", "edit_file", "finish"]);
 
 function trimHistoryInPlace(history: Content[]) {
-  const max = HISTORY_PREFIX + HISTORY_RECENT_TURNS + 1; // +1 özet için
+  // 1) Selektif: eski ephemeral tool result'larını stub'la
+  trimEphemeralResults(history);
+
+  // 2) Hard cap: hâlâ uzunsa middle'ı özet'e sıkıştır
+  const max = HISTORY_PREFIX + HISTORY_RECENT_TURNS + 1;
   if (history.length <= max) return;
 
   const prefix = history.slice(0, HISTORY_PREFIX);
   const recent = history.slice(history.length - HISTORY_RECENT_TURNS);
   const middle = history.slice(HISTORY_PREFIX, history.length - HISTORY_RECENT_TURNS);
 
-  // Middle'da function call'ların özetini çıkar
-  const toolCalls: string[] = [];
+  // Persistent tool call'larını listele — bilgi kaybetmemek için
+  const persistentCalls: string[] = [];
+  const allCalls: string[] = [];
   for (const m of middle) {
     if (m.role !== "model") continue;
     for (const p of m.parts ?? []) {
@@ -797,21 +875,70 @@ function trimHistoryInPlace(history: Content[]) {
                 })
                 .join(" ")
             : "";
-        toolCalls.push(`${fc.name}(${argHint})`);
+        const sig = `${fc.name}(${argHint})`;
+        allCalls.push(sig);
+        if (PERSISTENT_TOOLS.has(fc.name)) persistentCalls.push(sig);
       }
     }
   }
 
-  const summaryText =
-    toolCalls.length > 0
-      ? `[Önceki ${middle.length / 2} tur sıkıştırıldı. Yapılan tool çağrıları:\n- ${toolCalls.slice(0, 12).join("\n- ")}\n${toolCalls.length > 12 ? `(+${toolCalls.length - 12} daha)` : ""}]`
-      : `[Önceki ${middle.length / 2} tur sıkıştırıldı.]`;
+  const summaryLines: string[] = [
+    `[Önceki ${middle.length / 2} tur sıkıştırıldı.]`,
+  ];
+  if (persistentCalls.length > 0) {
+    summaryLines.push("Kalıcı değişiklikler:");
+    for (const c of persistentCalls.slice(0, 15)) summaryLines.push(`  - ${c}`);
+  }
+  if (allCalls.length > persistentCalls.length) {
+    summaryLines.push(
+      `Diğer keşif: ${allCalls.length - persistentCalls.length} read/grep/list (sonuçlar silindi).`,
+    );
+  }
 
   history.length = 0;
   history.push(...prefix);
-  history.push({ role: "user", parts: [{ text: summaryText }] });
+  history.push({ role: "user", parts: [{ text: summaryLines.join("\n") }] });
   history.push({ role: "model", parts: [{ text: "Anlaşıldı, devam ediyorum." }] });
   history.push(...recent);
+}
+
+/**
+ * Recent turn'lardan ÖNCE gelen ephemeral tool result'larını "[temizlendi]" ile değiştir.
+ * read_file/list_dir/grep sonuçları çok yer kaplar — silmenin maliyeti yok çünkü:
+ *  - read sonuçları zaten readFiles map'inde snapshot olarak duruyor
+ *  - grep sonuçları aktif iter'lerde tekrar yapılırsa dedup engelliyor
+ */
+function trimEphemeralResults(history: Content[]) {
+  // Recent threshold — son 8 element içindeki sonuçlar olduğu gibi kalır
+  const keepFrom = Math.max(0, history.length - 8);
+
+  for (let i = HISTORY_PREFIX; i < keepFrom; i++) {
+    const m = history[i];
+    if (m.role !== "user") continue;
+    const newParts: Part[] = [];
+    let modified = false;
+    for (const p of m.parts ?? []) {
+      if ("functionResponse" in p && p.functionResponse) {
+        const fr = p.functionResponse;
+        if (EPHEMERAL_TOOLS.has(fr.name)) {
+          newParts.push({
+            functionResponse: {
+              name: fr.name,
+              response: {
+                ok: true,
+                cleared: true,
+                hint: `[${fr.name} sonucu temizlendi — eski keşif, mevcut readFiles state'inde özet var]`,
+              },
+            },
+          });
+          modified = true;
+          continue;
+        }
+      }
+      newParts.push(p);
+    }
+    if (modified) m.parts = newParts;
+  }
 }
 
 function summarizeArgs(args: unknown): string {
