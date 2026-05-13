@@ -53,7 +53,9 @@ export async function signUpAction(
       name: parsed.data.name,
       email: parsed.data.email,
       hashedPassword,
-      role: "VIEWER",
+      // Hackathon demo: ilk-kayıt admin paneline anında erişebilsin.
+      // Production'da ilk kullanıcı ADMIN, sonrakiler VIEWER + admin onayı pattern'i tercih edilir.
+      role: "ADMIN",
     },
   });
 
