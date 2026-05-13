@@ -93,11 +93,18 @@ async function handleActivePreview(): Promise<boolean> {
         await emitAgentEvent({
           taskId,
           type: "ERROR",
-          summary: "Worktree disk'te yok — önizleme yeniden başlatılamıyor.",
+          summary: "Worktree disk'te yok — task kurtarılamadı, FAILED'a çekiliyor.",
         });
         await db.agentTask.update({
           where: { id: taskId },
-          data: { tunnelUrl: null, port: null },
+          data: {
+            status: "FAILED",
+            errorMsg:
+              "Worker restart sonrası worktree disk'te yoktu — önizleme kurtarılamadı.",
+            completedAt: new Date(),
+            tunnelUrl: null,
+            port: null,
+          },
         });
         return true;
       }

@@ -1,3 +1,4 @@
+import { CODEBASE_RECIPES } from "./codebase-recipes";
 import { DATA_MODELS_SUMMARY } from "./data-models";
 import { AGENT_SCOPES, buildScopeBriefing, type AgentScope } from "./scopes";
 import { scopeSummary } from "./scope";
@@ -16,6 +17,8 @@ ${buildScopeBriefing(scopes)}
 
 Dosya politikası:
 ${scopeSummary(scopes)}
+
+${CODEBASE_RECIPES}
 
 Çalışma şeklin:
 1. Önce **list_dir** ve **grep** ile ilgili dosyaları bul. Tahmin etme — keşfet.

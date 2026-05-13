@@ -11,7 +11,8 @@ import { execTool, TOOL_DECLS, type AgentContext } from "./tools";
 import { filterAgentRelevantErrors, runTsc } from "./tsc-gate";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
-const MAX_ITERATIONS = 15;
+const MAX_ITERATIONS = 25;
+const MAX_TSC_RETRIES = 5;
 
 class CancelledError extends Error {
   constructor() {
@@ -189,6 +190,7 @@ export async function runTask(taskId: string): Promise<void> {
     let iteration = 0;
     let finished = false;
     let totalTokens = 0;
+    let tscRetries = 0;
 
     while (iteration < MAX_ITERATIONS && !finished) {
       iteration += 1;
@@ -282,13 +284,28 @@ export async function runTask(taskId: string): Promise<void> {
             break;
           }
           // tsc fail → agent'a hataları geri besle
+          tscRetries += 1;
           const relevantErrors = filterAgentRelevantErrors(tscResult.errors);
           const errBody = (relevantErrors || tscResult.errors).slice(0, 3500);
+
+          if (tscRetries >= MAX_TSC_RETRIES) {
+            await emitAgentEvent({
+              taskId,
+              type: "ERROR",
+              summary: `Max ${MAX_TSC_RETRIES} tsc denemesi doldu — kabul ediliyor, kullanıcı önizlemede görsün.`,
+              payload: { tsc: "max-retries", errorCount: tscResult.errorCount },
+            });
+            // tsc temizlenemedi ama agent'ı sonsuza dek tıkamayalım — finish'i kabul et
+            finished = true;
+            finalSummary = out.finish.summary;
+            break;
+          }
+
           await emitAgentEvent({
             taskId,
             type: "ERROR",
-            summary: `TypeScript hatası (${tscResult.errorCount}) — finish geri alındı, agent düzeltecek.`,
-            payload: { tsc: "fail", errorCount: tscResult.errorCount },
+            summary: `TypeScript hatası (${tscResult.errorCount}) — finish geri alındı, deneme ${tscRetries}/${MAX_TSC_RETRIES}.`,
+            payload: { tsc: "fail", errorCount: tscResult.errorCount, retry: tscRetries },
           });
           responseParts.push({
             functionResponse: {
