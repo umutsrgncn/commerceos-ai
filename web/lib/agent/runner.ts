@@ -2,7 +2,7 @@ import type { Content, FunctionCall, Part } from "@google/generative-ai";
 
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
-import { agentModel, plannerModel } from "./gemini";
+import { agentModel, generateWithRetry, plannerModel } from "./gemini";
 import { buildAgentTurnPrompt, buildPlannerPrompt, SYSTEM_PROMPT } from "./prompts";
 import { startPreview, stopPreview } from "./preview";
 import { buildScopeBriefing, getScopesByIds, type AgentScope } from "./scopes";
@@ -80,8 +80,18 @@ export async function runTask(taskId: string): Promise<void> {
     });
 
     const planner = plannerModel();
-    const planRes = await planner.generateContent(
+    const planRes = await generateWithRetry(
+      planner,
       buildPlannerPrompt({ title: task.title, prompt: task.prompt }),
+      {
+        onRetry: async ({ attempt, delayMs, reason }) => {
+          await emitAgentEvent({
+            taskId,
+            type: "NOTE",
+            summary: `Gemini ${reason} — ${Math.round(delayMs / 1000)}sn bekleyip yeniden deneme (${attempt}/4)…`,
+          });
+        },
+      },
     );
     const planText = planRes.response.text();
     let plan: Record<string, unknown> = {};
@@ -196,7 +206,19 @@ export async function runTask(taskId: string): Promise<void> {
       iteration += 1;
       await ensureNotCancelled(taskId);
 
-      const result = await model.generateContent({ contents: history });
+      const result = await generateWithRetry(
+        model,
+        { contents: history },
+        {
+          onRetry: async ({ attempt, delayMs, reason }) => {
+            await emitAgentEvent({
+              taskId,
+              type: "NOTE",
+              summary: `Gemini ${reason} — ${Math.round(delayMs / 1000)}sn bekleyip yeniden deneme (${attempt}/4)…`,
+            });
+          },
+        },
+      );
       const usage = result.response.usageMetadata;
       if (usage?.totalTokenCount) totalTokens += usage.totalTokenCount;
 
