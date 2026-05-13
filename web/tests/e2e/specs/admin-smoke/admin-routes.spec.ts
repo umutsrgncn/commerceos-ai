@@ -26,6 +26,7 @@ const ADMIN_ROUTES: Record<string, string> = {
   admin_agent: "/admin/agent",
   admin_activity: "/admin/activity",
   admin_settings: "/admin/settings",
+  admin_settings_kvkk: "/admin/settings/kvkk",
   admin_data_requests: "/admin/data-requests",
   admin_bank: "/admin/bank",
   admin_bank_import: "/admin/bank/import",
