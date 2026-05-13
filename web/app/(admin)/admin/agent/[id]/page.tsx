@@ -212,10 +212,10 @@ export default async function AgentDetailPage({
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                Bu görev yapılmadı
+                Güvenlik tedbiri devreye girdi
               </h3>
               <p className="mt-0.5 text-[11px] uppercase tracking-wider text-orange-600/70 dark:text-orange-400/70">
-                Agent kasıtlı olarak reddetti — güvenlik veya scope kuralı
+                Görev politika gereği çalıştırılmadı — hata oluşmadı
               </p>
               <div className="mt-3 rounded-lg border border-orange-500/15 bg-[color:var(--color-bg)] p-3.5">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--color-muted)]">
@@ -226,8 +226,9 @@ export default async function AgentDetailPage({
                 </p>
               </div>
               <p className="mt-3 text-xs text-[color:var(--color-muted)]">
-                Bu bir sistem hatası değil. Görevi yeniden formüle edip tekrar
-                deneyebilirsin.
+                Sistem doğru çalıştı — agent talebi güvenlik, scope veya
+                anlaşılabilirlik kuralları nedeniyle başlatmadı. Görevi yeniden
+                formüle edip tekrar deneyebilirsin.
               </p>
             </div>
           </div>
@@ -458,7 +459,7 @@ const STATUS_META: Record<
     heroBlur: "bg-stone-400/10",
   },
   REFUSED: {
-    label: "Yapılamadı",
+    label: "Güvenlik tedbiri",
     cls: "bg-orange-500/15 text-orange-600 dark:text-orange-300",
     dot: "bg-orange-500",
     heroBg: "bg-gradient-to-br from-orange-500/[0.08] via-[color:var(--color-bg)] to-[color:var(--color-bg)]",

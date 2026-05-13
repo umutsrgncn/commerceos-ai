@@ -128,7 +128,7 @@ export async function runTask(taskId: string): Promise<void> {
       await emitAgentEvent({
         taskId,
         type: "NOTE",
-        summary: `Görev reddedildi: ${reason.slice(0, 200)}`,
+        summary: `Güvenlik tedbiri devreye girdi: ${reason.slice(0, 200)}`,
         payload: { kind: "refusal", reason_kind: kind },
       });
       await db.agentTask.update({
@@ -148,7 +148,7 @@ export async function runTask(taskId: string): Promise<void> {
       await emitAgentEvent({
         taskId,
         type: "NOTE",
-        summary: `Görev reddedildi: ${reason}`,
+        summary: `Güvenlik tedbiri devreye girdi: ${reason}`,
         payload: { kind: "no_scope" },
       });
       await db.agentTask.update({
