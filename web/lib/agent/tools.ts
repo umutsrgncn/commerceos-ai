@@ -7,6 +7,12 @@ import type { FunctionDeclaration, SchemaType } from "@google/generative-ai";
 
 import { canRead, canWrite } from "./scope";
 import type { AgentScope } from "./scopes";
+import {
+  addLineNumbers,
+  findFuzzyMatch,
+  LINE_NUMBER_HINT,
+  stripLineNumbers,
+} from "./text-utils";
 
 const exec = promisify(execFile);
 
@@ -68,7 +74,7 @@ export const TOOL_DECLS: FunctionDeclaration[] = [
   {
     name: "read_file",
     description:
-      "Bir dosyanın tüm içeriğini oku. Aynı dosya zaten okunduysa ve içerik değişmediyse 'değişmedi' özeti döner — tekrar okumana gerek yok. Max 30KB; daha büyükse truncated döner. ÖNEMLİ: edit_file çağırmadan ÖNCE mutlaka read_file çağırmalısın.",
+      `Bir dosyanın tüm içeriğini oku. Çıktı 'N→content' formatında satır numarası prefix'i ile gelir — bu prefix MODELE GÖSTERİM içindir, dosyada yoktur. edit_file'da old_string'i kopyalarken prefix'i (sayı + →) DAHIL ETME, sadece içeriği al. Aynı dosya zaten okunduysa ve içerik değişmediyse 'değişmedi' stub'ı döner. Max 30KB. ÖNEMLİ: edit_file çağırmadan ÖNCE mutlaka read_file çağırmalısın.`,
     parameters: {
       type: "OBJECT" as SchemaType,
       properties: {
@@ -113,7 +119,9 @@ export const TOOL_DECLS: FunctionDeclaration[] = [
       "1) Bu dosyayı önce read_file ile okumuş olmalısın — yoksa hata.\n" +
       "2) old_string dosyada UNIQUE olmalı. Birden çok yerde geçiyorsa: ya daha fazla bağlam ekle ya da replace_all=true ver.\n" +
       "3) Aynı (path, old_string, new_string) edit'ini 2 kez deneme — DRY hata.\n" +
-      "4) Indentation'ı koru — old_string'deki boşluk/tab'ler new_string'de de aynı olmalı.",
+      "4) Indentation'ı koru — old_string'deki boşluk/tab'ler new_string'de de aynı olmalı.\n" +
+      `5) ${LINE_NUMBER_HINT}\n` +
+      "6) Edit sonrası dosyada DUPLICATE import satırı oluşmasın — eklemeden önce mevcut import'ları kontrol et.",
     parameters: {
       type: "OBJECT" as SchemaType,
       properties: {
@@ -307,20 +315,33 @@ async function readFile(ctx: AgentContext, relPath: string) {
 
   const buf = await fs.readFile(full);
   const isFull = buf.length <= MAX_READ_BYTES;
-  const text = isFull ? buf.toString("utf8") : buf.slice(0, MAX_READ_BYTES).toString("utf8");
+  const rawText = isFull ? buf.toString("utf8") : buf.slice(0, MAX_READ_BYTES).toString("utf8");
 
-  // Snapshot kaydı (edit guard için)
+  // Snapshot RAW içeriği saklar (edit ve mtime check için)
   ctx.readFiles.set(norm, {
     mtimeMs: mtime,
-    content: text,
+    content: rawText,
     isFullRead: isFull,
     readAt: ctx.callCounter.n,
   });
 
+  // Modele line-numbered çıktı ver — indentation görsel olarak ayırt edilebilsin
+  const displayContent = addLineNumbers(rawText);
   if (!isFull) {
-    return { path: relPath, content: text, truncated: true, totalBytes: buf.length };
+    return {
+      path: relPath,
+      content: displayContent,
+      truncated: true,
+      totalBytes: buf.length,
+      lineFormat: "N→content (prefix'i edit'te kopyalama)",
+    };
   }
-  return { path: relPath, content: text, truncated: false };
+  return {
+    path: relPath,
+    content: displayContent,
+    truncated: false,
+    lineFormat: "N→content (prefix'i edit'te kopyalama)",
+  };
 }
 
 async function grep(ctx: AgentContext, pattern: string, relPath?: string) {
@@ -459,21 +480,30 @@ async function editFile(
   }
   ctx.editAttempts.set(editHash, 1);
 
-  // 4) Match analizi
+  // 4) Fuzzy match — exact → strip line numbers → quote normalize → ws strip
   const content = await fs.readFile(full, "utf8");
-  let occurrences = 0;
-  let idx = -1;
-  while ((idx = content.indexOf(oldStr, idx + 1)) !== -1) occurrences += 1;
+  // Defansif: agent yanlışlıkla line-number prefix'i koyduysa hem old hem new'ü temizle
+  const oldStrClean = stripLineNumbers(oldStr);
+  const newStrClean = stripLineNumbers(newStr);
+  const match = findFuzzyMatch(content, oldStrClean);
 
-  if (occurrences === 0) {
-    // Yakın eşleşme bulmaya çalış — agent'a "şuna mı dedin?" ipucu
-    const hint = findClosestSnippet(content, oldStr);
+  if (!match) {
+    const hint = findClosestSnippet(content, oldStrClean);
     const hintMsg = hint
       ? `\n\nDosyada en yakın benzer pasaj (satır ${hint.line}):\n${hint.text}\n\nFark muhtemelen: ${hint.diffNote}`
       : "";
     throw new Error(
-      `old_string ${relPath} dosyasında bulunamadı (tam eşleşme, whitespace ve quote tipleri dahil).${hintMsg}`,
+      `old_string ${relPath} dosyasında bulunamadı (exact + quote-normalize + ws-strip denendi).${hintMsg}`,
     );
+  }
+
+  const actualOldStr = match.actual;
+  // Match metoduna göre dosyada kaç kez geçtiğini say
+  const occurrences = content.split(actualOldStr).length - 1;
+
+  if (occurrences === 0) {
+    // Bu olmamalı ama defansif
+    throw new Error(`Tutarsızlık: fuzzy match bulundu ama dosyada count=0`);
   }
   if (occurrences > 1 && !replaceAll) {
     throw new Error(
@@ -481,11 +511,18 @@ async function editFile(
     );
   }
 
-  // 5) Değiştir
+  // 5) Değiştir — orijinal dosya formatına yaz
   const next = replaceAll
-    ? content.split(oldStr).join(newStr)
-    : content.replace(oldStr, newStr);
+    ? content.split(actualOldStr).join(newStrClean)
+    : content.replace(actualOldStr, newStrClean);
   await fs.writeFile(full, next, "utf8");
+
+  // Match method'u (exact dışında) agent'a not olarak iletilsin
+  if (match.method !== "exact") {
+    await ctx.emit("NOTE", `Edit tolerance: ${relPath} (${match.method} eşleşme)`, {
+      method: match.method,
+    });
+  }
 
   // 6) Post-edit: duplicate import / line check
   const dupWarning = detectDuplicateLines(next);

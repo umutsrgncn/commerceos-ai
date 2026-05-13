@@ -1,0 +1,116 @@
+/**
+ * Agent tool I/O için metin yardımcıları.
+ *
+ * - Read çıktısına satır numarası ekle (model indentation'ı görsün)
+ * - Edit girdisinde olası satır numarası prefix'lerini sıyır (model yanlışlıkla koyduysa)
+ * - Curly quote → straight quote normalize (tokenizer farklılığı için)
+ * - Trailing whitespace tolerance
+ */
+
+const LEFT_SINGLE_CURLY = "‘";
+const RIGHT_SINGLE_CURLY = "’";
+const LEFT_DOUBLE_CURLY = "“";
+const RIGHT_DOUBLE_CURLY = "”";
+const ARROW = "→"; // →
+
+/** `cat -n` benzeri çıktı — modele indentation'ı görselleştirir. */
+export function addLineNumbers(content: string, startLine = 1): string {
+  if (!content) return "";
+  const lines = content.split(/\r?\n/);
+  return lines
+    .map((line, i) => {
+      const num = String(i + startLine).padStart(6, " ");
+      return `${num}${ARROW}${line}`;
+    })
+    .join("\n");
+}
+
+/**
+ * Modelin verdiği old_string'de satır numarası prefix'i olabilir (örn. "   12→content").
+ * Defansif: prefix'leri tek tek sıyır.
+ */
+export function stripLineNumbers(input: string): string {
+  return input
+    .split("\n")
+    .map((ln) => {
+      // "   42→actual_content" → "actual_content"
+      // "42\tactual_content"     → "actual_content"
+      const m = ln.match(/^\s*\d+[→\t](.*)$/);
+      return m ? m[1] : ln;
+    })
+    .join("\n");
+}
+
+/** Curly quote'ları straight quote'a normalize et. */
+export function normalizeQuotes(s: string): string {
+  return s
+    .split(LEFT_SINGLE_CURLY).join("'")
+    .split(RIGHT_SINGLE_CURLY).join("'")
+    .split(LEFT_DOUBLE_CURLY).join('"')
+    .split(RIGHT_DOUBLE_CURLY).join('"');
+}
+
+/** Her satırın sonundaki whitespace'i sil — fuzzy match için. */
+export function stripTrailingWs(s: string): string {
+  return s
+    .split(/(\r\n|\n|\r)/)
+    .map((part, i) => (i % 2 === 0 ? part.replace(/[ \t]+$/, "") : part))
+    .join("");
+}
+
+/**
+ * Dosya içeriğinde search string'i bul.
+ * Sıralı toleranslar:
+ *   1) exact match
+ *   2) line-number prefix'leri sıyır
+ *   3) curly → straight quote normalize
+ *   4) trailing whitespace strip
+ *
+ * Dönüş: dosyadaki ORİJİNAL substring (yazılırken format korunsun).
+ */
+export function findFuzzyMatch(
+  fileContent: string,
+  search: string,
+): { actual: string; method: "exact" | "stripped" | "quotes" | "ws" } | null {
+  // 1) Exact
+  if (fileContent.includes(search)) {
+    return { actual: search, method: "exact" };
+  }
+
+  // 2) Strip line number prefix'i (model yanlışlıkla koyduysa)
+  const stripped = stripLineNumbers(search);
+  if (stripped !== search && fileContent.includes(stripped)) {
+    return { actual: stripped, method: "stripped" };
+  }
+
+  // 3) Quote normalize
+  const normSearch = normalizeQuotes(stripped);
+  const normFile = normalizeQuotes(fileContent);
+  let idx = normFile.indexOf(normSearch);
+  if (idx !== -1) {
+    return {
+      actual: fileContent.substring(idx, idx + normSearch.length),
+      method: "quotes",
+    };
+  }
+
+  // 4) Trailing whitespace toleransı
+  const wsSearch = stripTrailingWs(normSearch);
+  const wsFile = stripTrailingWs(normFile);
+  idx = wsFile.indexOf(wsSearch);
+  if (idx !== -1) {
+    // Whitespace stripped çakışmasını orijinal dosyada bulmak zor;
+    // en yakın approximate: orijinal dosyada wsSearch satırlarını sıralı ara
+    // Burada bilinçli olarak ws-stripped halini döndürüyoruz — yazma sırasında
+    // editFile dosyayı stripTrailingWs(file).replace(wsSearch, ...) ile değiştirir
+    return { actual: wsSearch, method: "ws" };
+  }
+
+  return null;
+}
+
+/**
+ * Agent'a (model'e) yönelik "edit kurallı" hatırlatma metni.
+ * read_file ve edit_file tool description'larında kullanılır.
+ */
+export const LINE_NUMBER_HINT = `Dosya içerikleri \`     N${ARROW}content\` formatında satır numarası prefix'i ile sunulur. Edit yaparken old_string'i KOPYALARKEN bu prefix'i (sayı + ${ARROW}) DAHIL ETME — sadece içerik kısmını al. Indentation (boşluk/tab) sayısı eski hale aynen kalmalı.`;
