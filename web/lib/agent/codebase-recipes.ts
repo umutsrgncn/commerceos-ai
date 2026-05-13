@@ -60,20 +60,50 @@ YANLIŞ: import { ActionResult } from "@/lib/util/action-result"  ← yok
   redirect("/shop/account");
 
 ────────────────────────────────────────
-7) "use server" PATTERN
+7) "use client" vs "use server" — ÇOK KRİTİK
 ────────────────────────────────────────
-- Server action dosyaları **dosyanın en üstünde** "use server" ile başlar.
-- Bir dosyada hem server component hem client component KARIŞTIRMA.
-- Client component'lerde "use client", server action'larda "use server".
-- React hook'ları (useState, useFormState, useFormStatus) sadece client component'lerde.
 
-useFormState (form action ile bind):
-  import { useActionState } from "react";
-  const [state, formAction] = useActionState(myServerAction, null);
+KESİN KURAL: Aşağıdaki React hook'ları SADECE "use client" ile başlayan dosyalarda kullanılır:
+  useState, useEffect, useRef, useMemo, useCallback, useReducer, useContext,
+  useActionState (react), useFormStatus (react-dom), useFormState, useTransition,
+  useLayoutEffect, useDeferredValue, useOptimistic
 
-useFormStatus (pending state):
-  import { useFormStatus } from "react-dom";
-  const { pending } = useFormStatus();
+KESİN KURAL: page.tsx genelde "async function" server component'tir. ASLA içine yukarıdaki
+hook'ları IMPORT ETME. Yapacağın iş etkileşim gerektiriyorsa:
+
+  YANLIŞ (aynı dosyada server + client karıştırma):
+    // page.tsx
+    import { useActionState } from "react";  // ← ERROR
+    export default async function Page() {
+      const user = await getCurrentCustomer();
+      return <form>...</form>;
+    }
+
+  DOĞRU (ayır):
+    // page.tsx  (server, async)
+    import { getCurrentCustomer } from "@/lib/shop/auth";
+    import { DeleteAccountForm } from "./delete-account-form";
+    export default async function Page() {
+      const user = await getCurrentCustomer();
+      return <DeleteAccountForm email={user.email} />;
+    }
+
+    // delete-account-form.tsx  (client, etkileşim)
+    "use client";
+    import { useActionState } from "react";
+    import { useFormStatus } from "react-dom";
+    import { requestAccountDeletion } from "./actions";
+    export function DeleteAccountForm({ email }: { email: string }) {
+      const [state, formAction] = useActionState(requestAccountDeletion, null);
+      ...
+    }
+
+    // actions.ts  (server action)
+    "use server";
+    import { db } from "@/lib/db";
+    export async function requestAccountDeletion(prev, formData) { ... }
+
+Üç dosya, üç farklı direktif. Karıştırma — Next build hata verir.
 
 ────────────────────────────────────────
 8) KVKK / HESAP SİLME TALEBİ — gerçek schema

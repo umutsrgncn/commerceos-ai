@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
 import { agentModel, generateWithRetry, plannerModel } from "./gemini";
 import { buildAgentTurnPrompt, buildPlannerPrompt, SYSTEM_PROMPT } from "./prompts";
+import { formatIssuesForAgent, lintChangedFiles } from "./rsc-lint";
 import { startPreview, stopPreview } from "./preview";
 import { buildScopeBriefing, getScopesByIds, type AgentScope } from "./scopes";
 import { resetTestData } from "./test-db";
@@ -287,6 +288,40 @@ export async function runTask(taskId: string): Promise<void> {
         const out = await execTool(ctx, call.name, (call.args ?? {}) as Record<string, unknown>);
 
         if (out.finish) {
+          // ── RSC lint (hızlı, deterministik) — server/client karıştırma
+          const rscResult = await lintChangedFiles(wt.path);
+          if (!rscResult.ok) {
+            tscRetries += 1;
+            const issuesText = formatIssuesForAgent(rscResult.issues);
+            if (tscRetries >= MAX_TSC_RETRIES) {
+              await emitAgentEvent({
+                taskId,
+                type: "ERROR",
+                summary: `Max ${MAX_TSC_RETRIES} doğrulama denemesi doldu — kabul ediliyor.`,
+                payload: { gate: "rsc", issues: rscResult.issues.length },
+              });
+              finished = true;
+              finalSummary = out.finish.summary;
+              break;
+            }
+            await emitAgentEvent({
+              taskId,
+              type: "ERROR",
+              summary: `RSC kuralı ihlal edildi (${rscResult.issues.length}) — finish geri alındı, deneme ${tscRetries}/${MAX_TSC_RETRIES}.`,
+              payload: { gate: "rsc", issues: rscResult.issues.length, retry: tscRetries },
+            });
+            responseParts.push({
+              functionResponse: {
+                name: "finish",
+                response: {
+                  ok: false,
+                  error: `Finish reddedildi: Next.js RSC kurallarını ihlal ediyor.\n\n${issuesText}\n\nDosyaları düzelt, sonra finish'i tekrar çağır.`,
+                },
+              },
+            });
+            continue;
+          }
+
           // ── tsc gate ── finish öncesi TypeScript doğrulaması
           await emitAgentEvent({
             taskId,
