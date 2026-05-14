@@ -56,6 +56,7 @@ function makeCtx(taskId: string, wt: Worktree, scopes: AgentScope[]): AgentConte
     },
     readFiles: makeReadFilesMap(),
     editAttempts: new Map(),
+    editsPerFile: new Map(),
     callCounter: { n: 0 },
   };
 }
@@ -256,6 +257,8 @@ export async function runTask(taskId: string): Promise<void> {
     // Sticky context — aktif tsc hatası varsa her iter'de hatırlat, compact silmesin
     let activeTscError: string | null = null;
     let activeRscError: string | null = null;
+    // Aynı dosya 3+ kez edit'lendi ve hâlâ tsc fail → "baştan yaz" uyarısı
+    let activeRewriteHint: string | null = null;
     // Tool dedup — aynı read tool'unu 3. kez çağrıyorsa engel
     const callCounts = new Map<string, number>();
     const READ_TOOLS = new Set(["read_file", "list_dir", "grep"]);
@@ -364,10 +367,10 @@ export async function runTask(taskId: string): Promise<void> {
 
       // Sticky context — aktif hata varsa son user turn'üne prepend et
       // (compact/trim onu silse bile agent her iter'de görür)
-      if (activeTscError || activeRscError) {
+      if (activeTscError || activeRscError || activeRewriteHint) {
         const lastUserIdx = findLastUserTurnIndex(history);
         if (lastUserIdx >= 0) {
-          const sticky = buildStickyErrorBlock(activeTscError, activeRscError);
+          const sticky = buildStickyErrorBlock(activeTscError, activeRscError, activeRewriteHint);
           injectStickyIntoTurn(history, lastUserIdx, sticky);
         }
       }
@@ -526,6 +529,7 @@ export async function runTask(taskId: string): Promise<void> {
           if (tscResult.ok) {
             // tsc temiz → sticky error temizle
             activeTscError = null;
+            activeRewriteHint = null;
             finished = true;
             finalSummary = out.finish.summary;
             await emitAgentEvent({
@@ -556,6 +560,17 @@ export async function runTask(taskId: string): Promise<void> {
 
           // Sticky context — bu hatayı her iter'de hatırlatacağız
           activeTscError = errBody;
+
+          // Aynı dosyayı 3+ kez edit'lediyse + hâlâ fail → "baştan yaz" sticky uyarısı
+          // Bu, agent'ın micro-edit ölüm-döngüsüne girmesini engeller
+          const hotFiles: string[] = [];
+          for (const [path, count] of ctx.editsPerFile.entries()) {
+            if (count >= 3) hotFiles.push(`${path} (${count} edit)`);
+          }
+          activeRewriteHint = hotFiles.length > 0
+            ? `Bu dosya(lar)da çok sayıda edit yaptın ve hâlâ TS hatası alıyorsun:\n  ${hotFiles.join("\n  ")}\n\nMicro-edit yerine STRATEJİ DEĞİŞTİR:\n- Dosyayı write_file ile BAŞTAN yaz (tutarlı, tek seferde).\n- VEYA aynı sembolü çok tekrar değiştiriyorsan edit_file'da replace_all:true kullan.\n- Component import edip 'X not defined' hatası alıyorsan → components catalog'a bak, o isim YOK olabilir.`
+            : null;
+
           await emitAgentEvent({
             taskId,
             type: "ERROR",
@@ -887,6 +902,7 @@ const PERSISTENT_TOOLS = new Set(["write_file", "edit_file", "finish"]);
 function buildStickyErrorBlock(
   tsc: string | null,
   rsc: string | null,
+  rewriteHint: string | null,
 ): string {
   const blocks: string[] = ["━━━ AKTİF HATA — bunu düzeltmeden finish çağırma ━━━"];
   if (rsc) {
@@ -894,6 +910,9 @@ function buildStickyErrorBlock(
   }
   if (tsc) {
     blocks.push(`\n[TypeScript hataları]\n${tsc.slice(0, 2500)}`);
+  }
+  if (rewriteHint) {
+    blocks.push(`\n[STRATEJİ UYARISI — micro-edit ölüm-döngüsü]\n${rewriteHint.slice(0, 1200)}`);
   }
   blocks.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   return blocks.join("\n");

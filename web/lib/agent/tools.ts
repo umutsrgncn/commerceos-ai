@@ -47,6 +47,8 @@ export type AgentContext = {
   readFiles: Map<string, ReadSnapshot>;
   /** Edit denemelerinin hash'i — semantic dedup */
   editAttempts: Map<string, number>;
+  /** Dosya yolu → kaç kez edit denenmiş (hash bazlı değil, dosya bazlı) */
+  editsPerFile: Map<string, number>;
   /** Tool call sayacı (state takibi) */
   callCounter: { n: number };
 };
@@ -419,6 +421,9 @@ async function writeFile(ctx: AgentContext, relPath: string, content: string) {
     readAt: ctx.callCounter.n,
   });
 
+  // write_file = baştan yazma → micro-edit sayacını sıfırla, rewrite-hint sönsün
+  ctx.editsPerFile.delete(norm);
+
   await ctx.emit("FILE_WRITE", `${exists ? "Güncellendi" : "Oluşturuldu"}: ${relPath}`, {
     path: relPath,
     bytes: Buffer.byteLength(content, "utf8"),
@@ -543,6 +548,10 @@ async function editFile(
     readAt: ctx.callCounter.n,
   });
 
+  // Per-file edit sayacı — runner sticky uyarı için kullanır
+  const fileEdits = (ctx.editsPerFile.get(norm) ?? 0) + 1;
+  ctx.editsPerFile.set(norm, fileEdits);
+
   await ctx.emit("FILE_WRITE", `Edit: ${relPath}${replaceAll ? ` (${occurrences} yer)` : ""}`, {
     path: relPath,
     oldBytes: Buffer.byteLength(oldStr, "utf8"),
@@ -550,6 +559,7 @@ async function editFile(
     replacements: replaceAll ? occurrences : 1,
     added: diff.added,
     removed: diff.removed,
+    fileEditCount: fileEdits,
   });
   // Kısa tool result — modeli boğmasın
   const summaryParts = [`${relPath} güncellendi`];
