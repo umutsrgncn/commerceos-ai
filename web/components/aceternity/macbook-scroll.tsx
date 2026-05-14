@@ -44,34 +44,58 @@ export const MacbookScroll = ({
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    if (window && window.innerWidth < 768) {
-      setIsMobile(true);
-    }
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
-  const scaleX = useTransform(
-    scrollYProgress,
-    [0, 0.3],
-    [1.2, isMobile ? 1 : 1.5]
-  );
-  const scaleY = useTransform(
-    scrollYProgress,
-    [0, 0.3],
-    [0.6, isMobile ? 1 : 1.5]
-  );
+  const scaleX = useTransform(scrollYProgress, [0, 0.3], [1.2, 1.5]);
+  const scaleY = useTransform(scrollYProgress, [0, 0.3], [0.6, 1.5]);
   const translate = useTransform(scrollYProgress, [0, 1], [0, 1500]);
   const rotate = useTransform(scrollYProgress, [0.1, 0.12, 0.3], [-28, -28, 0]);
   const textTransform = useTransform(scrollYProgress, [0, 0.3], [0, 100]);
   const textOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
+  // ── Mobil: animasyon yerine statik framed önizleme ──
+  if (isMobile) {
+    return (
+      <div className="mx-auto max-w-2xl px-6 py-8">
+        <h2 className="mb-6 text-balance text-center text-2xl font-bold text-neutral-800 dark:text-white">
+          {title}
+        </h2>
+        <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-black shadow-2xl">
+          <div className="flex items-center gap-1.5 border-b border-white/[0.06] bg-white/[0.02] px-3 py-2">
+            <span className="h-2 w-2 rounded-full bg-red-500/70" />
+            <span className="h-2 w-2 rounded-full bg-amber-500/70" />
+            <span className="h-2 w-2 rounded-full bg-emerald-500/70" />
+            <span className="ml-2 font-mono text-[9px] text-white/40">
+              commerceos.cloud/admin/autopilot
+            </span>
+          </div>
+          {src && (
+            <div className="relative aspect-[16/10]">
+              <img
+                src={src}
+                alt="Otopilot paneli"
+                className="absolute inset-0 h-full w-full object-cover object-top"
+                loading="lazy"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={ref}
-      className="flex min-h-[200vh] shrink-0 scale-[0.35] transform flex-col items-center justify-start py-0 [perspective:800px] sm:scale-50 md:scale-100 md:py-80"
+      className="flex min-h-[140vh] shrink-0 scale-50 transform flex-col items-center justify-start py-16 [perspective:800px] md:min-h-[170vh] md:scale-100 md:py-28"
     >
       <motion.h2
         style={{ translateY: textTransform, opacity: textOpacity }}
-        className="mb-20 text-center text-3xl font-bold text-neutral-800 dark:text-white"
+        className="mb-12 text-center text-3xl font-bold text-neutral-800 dark:text-white"
       >
         {title}
       </motion.h2>
