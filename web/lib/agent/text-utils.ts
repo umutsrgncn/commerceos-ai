@@ -114,3 +114,49 @@ export function findFuzzyMatch(
  * read_file ve edit_file tool description'larında kullanılır.
  */
 export const LINE_NUMBER_HINT = `Dosya içerikleri \`     N${ARROW}content\` formatında satır numarası prefix'i ile sunulur. Edit yaparken old_string'i KOPYALARKEN bu prefix'i (sayı + ${ARROW}) DAHIL ETME — sadece içerik kısmını al. Indentation (boşluk/tab) sayısı eski hale aynen kalmalı.`;
+
+/**
+ * Dosyada edit uygula — replace() iki kritik buga karşı güvenli:
+ *
+ *  1) $-interpolation bug: replace(s, v) v içinde $1/$&/$\` varsa string substitution
+ *     pattern'i olarak yorumlanır. Callback () => v kullanarak literal yazar.
+ *
+ *  2) Trailing newline cleanup: Agent bir satırı SİLMEK için
+ *     old_string='code line' + new_string='' verirse, dosyada
+ *     'code line\n' varsa boş satır kalır. Buradan trailing \n'i de yut.
+ */
+export function applyEdit(
+  content: string,
+  oldStr: string,
+  newStr: string,
+  replaceAll: boolean,
+): string {
+  // Silme operasyonu — trailing newline da yutulsun
+  if (newStr === "") {
+    const includesWithNewline =
+      !oldStr.endsWith("\n") && content.includes(oldStr + "\n");
+    if (includesWithNewline) {
+      const target = oldStr + "\n";
+      return replaceAll
+        ? content.split(target).join("")
+        : content.replace(target, () => "");
+    }
+  }
+  return replaceAll
+    ? content.split(oldStr).join(newStr)
+    : content.replace(oldStr, () => newStr);
+}
+
+/** Edit sonrası kaç satır eklendi/silindi/değişti — agent'a kısa özet için. */
+export function diffSummary(
+  before: string,
+  after: string,
+): { added: number; removed: number; changed: boolean } {
+  if (before === after) return { added: 0, removed: 0, changed: false };
+  const beforeLines = before.split("\n").length;
+  const afterLines = after.split("\n").length;
+  const delta = afterLines - beforeLines;
+  if (delta > 0) return { added: delta, removed: 0, changed: true };
+  if (delta < 0) return { added: 0, removed: -delta, changed: true };
+  return { added: 0, removed: 0, changed: true }; // sadece satır içi değişiklik
+}

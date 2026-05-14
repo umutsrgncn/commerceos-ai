@@ -9,6 +9,8 @@ import { canRead, canWrite } from "./scope";
 import type { AgentScope } from "./scopes";
 import {
   addLineNumbers,
+  applyEdit,
+  diffSummary,
   findFuzzyMatch,
   LINE_NUMBER_HINT,
   stripLineNumbers,
@@ -422,10 +424,11 @@ async function writeFile(ctx: AgentContext, relPath: string, content: string) {
     bytes: Buffer.byteLength(content, "utf8"),
     created: !exists,
   });
+  // Kısa tool result
+  const lines = content.split("\n").length;
   return {
-    path: relPath,
-    bytes: Buffer.byteLength(content, "utf8"),
-    created: !exists,
+    ok: true,
+    message: `${relPath} ${exists ? "güncellendi" : "oluşturuldu"} (${lines} satır)`,
     ...(dupWarning ? { warning: dupWarning } : {}),
   };
 }
@@ -511,10 +514,8 @@ async function editFile(
     );
   }
 
-  // 5) Değiştir — orijinal dosya formatına yaz
-  const next = replaceAll
-    ? content.split(actualOldStr).join(newStrClean)
-    : content.replace(actualOldStr, newStrClean);
+  // 5) Değiştir — safe replace (callback, $-bug yok) + silmede trailing \n cleanup
+  const next = applyEdit(content, actualOldStr, newStrClean, replaceAll);
   await fs.writeFile(full, next, "utf8");
 
   // Match method'u (exact dışında) agent'a not olarak iletilsin
@@ -523,6 +524,9 @@ async function editFile(
       method: match.method,
     });
   }
+
+  // Diff özeti (sadece bilgi amaçlı)
+  const diff = diffSummary(content, next);
 
   // 6) Post-edit: duplicate import / line check
   const dupWarning = detectDuplicateLines(next);
@@ -544,10 +548,17 @@ async function editFile(
     oldBytes: Buffer.byteLength(oldStr, "utf8"),
     newBytes: Buffer.byteLength(newStr, "utf8"),
     replacements: replaceAll ? occurrences : 1,
+    added: diff.added,
+    removed: diff.removed,
   });
+  // Kısa tool result — modeli boğmasın
+  const summaryParts = [`${relPath} güncellendi`];
+  if (replaceAll) summaryParts.push(`${occurrences} yer`);
+  if (diff.added > 0) summaryParts.push(`+${diff.added} satır`);
+  if (diff.removed > 0) summaryParts.push(`-${diff.removed} satır`);
   return {
-    path: relPath,
-    replaced: replaceAll ? occurrences : 1,
+    ok: true,
+    message: summaryParts.join(", "),
     ...(dupWarning ? { warning: dupWarning } : {}),
   };
 }
