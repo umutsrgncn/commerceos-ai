@@ -7,13 +7,67 @@ import { runTask } from "./runner";
 import { destroyWorktree, mergeBranchToMain, type Worktree } from "./worktree";
 
 const POLL_INTERVAL_MS = 3000;
+const STALE_RECOVERY_MS = 3 * 60_000; // 3 dk hareket yoksa zombie say
+const STALE_CHECK_INTERVAL_MS = 60_000; // 1 dk'da bir tara
 
 const ACTIVE_STATUSES = ["PLANNING", "RUNNING", "TESTING"] as const;
 
 let stopped = false;
+let lastStaleCheck = 0;
 
 export function stopWorker() {
   stopped = true;
+}
+
+/**
+ * Worker restart edildiğinde önceki süreçten kalan PLANNING/RUNNING/TESTING
+ * task'lar bellekte sahipsiz kalıyor — son event veya startedAt 3dk+ eskiyse
+ * FAILED'a çek ki yeni task'lar pickup edilebilsin.
+ */
+async function recoverStaleActiveTasks() {
+  const now = Date.now();
+  const cutoff = new Date(now - STALE_RECOVERY_MS);
+  const stale = await db.agentTask.findMany({
+    where: {
+      status: { in: [...ACTIVE_STATUSES] },
+      startedAt: { lt: cutoff },
+    },
+    select: { id: true, status: true, startedAt: true },
+  });
+  for (const t of stale) {
+    // Son event 3dk'dan eski mi?
+    const lastEvent = await db.agentEvent.findFirst({
+      where: { taskId: t.id },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    });
+    const lastActivity = lastEvent?.createdAt ?? t.startedAt;
+    if (!lastActivity || lastActivity.getTime() < cutoff.getTime()) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `[agent/worker] stale ${t.status} task kurtarılıyor: ${t.id} (son hareket: ${lastActivity?.toISOString() ?? "yok"})`,
+      );
+      await db.agentTask.update({
+        where: { id: t.id },
+        data: {
+          status: "FAILED",
+          errorMsg:
+            "Worker restart edildiği sırada bu task aktifti — süreç sahipsiz kaldı, kurtarıldı.",
+          completedAt: new Date(),
+          tunnelUrl: null,
+          port: null,
+        },
+      });
+      try {
+        await emitAgentEvent({
+          taskId: t.id,
+          type: "ERROR",
+          summary:
+            "Worker restart edildi, task sahipsiz kaldı → FAILED. Yeniden çalıştırmak istersen yeni task aç.",
+        });
+      } catch {}
+    }
+  }
 }
 
 /**
@@ -26,8 +80,23 @@ export function stopWorker() {
 export async function runWorkerLoop() {
   // eslint-disable-next-line no-console
   console.log("[agent/worker] başlatıldı");
+  // Startup'ta önceki süreçten kalan zombie task'ları temizle
+  try {
+    await recoverStaleActiveTasks();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[agent/worker] startup stale recovery hata:", err);
+  }
   while (!stopped) {
     try {
+      // Periyodik stale check (her 60 sn'de bir)
+      if (Date.now() - lastStaleCheck > STALE_CHECK_INTERVAL_MS) {
+        lastStaleCheck = Date.now();
+        await recoverStaleActiveTasks().catch((e) => {
+          // eslint-disable-next-line no-console
+          console.error("[agent/worker] periyodik stale check hata:", e);
+        });
+      }
       // 1) Aktif preview varsa: review/approve/reject akışını yönet
       const handled = await handleActivePreview();
       if (handled) {
