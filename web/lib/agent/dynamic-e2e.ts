@@ -1,4 +1,4 @@
-import { chromium, type Browser } from "@playwright/test";
+import { chromium, type Browser, type BrowserContext } from "@playwright/test";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -48,9 +48,20 @@ export async function runDynamicE2e(opts: {
     browser = await chromium.launch({ headless: true });
     const ctx = await browser.newContext({
       viewport: { width: 1280, height: 800 },
-      // Cookie kabul etmesi için bayrak
       ignoreHTTPSErrors: true,
     });
+
+    // /admin sayfası test edilecekse, demo admin user'la login ol — yoksa hep /login'e redirect oluyor
+    const needsAdminAuth = opts.pages.some((p) => p.url.startsWith("/admin"));
+    if (needsAdminAuth) {
+      await loginAsDemoAdmin(ctx, opts.port).catch(async (err) => {
+        await emitAgentEvent({
+          taskId: opts.taskId,
+          type: "NOTE",
+          summary: `Demo admin login atlandı: ${(err instanceof Error ? err.message : String(err)).slice(0, 150)}`,
+        });
+      });
+    }
 
     for (const cp of opts.pages) {
       const fullUrl = `http://localhost:${opts.port}${cp.url}`;
@@ -130,4 +141,30 @@ export async function runDynamicE2e(opts: {
   }
 
   return { total: opts.pages.length, passed, failed, pages: results };
+}
+
+/**
+ * Test schema'daki demo admin user'ı (seed.ts'den geliyor) ile programatik login.
+ * Cookie context'te kalır, sonraki page.goto'lar authenticated olur.
+ */
+async function loginAsDemoAdmin(ctx: BrowserContext, port: number): Promise<void> {
+  const page = await ctx.newPage();
+  try {
+    await page.goto(`http://localhost:${port}/login`, {
+      waitUntil: "domcontentloaded",
+      timeout: 20_000,
+    });
+    await page.fill('input[name="email"]', "demo@commerceos.dev");
+    await page.fill('input[name="password"]', "demo1234");
+    await Promise.all([
+      page
+        .waitForURL((url) => !url.pathname.startsWith("/login"), {
+          timeout: 15_000,
+        })
+        .catch(() => {}),
+      page.click('button[type="submit"]'),
+    ]);
+  } finally {
+    await page.close();
+  }
 }
