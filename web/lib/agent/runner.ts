@@ -525,7 +525,8 @@ export async function runTask(taskId: string): Promise<void> {
             type: "STATUS",
             summary: "Finish öncesi TypeScript kontrolü…",
           });
-          const tscResult = await runTsc(wt.webPath);
+          const touchedFiles = Array.from(ctx.editsPerFile.keys());
+          const tscResult = await runTsc(wt.webPath, touchedFiles);
           if (tscResult.ok) {
             // tsc temiz → sticky error temizle
             activeTscError = null;

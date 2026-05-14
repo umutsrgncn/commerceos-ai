@@ -12,11 +12,13 @@ export type TscResult =
 
 /**
  * Worktree'de `pnpm tsc --noEmit` çalıştır.
- * Sadece web/ klasöründe çalışır.
- * Sonuç dönerken kullanıcı kodundaki hataları yakalar — pre-existing typedRoutes
- * vs. hataları her zaman varlığını sürdürür, bunlar filtrelenmez (agent görsün).
+ * `agentTouchedFiles` verilirse SADECE o dosyalardan gelen hatalar gate'i tetikler.
+ * Baseline hataları (projede zaten olanlar) agent'ı bloke etmez.
  */
-export async function runTsc(webPath: string): Promise<TscResult> {
+export async function runTsc(
+  webPath: string,
+  agentTouchedFiles?: string[],
+): Promise<TscResult> {
   try {
     await exec("pnpm", ["tsc", "--noEmit"], {
       cwd: webPath,
@@ -25,7 +27,6 @@ export async function runTsc(webPath: string): Promise<TscResult> {
     });
     return { ok: true };
   } catch (err) {
-    // tsc fail → stdout'ta hata listesi
     const stderr =
       err && typeof err === "object" && "stderr" in err
         ? String((err as { stderr: string }).stderr ?? "")
@@ -36,16 +37,30 @@ export async function runTsc(webPath: string): Promise<TscResult> {
         : "";
     const allOutput = (stdout + "\n" + stderr).trim();
 
-    // Pre-existing hataları say
     const lines = allOutput.split("\n").filter(Boolean);
-    const errorLines = lines.filter((l) => /error TS\d+:/.test(l));
+    const allErrorLines = lines.filter((l) => /error TS\d+:/.test(l));
 
-    // Sadece relatif path'li (agent'ın yazdığı) hataları gösterelim
-    // Pre-existing typedRoutes hatalarını agent halen görür ama büyük listeyi keseriz.
+    // Agent'ın yazdığı dosyalarla sınırla — baseline hataları reject etmesin
+    let errorLines = allErrorLines;
+    if (agentTouchedFiles && agentTouchedFiles.length > 0) {
+      // Path'leri normalize et (web/ prefix var/yok, baş ./ var/yok)
+      const norms = agentTouchedFiles.map((f) =>
+        f.replace(/^\.?\/+/, "").replace(/^web\//, ""),
+      );
+      errorLines = allErrorLines.filter((l) =>
+        norms.some((n) => l.includes(n)),
+      );
+    }
+
+    if (errorLines.length === 0) {
+      // Sadece baseline hataları → agent'ı geçir, hata yok say
+      return { ok: true };
+    }
+
     const head = errorLines.slice(0, MAX_OUTPUT_LINES).join("\n");
     return {
       ok: false,
-      errors: head || allOutput.slice(0, 4000),
+      errors: head,
       errorCount: errorLines.length,
     };
   }

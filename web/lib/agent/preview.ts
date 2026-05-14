@@ -49,7 +49,9 @@ export async function startPreview(opts: {
     summary: `Önizleme sunucusu başlatılıyor (port ${port})…`,
     payload: { port },
   });
-  // Turbopack symlink'li node_modules'u reddediyor — webpack mode + explicit flag'ler.
+  // Tailwind v4 + Next 15 webpack mode'da @import "tailwindcss" parse edilemiyor.
+  // Worktree.ts artık node_modules'u hardlink mirror (cp -al) ile kuruyor →
+  // Turbopack symlink hatasını vermeyecek, --turbopack flag'i güvenli.
   // DATABASE_URL → commerceos_test schema (canlı public DB izole).
   let testDbUrl: string | null = null;
   try {
@@ -59,7 +61,16 @@ export async function startPreview(opts: {
   }
   const devProc = spawn(
     "pnpm",
-    ["exec", "next", "dev", "--port", String(port), "--hostname", "127.0.0.1"],
+    [
+      "exec",
+      "next",
+      "dev",
+      "--turbopack",
+      "--port",
+      String(port),
+      "--hostname",
+      "127.0.0.1",
+    ],
     {
       cwd: opts.wt.webPath,
       env: {

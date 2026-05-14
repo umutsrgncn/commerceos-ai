@@ -68,7 +68,8 @@ export async function createWorktree(
   });
 
 
-  // node_modules paylaşım: symlink (build hızı için)
+  // node_modules: Turbopack symlink'i "filesystem root dışı" diye reddeder.
+  // Hardlink mirror (cp -al) → gerçek directory görünür ama disk paylaşılır.
   const nm = path.join(webPath, "node_modules");
   const nmExists = await fs
     .stat(nm)
@@ -76,10 +77,14 @@ export async function createWorktree(
     .catch(() => false);
   if (!nmExists) {
     try {
-      await fs.symlink(path.join(REPO_ROOT, "web", "node_modules"), nm, "dir");
-    } catch (err) {
-      // symlink başarısız → devam et, agent yine de okuma/yazma yapabilir,
-      // sadece tsc/test bunu kullanacak
+      await exec("cp", ["-al", path.join(REPO_ROOT, "web", "node_modules"), nm], {
+        maxBuffer: 1024 * 1024 * 4,
+      });
+    } catch {
+      // hardlink başarısız → fallback olarak symlink dene; webpack bunu tolere eder
+      try {
+        await fs.symlink(path.join(REPO_ROOT, "web", "node_modules"), nm, "dir");
+      } catch {}
     }
   }
 
