@@ -82,36 +82,6 @@ export default function WatchPage() {
       {/* ─── Ana sayfa içeriğinin tamamı ─── */}
       <AiDeveloperSection />
       <LandingFeatures />
-
-      {/* ─── Son CTA ─── */}
-      <section className="relative z-10 mx-auto max-w-3xl px-6 pb-24 pt-12 text-center">
-        <h2 className="text-balance text-3xl font-semibold tracking-tight sm:text-5xl">
-          Yeterince izledin mi?{" "}
-          <span className="bg-gradient-to-br from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">
-            Canlı dene
-          </span>
-        </h2>
-        <p className="mt-4 text-sm text-white/60 sm:text-base">
-          Demo hesap hazır — kayıt yok, kredi kartı yok.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/login">
-            <Button size="lg" className="bg-white text-black hover:bg-white/90">
-              Demo panele git
-            </Button>
-          </Link>
-          <Link href="/">
-            <Button
-              size="lg"
-              variant="outline"
-              className="border-white/20 bg-white/[0.05] text-white backdrop-blur hover:bg-white/[0.12] hover:text-white"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Ana sayfa
-            </Button>
-          </Link>
-        </div>
-      </section>
     </main>
   );
 }
