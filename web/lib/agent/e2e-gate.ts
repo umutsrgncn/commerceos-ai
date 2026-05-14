@@ -105,9 +105,9 @@ export async function runE2eGate(opts: {
   const screenshots: string[] = [];
   const testRows: Array<{ name: string; status: "PASSED" | "FAILED" | "SKIPPED"; durationMs: number; output?: string }> = [];
 
+  let parseOk = false;
   try {
     const raw = stdoutText.trim();
-    // playwright json reporter stdout'a JSON yazar
     const jsonStart = raw.indexOf("{");
     if (jsonStart >= 0) {
       const parsed = JSON.parse(raw.slice(jsonStart));
@@ -118,9 +118,25 @@ export async function runE2eGate(opts: {
         else skipped += 1;
         testRows.push({ name: test, status, durationMs: dur, output: msg });
       });
+      parseOk = true;
     }
   } catch {
-    // parse error — fallback'ler aşağıda
+    // parse error — fallback aşağıda
+  }
+
+  // Exec fail + parse fail → playwright komutu başlamadan öldü
+  // (chromium binary yok, syntax hatası vb). total=0 olarak "tanımlanmamış" göstermek
+  // YANILTICI; failed=1 ile gerçek hatayı raporla.
+  if (!exitOk && !parseOk) {
+    total = 1;
+    failed = 1;
+    const errSnippet = (stderrText + "\n" + stdoutText).trim().slice(0, 1500);
+    testRows.push({
+      name: "playwright bootstrap",
+      status: "FAILED",
+      durationMs,
+      output: errSnippet || "playwright komutu başarısız (stdout/stderr boş).",
+    });
   }
 
   // Screenshot'ları topla (worktree içinden)
