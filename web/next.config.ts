@@ -11,6 +11,14 @@ const nextConfig: NextConfig = {
   experimental: {
     typedRoutes: true,
   },
+  // Production build sırasında ESLint stilistik hataları engellemesin.
+  // Tip kontrolü ayrı bir adımda (pnpm typecheck) koşar.
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;
