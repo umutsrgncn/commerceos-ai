@@ -1,6 +1,7 @@
 import { Settings as SettingsIcon } from "lucide-react";
 
 import { requireCustomer } from "@/lib/shop/auth";
+import { DeleteAccountForm } from "./delete-account-form";
 
 export const metadata = { title: "Ayarlar · Pamuk" };
 export const dynamic = "force-dynamic";
@@ -63,6 +64,7 @@ export default async function SettingsPage() {
         <p className="mt-4 text-[11px] text-[color:var(--color-muted)]">
           Talep için: <strong>kvkk@pamuktekstil.com</strong>
         </p>
+        <DeleteAccountForm customerId={customer.id} />
       </section>
     </div>
   );
