@@ -107,7 +107,7 @@ export default async function CheckoutPage() {
             <ul className="space-y-2 border-t border-[color:var(--color-border)] pt-4 text-[10px] text-[color:var(--color-muted)]">
               <li className="flex items-center gap-2">
                 <Lock className="h-3 w-3 text-[color:var(--color-accent)]" />
-                SSL şifreli ödeme · iyzico
+                SSL şifreli ödeme · PayTR 3DS
               </li>
               <li className="flex items-center gap-2">
                 <Truck className="h-3 w-3 text-[color:var(--color-accent)]" />

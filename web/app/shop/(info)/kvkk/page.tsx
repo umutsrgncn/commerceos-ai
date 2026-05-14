@@ -106,12 +106,11 @@ export default function KvkkPage() {
           </p>
           <ul className="mt-3 space-y-2 list-disc pl-5">
             <li>
-              <strong>Kargo firmaları</strong> (Aras, Yurtiçi, MNG, PTT) —
-              teslimat adresi ve telefon
+              <strong>Kargo firmaları</strong> — teslimat adresi ve telefon
             </li>
             <li>
-              <strong>Ödeme altyapısı</strong> (iyzico, banka) — ödeme tutarı ve
-              referans
+              <strong>Ödeme altyapısı</strong> (PayTR, banka) — ödeme tutarı
+              ve referans
             </li>
             <li>
               <strong>E-posta servisi</strong> (Mailchimp, Klaviyo) — sipariş

@@ -111,7 +111,7 @@ export function MockPosForm({ total }: { total: number }) {
               <div className="h-3 w-6 rounded-sm border border-amber-900/40" />
             </div>
             <span className="text-[10px] font-mono uppercase tracking-[0.2em] opacity-80">
-              Demo POS
+              PayTR
             </span>
           </div>
           <div className="mt-7 font-mono text-2xl tracking-[0.18em]">
@@ -304,7 +304,7 @@ export function MockPosForm({ total }: { total: number }) {
       <SubmitBtn total={total} />
 
       <p className="text-center text-[10px] text-[color:var(--color-muted)]">
-        Bu bir <strong>demo POS</strong> sistemidir — gerçek kart bilgisi
+        Bu bir <strong>PayTR sandbox</strong> akışıdır — gerçek kart bilgisi
         gönderme. Test kartlarıyla akışı simüle eder.
       </p>
     </form>

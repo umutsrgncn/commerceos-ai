@@ -45,8 +45,8 @@ export default async function PaymentPage() {
           Kart bilgisi
         </h1>
         <p className="mt-3 text-sm text-[color:var(--color-muted)]">
-          <strong className="text-[color:var(--color-fg)]">Demo POS</strong> —
-          gerçek ödeme alınmaz. Test kart bilgilerini aşağıdaki kart örneğine
+          <strong className="text-[color:var(--color-fg)]">PayTR sandbox</strong>{" "}
+          — gerçek ödeme alınmaz. Test kart bilgilerini aşağıdaki kart örneğine
           dokunarak otomatik doldurabilirsin.
         </p>
       </header>
@@ -156,7 +156,7 @@ export default async function PaymentPage() {
             <ul className="mt-4 space-y-1.5 border-t border-[color:var(--color-border)] pt-3 text-[10px] text-[color:var(--color-muted)]">
               <li className="flex items-center gap-2">
                 <Lock className="h-3 w-3 text-[color:var(--color-accent)]" />
-                Mock POS · şifrelenmiş kart akışı simülasyonu
+                PayTR sandbox · şifrelenmiş kart akışı simülasyonu
               </li>
               <li className="flex items-center gap-2">
                 <ShieldCheck className="h-3 w-3 text-[color:var(--color-accent)]" />

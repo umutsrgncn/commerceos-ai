@@ -63,7 +63,7 @@ const FAQS: { category: string; items: { q: string; a: string }[] }[] = [
       },
       {
         q: "Kart bilgilerim güvende mi?",
-        a: "Tüm ödemeler SSL şifreli kanaldan iyzico altyapısı üzerinden geçer. Kart bilgilerin sistemimize asla kaydedilmez, sadece banka tarafında işlenir.",
+        a: "Tüm ödemeler SSL şifreli kanaldan PayTR'nin 3DS doğrulamalı POS altyapısı üzerinden geçer. Kart bilgilerin sistemimize asla kaydedilmez, sadece banka tarafında işlenir.",
       },
       {
         q: "Taksit yapabilir miyim?",

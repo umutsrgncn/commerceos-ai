@@ -59,7 +59,7 @@ export function PaymentCard({
         </div>
         <div className="space-y-1 text-xs text-[color:var(--color-muted)]">
           <div>
-            iyzico ·{" "}
+            PayTR ·{" "}
             <span
               className={cn(
                 "rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider",

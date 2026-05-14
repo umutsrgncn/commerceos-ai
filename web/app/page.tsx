@@ -36,7 +36,7 @@ import {
 export const metadata = {
   title: "CommerceOS — AI-destekli e-ticaret yönetim paneli",
   description:
-    "Otopilot 7 farklı işi yönetir: yorum cevabı, e-fatura, stok sipariş, havale eşleştirme, fiyat, segmentasyon, anomali. Gemini AI + Türkiye'ye özel (KVKK, GİB, iyzico).",
+    "Otopilot 7 farklı işi yönetir: yorum cevabı, e-fatura, stok sipariş, havale eşleştirme, fiyat, segmentasyon, anomali. Gemini AI + Türkiye'ye özel (KVKK, GİB, PayTR).",
 };
 
 export default function HomePage() {

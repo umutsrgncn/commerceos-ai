@@ -47,7 +47,7 @@ const MODULES = [
   { icon: Package, title: "Ürün & envanter", desc: "AI açıklama + görsel, otomatik stok" },
   { icon: Users, title: "Müşteri", desc: "Sadık / VIP / risky AI segmentasyon" },
   { icon: Receipt, title: "GİB e-fatura", desc: "E-fatura + e-arşiv, otopilot otomatik" },
-  { icon: CreditCard, title: "iyzico", desc: "Sandbox + üretim, 3DS callback" },
+  { icon: CreditCard, title: "PayTR", desc: "Yerli ödeme altyapısı · sandbox + 3DS callback" },
   { icon: TrendingUp, title: "Finans", desc: "Kâr/zarar, 30g AI tahmin, anomali" },
   { icon: Banknote, title: "Banka", desc: "EFT/havale CSV import, AI eşleştirme" },
   { icon: Bot, title: "Otopilot", desc: "Yorum, fatura, stok, havale — AI" },
@@ -617,7 +617,7 @@ export function LandingFeatures() {
             </span>
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-white/60 sm:text-base">
-            KVKK, GİB, iyzico, kargo entegrasyonu — Türkiye'ye özel. Hepsi tek
+            KVKK, GİB, PayTR, kargo entegrasyonu — Türkiye'ye özel. Hepsi tek
             panelde.
           </p>
         </div>
@@ -660,15 +660,15 @@ export function LandingFeatures() {
                 </span>
               </h3>
               <p className="mt-2 text-sm text-white/60 sm:text-base">
-                GİB e-fatura/e-arşiv, iyzico 3DS tahsilat, kargo entegrasyonu,
-                banka EFT/havale eşleştirme — tek API arkasında.
+                GİB e-fatura/e-arşiv, PayTR 3DS sandbox tahsilatı, kargo
+                entegrasyonu, banka EFT/havale eşleştirme — tek API arkasında.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <InfraPill icon={Receipt} label="GİB" sub="e-fatura" />
-              <InfraPill icon={CreditCard} label="iyzico" sub="3DS" />
+              <InfraPill icon={CreditCard} label="PayTR" sub="3DS sandbox" />
               <InfraPill icon={Banknote} label="Banka" sub="havale match" />
-              <InfraPill icon={Package} label="Kargo" sub="Aras/Yurtiçi" />
+              <InfraPill icon={Package} label="Kargo" sub="çoklu kurye" />
             </div>
           </div>
         </div>
