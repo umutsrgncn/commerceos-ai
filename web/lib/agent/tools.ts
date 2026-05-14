@@ -305,15 +305,17 @@ async function readFile(ctx: AgentContext, relPath: string) {
   const norm = normalizePath(relPath);
   const full = resolveSafe(ctx, relPath);
 
-  // Dedup: aynı dosya + mtime değişmediyse stub
+  // Dedup: aynı dosya + mtime değişmediyse content'i TEKRAR ver (agent hatırlasın)
+  // + uyarı notu ekle. Eski 'stub-only' davranışı agent'ı çıkmaz sokağa sokuyordu.
   const mtime = await getMtime(full);
   const prev = ctx.readFiles.get(norm);
   if (prev && prev.mtimeMs === mtime) {
     return {
       path: relPath,
-      content: `[Bu dosya değişmedi — seq #${prev.readAt}'te okuduğun içerik geçerli. Tekrar okumana gerek yok, mevcut bilgiyle ilerle.]`,
-      truncated: false,
+      content: `[Bu dosyayı daha önce seq #${prev.readAt}'te okudun — içerik değişmedi. Aşağıda aynı içeriği tekrar veriyorum, ama yeni tool çağrısı sayma:]\n\n${addLineNumbers(prev.content)}`,
+      truncated: !prev.isFullRead,
       unchanged: true,
+      bytes: prev.content.length,
     };
   }
 

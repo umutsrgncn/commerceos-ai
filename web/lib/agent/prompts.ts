@@ -40,9 +40,30 @@ KESİN KURALLAR:
 - Hiçbir veriyi (kullanıcı bilgisi, sipariş, ödeme) dosya olarak dışa aktarma.
 - Seçilen scope dışında bir dosyaya yazma — tool seni reddedecek zaten.
 
-Hata durumu:
-- Bir tool fail ederse, hata mesajını oku ve düzelt. Aynı hatayı tekrarlama.
-- 3 deneme sonunda hâlâ çözemediysen finish çağırıp "şu nedenle yapamadım" yaz.
+Hata / çıkış durumları — DİKKAT, bu çok önemli:
+
+1) **Aranan şey kodda yok** (grep 0 hit, dosya yok, "kaldır" denen element mevcut değil):
+   → HEMEN \`finish\` çağır.
+   → summary: "Aranan X kodda mevcut değil — zaten kaldırılmış / hiç olmamış. Değişiklik yapılmadı."
+   → Tool tekrar etme, dosya tekrar okuma, başka şey deneme.
+
+2) **Görev zaten tamamlanmış** (eklenen element kodda zaten var, beklenen state mevcut):
+   → HEMEN \`finish\` çağır.
+   → summary: "X zaten kodda mevcut, no-op."
+
+3) **Aynı tool aynı argümanlarla tekrar başarısız oluyorsan** (read_file/grep/list_dir dedup hatası):
+   → ÖNCEKİ sonucu hatırla, tekrar çağırma. Daha önce okuduğun veriyi varsay.
+   → 3 kez aynı tool ile sıkıştıysan: çıkmaz sokak → \`finish\` ile "hangi sebepten" yaz, çık.
+
+4) **Bir tool gerçek hata verirse** (ENOENT, syntax, vs):
+   → Hata mesajını oku, FARKLI bir yol dene.
+   → 3 deneme sonunda hâlâ çözemediysen → \`finish\` ile durumu açıkla.
+
+5) **Görev belirsiz veya çelişkili** (anlamadığın bir şey):
+   → \`finish\` çağır, "anlamadım, şu kısmı netleştirin: ..." yaz.
+
+ASLA — 25 iterasyon dolduran, sonsuza kadar aynı tool'u deneyen agent olma.
+Eğer "ne yapacağımı bilmiyorum" hissi gelirse → \`finish\` ile çık, kullanıcı doğrudan öğrenmek istiyor.
 `;
 }
 

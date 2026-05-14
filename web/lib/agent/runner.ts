@@ -821,21 +821,43 @@ export async function runTask(taskId: string): Promise<void> {
       }
     }
 
-    // ─── 8) REVIEW status'una geç ───
-    await db.agentTask.update({
-      where: { id: taskId },
-      data: {
-        status: "REVIEW",
-        iterations: iteration,
-        tokensUsed: totalTokens,
-      },
-    });
-    await emitAgentEvent({
-      taskId,
-      type: "STATUS",
-      summary: "Onay bekleniyor. Önizleme linkinden test edebilirsin.",
-      payload: { iterations: iteration, tokens: totalTokens },
-    });
+    // ─── 8) Final status ───
+    // Hiç değişiklik yapılmadıysa REVIEW'a geçirme — worker sonsuz restart döngüsüne girer.
+    // Onun yerine FAILED status'una düş, errorMsg ile sebebi yaz.
+    if (!commit.ok) {
+      await db.agentTask.update({
+        where: { id: taskId },
+        data: {
+          status: "FAILED",
+          iterations: iteration,
+          tokensUsed: totalTokens,
+          errorMsg:
+            "Agent hiç değişiklik üretmedi — görev kodda zaten yok ya da imkansız. Detay event akışındadır.",
+          completedAt: new Date(),
+        },
+      });
+      await emitAgentEvent({
+        taskId,
+        type: "STATUS",
+        summary: "Değişiklik üretilmedi — görev kapatıldı (FAILED).",
+        payload: { iterations: iteration, tokens: totalTokens, reason: "no-changes" },
+      });
+    } else {
+      await db.agentTask.update({
+        where: { id: taskId },
+        data: {
+          status: "REVIEW",
+          iterations: iteration,
+          tokensUsed: totalTokens,
+        },
+      });
+      await emitAgentEvent({
+        taskId,
+        type: "STATUS",
+        summary: "Onay bekleniyor. Önizleme linkinden test edebilirsin.",
+        payload: { iterations: iteration, tokens: totalTokens },
+      });
+    }
   } catch (err) {
     if (err instanceof CancelledError) {
       await emitAgentEvent({
