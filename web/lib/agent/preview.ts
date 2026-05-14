@@ -117,6 +117,13 @@ export async function startPreview(opts: {
   tunnelProc.stdout?.on("data", writeTunnel);
   tunnelProc.stderr?.on("data", writeTunnel);
 
+  // spawn ENOENT (cloudflared binary yok) gibi hataları sessizce yutmamak için
+  let spawnErr: Error | null = null;
+  tunnelProc.on("error", (err) => {
+    spawnErr = err;
+    writeTunnel(Buffer.from(`spawn error: ${err.message}\n`));
+  });
+
   const tunnelUrl = await waitForTunnelUrl(tunnelProc, TUNNEL_TIMEOUT_MS);
   if (tunnelUrl) {
     await emit({
@@ -124,6 +131,14 @@ export async function startPreview(opts: {
       type: "TUNNEL",
       summary: `Tunnel hazır: ${tunnelUrl}`,
       payload: { url: tunnelUrl },
+    });
+  } else if (spawnErr) {
+    const e = spawnErr as Error;
+    await emit({
+      taskId: opts.taskId,
+      type: "ERROR",
+      summary: `cloudflared başlatılamadı: ${e.message}. VPS'te kurulu mu? (cloudflared --version)`,
+      payload: { port, err: e.message },
     });
   } else {
     await emit({
