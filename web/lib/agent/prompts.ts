@@ -1,4 +1,5 @@
 import { CODEBASE_RECIPES } from "./codebase-recipes";
+import { buildComponentsCatalog } from "./components-catalog";
 import { DATA_MODELS_SUMMARY } from "./data-models";
 import { AGENT_SCOPES, buildScopeBriefing, type AgentScope } from "./scopes";
 import { scopeSummary } from "./scope";
@@ -17,6 +18,8 @@ ${buildScopeBriefing(scopes)}
 
 Dosya politikası:
 ${scopeSummary(scopes)}
+
+${buildComponentsCatalog()}
 
 ${CODEBASE_RECIPES}
 
