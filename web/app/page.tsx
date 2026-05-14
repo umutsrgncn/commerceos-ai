@@ -41,6 +41,7 @@ import {
   HeroBgOrbs,
   SmoothScroll,
 } from "@/components/landing/landing-effects";
+import { AiDeveloperSection } from "@/components/landing/ai-developer";
 import { MacbookScroll } from "@/components/aceternity/macbook-scroll";
 import { Spotlight } from "@/components/aceternity/spotlight";
 import { TextGenerateEffect } from "@/components/aceternity/text-generate";
@@ -50,7 +51,6 @@ import {
   FastApiIcon,
   GeminiIcon,
   GsapIcon,
-  HiggsfieldIcon,
   LucideIcon,
   MotionIcon,
   NextIcon,
@@ -282,7 +282,7 @@ export default function HomePage() {
               </h2>
               <div className="mx-auto mt-8 inline-flex items-center gap-3 rounded-full border border-white/[0.08] bg-white/[0.025] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.18em] text-white/45 backdrop-blur">
                 <span className="tabular-nums text-base font-semibold text-white">
-                  19
+                  18
                 </span>
                 <span>teknoloji</span>
                 <span className="h-3.5 w-px bg-white/15" />
@@ -324,7 +324,6 @@ export default function HomePage() {
                     </linearGradient>
                   }
                 />
-                <TechItem icon={<HiggsfieldIcon />} name="Higgsfield" tag="MCP" iconClass="text-fuchsia-300" />
               </TechCategory>
 
               <TechCategory label="AI servisi" accent="teal">
@@ -353,6 +352,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ─── AI Geliştirici — FLAGSHIP (otopilot'tan önce) ─── */}
+        <AiDeveloperSection />
 
         {/* ─── Otopilot — animated hero banner ─── */}
         <section id="ai" className="relative mx-auto max-w-6xl px-6 py-20">
@@ -700,7 +702,7 @@ export default function HomePage() {
                   ))}
                 </div>
               }
-              meta="Higgsfield + Gemini · 3 stil varyant"
+              meta="Gemini görsel · 3 stil varyant"
             />
 
             <AIToolCard
