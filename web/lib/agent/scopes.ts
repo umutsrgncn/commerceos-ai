@@ -304,6 +304,12 @@ export function getScopesByIds(ids: string[]): AgentScope[] {
 /**
  * Path verilen scope'ların yazılabilir glob'larıyla eşleşiyor mu?
  * Hem writeGlobs (UI dosyaları) hem libGlobs (backend dosyaları) kontrol edilir.
+ *
+ * GENEL KURAL: Bir scope kendi parent dizinindeki `_components/` ve `_lib/`
+ * alt klasörlerine yazma yetkisine otomatik sahiptir. Next.js convention'ı:
+ * `_` prefix'li klasörler route oluşturmaz, sadece yerel component/util barındırır.
+ * Bu sayede agent "use client" gereken küçük komponentleri inline yapmak yerine
+ * temiz şekilde ayrı dosya olarak yaratabilir.
  */
 export function pathInScopes(p: string, scopes: AgentScope[]): boolean {
   const norm = p.replace(/^\/+/, "").replace(/\\/g, "/");
@@ -314,6 +320,19 @@ export function pathInScopes(p: string, scopes: AgentScope[]): boolean {
     if (s.libGlobs) {
       for (const re of s.libGlobs) {
         if (re.test(norm)) return true;
+      }
+    }
+  }
+  // Helper alt klasör kuralı: norm bir _components/ veya _lib/ altındaysa
+  // parent dizinde scope match'leniyorsa OK
+  const helperMatch = norm.match(/^(.+\/)(?:_components|_lib)\//);
+  if (helperMatch) {
+    const parent = helperMatch[1]; // örn "web/app/(admin)/admin/"
+    // Parent dir altındaki "page.tsx" herhangi bir scope writeGlob'una eşleşiyor mu?
+    const testPaths = [parent + "page.tsx", parent.replace(/\/$/, "")];
+    for (const s of scopes) {
+      for (const re of s.writeGlobs) {
+        if (testPaths.some((t) => re.test(t))) return true;
       }
     }
   }

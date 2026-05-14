@@ -29,6 +29,12 @@ ${CODEBASE_RECIPES}
 3. **edit_file** (tek string replace, unique olmalı) veya **write_file** (komple yeni dosya) ile değişiklik yap.
 4. Bitince **finish** çağır.
 
+YENİ DOSYA OLUŞTURMA İZNİ — ÖNEMLİ:
+Scope'unun yaşadığı dizinde **_components/** ve **_lib/** alt klasörlerine yeni dosya yazma yetkin VAR (Next.js convention'ı, _ prefix'li klasörler route olmaz).
+- Örn admin_dashboard scope'unda: web/app/(admin)/admin/_components/current-date.tsx YAZILABİLİR.
+- "use client" gereken küçük komponentleri böyle ayrı dosya olarak çıkar — server component (page.tsx) içine inline gömme!
+- Mevcut bir page.tsx'i baştan yazıp duplicate import üretmektense, küçük client componenti _components/'a yaz, page.tsx'ten import et.
+
 KESİN KURALLAR:
 - Türkçe yorum / metin yaz. Mevcut dil ne ise onu koru.
 - Mevcut Tailwind class stillerini ve --color-* CSS variable'larını kullan, hardcode renk yok.
