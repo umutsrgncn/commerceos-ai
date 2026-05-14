@@ -21,9 +21,9 @@ import {
   FileCode,
   GitCommit,
   Hammer,
+  ShieldCheck,
   Sparkles,
   Terminal,
-  TestTube,
   Workflow,
   Zap,
 } from "lucide-react";
@@ -32,7 +32,7 @@ import { Button } from "@/components/ui/button";
 
 // ───────────── Pipeline stages ─────────────
 
-const STAGES = [
+export const STAGES = [
   {
     label: "Plan",
     icon: Brain,
@@ -49,7 +49,7 @@ const STAGES = [
   },
   {
     label: "Doğrula",
-    icon: TestTube,
+    icon: ShieldCheck,
     model: "tsc + RSC lint + e2e",
     desc: "TypeScript hatasız mı? Server/client karışmamış mı? Playwright spec'leri geçiyor mu? Yeşilden bir tanesi bile değilse finish reddedilir.",
     accent: "emerald",
@@ -220,18 +220,17 @@ export function AiDeveloperSection() {
             <Link href="/admin/agent">
               <Button
                 size="lg"
-                className="border-0 bg-gradient-to-br from-indigo-500 via-fuchsia-500 to-rose-500 text-white shadow-lg shadow-fuchsia-500/30 hover:from-indigo-400 hover:via-fuchsia-400 hover:to-rose-400"
+                className="bg-white text-black hover:bg-white/90"
               >
-                <Sparkles className="h-4 w-4" />
-                Demo'da dene
+                Demo panele git
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
             <a href="#ai-dev-pipeline">
               <Button
                 size="lg"
-                variant="ghost"
-                className="text-white/70 hover:bg-white/[0.06] hover:text-white"
+                variant="outline"
+                className="border-white/20 bg-white/[0.05] text-white backdrop-blur hover:bg-white/[0.12] hover:text-white"
               >
                 Nasıl çalışıyor?
               </Button>
@@ -291,7 +290,24 @@ export function AiDeveloperSection() {
 
 // ───────────── Sub-components ─────────────
 
-function FlagshipBadge() {
+/**
+ * 4 aşamalı pipeline grid'i — başka sayfalarda (watch) tek client component
+ * olarak import edilebilsin. RSC boundary'sini burada bitir.
+ */
+export function PipelineGrid({ className }: { className?: string }) {
+  return (
+    <div
+      id="ai-dev-pipeline"
+      className={className ?? "mt-12 grid gap-3 md:grid-cols-2 lg:grid-cols-4"}
+    >
+      {STAGES.map((s, i) => (
+        <PipelineCard key={s.label} stage={s} index={i + 1} />
+      ))}
+    </div>
+  );
+}
+
+export function FlagshipBadge() {
   return (
     <div className="inline-flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.32em] text-white/45">
       <span className="h-px w-10 bg-gradient-to-r from-transparent to-fuchsia-400/50" />
@@ -307,7 +323,7 @@ function FlagshipBadge() {
   );
 }
 
-function PipelineCard({
+export function PipelineCard({
   stage,
   index,
 }: {

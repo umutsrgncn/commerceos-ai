@@ -547,7 +547,7 @@ export default function HomePage() {
         {/* ─── Macbook Scroll — Otopilot screenshot büyük ekranda ─── */}
         <section className="relative overflow-hidden bg-black">
           <MacbookScroll
-            src="/team/shot-autopilot.jpg"
+            src="/team/shot-autopilot-dark.jpg"
             showGradient
             title={
               <span className="text-white">
@@ -1047,13 +1047,6 @@ export default function HomePage() {
             </div>
 
             <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-white/50">
-              <Link href="/privacy" className="inline-flex items-center gap-1 hover:text-white">
-                <FileText className="h-3 w-3" />
-                Aydınlatma metni
-              </Link>
-              <Link href="/data-deletion" className="hover:text-white">
-                Veri silme
-              </Link>
               <Link
                 href="https://github.com/umutsrgncn/commerceos-ai"
                 target="_blank"

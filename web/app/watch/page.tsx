@@ -3,7 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Bot,
-  CheckCircle2,
+  ChevronDown,
   Github,
   Play,
   Sparkles,
@@ -13,7 +13,10 @@ import { HeroParallax } from "@/components/aceternity/hero-parallax";
 import { Button } from "@/components/ui/button";
 import { CommerceOSLogo } from "@/components/brand/logo";
 import { HeroBgOrbs } from "@/components/landing/landing-effects";
-import { WatchMarquees } from "@/components/landing/watch-marquees";
+import {
+  FlagshipBadge,
+  PipelineGrid,
+} from "@/components/landing/ai-developer";
 import { WatchPlayer } from "./components/watch-player";
 
 export const metadata = {
@@ -24,19 +27,19 @@ export const metadata = {
 const PARALLAX_PRODUCTS = [
   { title: "Dashboard", link: "/admin", thumbnail: "/team/shot-dashboard.jpg" },
   { title: "AI Geliştirici", link: "/admin/agent", thumbnail: "/team/shot-agent.jpg" },
+  { title: "AI Geliştirici · dark", link: "/admin/agent", thumbnail: "/team/shot-agent-dark.jpg" },
   { title: "Siparişler", link: "/admin/orders", thumbnail: "/team/shot-orders.jpg" },
-  { title: "Otopilot", link: "/admin/autopilot", thumbnail: "/team/shot-autopilot.jpg" },
+  { title: "Otopilot · dark", link: "/admin/autopilot", thumbnail: "/team/shot-autopilot-dark.jpg" },
   { title: "Finans", link: "/admin/finance", thumbnail: "/team/shot-finance.jpg" },
+  { title: "Finans · dark", link: "/admin/finance", thumbnail: "/team/shot-finance-dark.jpg" },
   { title: "Gelecek ödemeler", link: "/admin/finance/scheduled", thumbnail: "/team/shot-scheduled.jpg" },
-  { title: "Banka", link: "/admin/bank", thumbnail: "/team/shot-bank.jpg" },
+  { title: "Banka · dark", link: "/admin/bank", thumbnail: "/team/shot-bank-dark.jpg" },
   { title: "Ürünler", link: "/admin/products", thumbnail: "/team/shot-products.jpg" },
   { title: "Müşteriler", link: "/admin/customers", thumbnail: "/team/shot-customers.jpg" },
-  { title: "Analitik", link: "/admin/analytics", thumbnail: "/team/shot-analytics.jpg" },
-  { title: "KVKK panel", link: "/admin/settings/kvkk", thumbnail: "/team/shot-kvkk.jpg" },
+  { title: "Analitik · dark", link: "/admin/analytics", thumbnail: "/team/shot-analytics-dark.jpg" },
   { title: "KVKK talepleri", link: "/admin/data-requests", thumbnail: "/team/shot-data-requests.jpg" },
   { title: "Yorumlar", link: "/admin/reviews", thumbnail: "/team/shot-reviews.jpg" },
   { title: "Shop ana sayfa", link: "/shop", thumbnail: "/team/shot-shop-home.jpg" },
-  { title: "Shop kategori", link: "/shop/c/tisort", thumbnail: "/team/shot-shop-category.jpg" },
   { title: "Shop ürün detay", link: "/shop/p/pamuklu-basic-tisort-bej", thumbnail: "/team/shot-shop-product.jpg" },
 ];
 
@@ -54,18 +57,10 @@ const PARALLAX_HEADER = (
       bir bakışta
     </h2>
     <p className="mt-3 max-w-2xl text-sm text-white/60 sm:text-base">
-      Admin paneli, AI Geliştirici, otopilot, finans, banka, KVKK, mağaza —
-      hepsi production'dan canlı görüntü.
+      Production'dan canlı görüntüler — karışık tema, gerçek demo verisiyle dolu.
     </p>
   </div>
 );
-
-const HIGHLIGHTS = [
-  { title: "AI Geliştirici", desc: "Doğal dil → kod → test → canlı. Onaylar sende." },
-  { title: "Otopilot 7 görev", desc: "Yorum, e-fatura, stok, havale, fiyat, segment, anomali." },
-  { title: "KVKK panel", desc: "Veri silme talepleri, çerez yönetimi, gizlilik metni AI üretimi." },
-  { title: "Finans + Banka", desc: "Cash flow tahmini, havale eşleştirme, gelecek ödemeler." },
-];
 
 export default function WatchPage() {
   return (
@@ -107,117 +102,67 @@ export default function WatchPage() {
         </div>
       </header>
 
-      {/* ─── Hero — video player + yandan akan marquee'ler ─── */}
-      <section className="relative z-10 overflow-hidden px-6 pb-20 pt-8 sm:pt-16">
-        {/* Yan akan feature şeritleri (yalnız lg+) */}
-        <WatchMarquees />
-
-        <div className="relative z-10 mx-auto max-w-5xl">
-          <div className="text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1 text-xs font-medium text-fuchsia-300">
-              <Play className="h-3 w-3 fill-fuchsia-300" />
-              Tanıtım
+      {/* ─── Hero — video ─── */}
+      <section className="relative z-10 mx-auto max-w-5xl px-6 pb-16 pt-8 sm:pt-16">
+        <div className="text-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1 text-xs font-medium text-fuchsia-300">
+            <Play className="h-3 w-3 fill-fuchsia-300" />
+            Tanıtım
+          </span>
+          <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
+            CommerceOS,{" "}
+            <span className="bg-gradient-to-br from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">
+              bir bakışta
             </span>
-            <h1 className="mt-5 text-balance text-4xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
-              CommerceOS,{" "}
-              <span className="bg-gradient-to-br from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">
-                bir bakışta
-              </span>
-            </h1>
-            <p className="mx-auto mt-5 max-w-xl text-sm text-white/65 sm:text-base">
-              AI yöneticili e-ticaret panelinin önemli özelliklerini videoda gör,
-              aşağıda her sayfanın canlı görüntüsünü gez.
-            </p>
-          </div>
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-sm text-white/65 sm:text-base">
+            AI yöneticili e-ticaret panelinin önemli özelliklerini videoda gör,
+            aşağıda her sayfanın canlı görüntüsünü gez.
+          </p>
+        </div>
 
-          {/* Player */}
-          <div className="relative mx-auto mt-12 max-w-4xl">
-            <div className="absolute -inset-6 -z-10 rounded-3xl bg-gradient-to-br from-indigo-500/30 via-fuchsia-500/25 to-emerald-500/20 opacity-70 blur-3xl" />
-            <WatchPlayer />
-          </div>
-
-          {/* Highlight strip */}
-          <div className="mx-auto mt-12 grid max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4">
-            {HIGHLIGHTS.map((h) => (
-              <div
-                key={h.title}
-                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left backdrop-blur-xl transition hover:border-white/20 hover:bg-white/[0.05]"
-              >
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-white">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-400" />
-                  {h.title}
-                </div>
-                <div className="mt-1 text-[10px] leading-snug text-white/55">
-                  {h.desc}
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="relative mx-auto mt-12 max-w-4xl">
+          <div className="absolute -inset-6 -z-10 rounded-3xl bg-gradient-to-br from-indigo-500/30 via-fuchsia-500/25 to-emerald-500/20 opacity-70 blur-3xl" />
+          <WatchPlayer />
         </div>
       </section>
 
-      {/* ─── AI Geliştirici teaser ─── */}
-      <section className="relative z-10 mx-auto max-w-5xl px-6 pb-12">
-        <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-fuchsia-500/10 via-indigo-500/10 to-emerald-500/5 p-6 sm:p-10">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full bg-fuchsia-500/20 blur-3xl"
-          />
-          <div className="relative grid items-center gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-fuchsia-500/40 bg-fuchsia-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200">
-                <Bot className="h-3 w-3" />
-                Flagship
-              </span>
-              <h2 className="mt-4 text-balance text-3xl font-semibold leading-tight sm:text-4xl">
-                Sen düşün.{" "}
-                <span className="bg-gradient-to-br from-fuchsia-300 to-amber-300 bg-clip-text text-transparent">
-                  AI kodlasın.
-                </span>
-              </h2>
-              <p className="mt-3 max-w-md text-sm text-white/65">
-                Doğal dilde görev yaz → agent planlar, kodlar, test eder,
-                önizleme açar. Sen sadece onaylarsın.
-              </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Link href="/admin/agent">
-                  <Button
-                    size="sm"
-                    className="border-0 bg-gradient-to-br from-fuchsia-500 to-indigo-500 text-white hover:from-fuchsia-400 hover:to-indigo-400"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Canlı dene
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </Link>
-                <Link
-                  href={"/#ai-developer" as never}
-                  className="text-xs text-white/55 hover:text-white"
-                >
-                  Detay →
-                </Link>
-              </div>
-            </div>
+      {/* ─── Flagship pipeline — videonun hemen altı ─── */}
+      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-16">
+        <div className="text-center">
+          <FlagshipBadge />
+          <h2 className="mt-7 text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
+            Sen{" "}
+            <span className="bg-gradient-to-br from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">
+              düşün.
+            </span>{" "}
+            AI{" "}
+            <span className="bg-gradient-to-br from-fuchsia-300 via-rose-300 to-amber-300 bg-clip-text text-transparent">
+              kodlasın.
+            </span>
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-pretty text-sm leading-relaxed text-white/65 sm:text-base">
+            Doğal dilde görev yaz —{" "}
+            <span className="text-white">"şu sayfaya şu butonu ekle"</span>.
+            Agent planlar, kodlar, test eder, önizleme açar.
+          </p>
+        </div>
 
-            {/* Mini agent panel preview */}
-            <div className="relative overflow-hidden rounded-xl border border-white/10 bg-black/40 shadow-2xl">
-              <div className="flex items-center gap-1.5 border-b border-white/10 bg-white/[0.02] px-3 py-2">
-                <span className="h-2 w-2 rounded-full bg-red-500/70" />
-                <span className="h-2 w-2 rounded-full bg-amber-500/70" />
-                <span className="h-2 w-2 rounded-full bg-emerald-500/70" />
-                <span className="ml-2 font-mono text-[9px] text-white/40">
-                  commerceos.cloud/admin/agent
-                </span>
-              </div>
-              <img
-                src="/team/shot-agent.jpg"
-                alt="AI Geliştirici paneli"
-                className="block w-full"
-              />
-            </div>
-          </div>
+        <PipelineGrid />
+
+
+        <div className="mt-8 flex justify-center">
+          <Link href="/admin/agent">
+            <Button size="lg" className="bg-white text-black hover:bg-white/90">
+              Demo panele git
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       </section>
+
+      {/* ─── Scroll-down teaser — efectli ─── */}
+      <ScrollTeaser />
 
       {/* ─── Parallax galeri ─── */}
       <section className="relative z-10 bg-gradient-to-b from-transparent via-black/40 to-black">
@@ -254,5 +199,80 @@ export default function WatchPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+/**
+ * Aşağı kaydırma davetiyesi — efectli. CSS animasyonlu chevron + parlayan
+ * gradient halka + "16 sayfa canlı görüntü" mesajı.
+ */
+function ScrollTeaser() {
+  return (
+    <section className="relative z-10 mx-auto max-w-3xl px-6 py-12 text-center">
+      <style>{`
+        @keyframes bob {
+          0%, 100% { transform: translateY(0); opacity: 0.65; }
+          50% { transform: translateY(8px); opacity: 1; }
+        }
+        @keyframes ringPulse {
+          0%, 100% { transform: scale(1); opacity: 0.35; }
+          50% { transform: scale(1.08); opacity: 0.7; }
+        }
+        @keyframes glow {
+          0%, 100% { box-shadow: 0 0 30px rgba(217, 70, 239, 0.25), 0 0 60px rgba(99, 102, 241, 0.15); }
+          50% { box-shadow: 0 0 50px rgba(217, 70, 239, 0.5), 0 0 100px rgba(99, 102, 241, 0.3); }
+        }
+        .scroll-bob { animation: bob 1.8s ease-in-out infinite; }
+        .scroll-ring { animation: ringPulse 2.4s ease-in-out infinite; }
+        .scroll-glow { animation: glow 3s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .scroll-bob, .scroll-ring, .scroll-glow { animation: none; }
+        }
+      `}</style>
+
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-indigo-200">
+        <Sparkles className="h-3 w-3" />
+        Aşağı kaydır
+      </span>
+
+      <h3 className="mt-5 text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+        Panelin her sayfası{" "}
+        <span className="bg-gradient-to-br from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">
+          aşağıda
+        </span>
+      </h3>
+      <p className="mx-auto mt-3 max-w-md text-sm text-white/55">
+        16 sayfa, karışık dark/light tema, gerçek demo verisi —
+        scroll ettikçe parallax'la akar.
+      </p>
+
+      <div className="relative mx-auto mt-10 h-20 w-20">
+        {/* Pulsing rings */}
+        <div className="scroll-ring absolute inset-0 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-indigo-500/30 blur-md" />
+        <div
+          className="scroll-ring absolute inset-2 rounded-full bg-gradient-to-br from-fuchsia-500/40 to-indigo-500/40 blur-sm"
+          style={{ animationDelay: "0.3s" }}
+        />
+        {/* Core button */}
+        <a
+          href="#parallax-gallery"
+          aria-label="Aşağı kaydır"
+          className="scroll-glow group relative grid h-20 w-20 place-items-center rounded-full border border-white/15 bg-gradient-to-br from-fuchsia-500/20 via-indigo-500/15 to-emerald-500/15 backdrop-blur transition hover:border-white/30"
+        >
+          <ChevronDown className="scroll-bob h-7 w-7 text-white transition group-hover:scale-110" />
+        </a>
+      </div>
+
+      {/* Sub stats — küçük, dikkat çekmeyen */}
+      <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] uppercase tracking-[0.22em] text-white/40">
+        <span>16 sayfa</span>
+        <span className="h-3 w-px bg-white/15" />
+        <span>karışık tema</span>
+        <span className="h-3 w-px bg-white/15" />
+        <span>canlı veri</span>
+      </div>
+
+      <div id="parallax-gallery" />
+    </section>
   );
 }
