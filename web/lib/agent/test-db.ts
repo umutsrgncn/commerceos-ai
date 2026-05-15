@@ -114,8 +114,8 @@ export async function seedTestSchema(): Promise<void> {
     { name: "Order", limit: 30, fkFilters: [{ column: "customerId", refTable: "Customer" }] },
     { name: "OrderItem", limit: 100, fkFilters: [{ column: "orderId", refTable: "Order" }, { column: "productId", refTable: "Product" }] },
     { name: "Payment", limit: 30, fkFilters: [{ column: "orderId", refTable: "Order" }] },
-    { name: "Review", limit: 50, fkFilters: [{ column: "productId", refTable: "Product" }] },
-    { name: "WishlistItem", limit: 50, fkFilters: [{ column: "customerId", refTable: "Customer" }, { column: "productId", refTable: "Product" }] },
+    { name: "ProductReview", limit: 50, fkFilters: [{ column: "productId", refTable: "Product" }] },
+    { name: "Wishlist", limit: 50, fkFilters: [{ column: "customerId", refTable: "Customer" }] },
     { name: "Cart", limit: 10, fkFilters: [{ column: "customerId", refTable: "Customer" }] },
     { name: "CartItem", limit: 30, fkFilters: [{ column: "cartId", refTable: "Cart" }, { column: "productId", refTable: "Product" }] },
     { name: "ActivityLog", limit: 100 },
@@ -172,16 +172,39 @@ export async function seedTestSchema(): Promise<void> {
         .join(", ");
       const limitClause = limit ? ` LIMIT ${limit}` : "";
       // FK filter — child tabloların kopyalanan parent ID'leri olmayan
-      // satırları atla (FK violation engellenir).
-      const fkWhere = (fkFilters && fkFilters.length > 0)
-        ? " WHERE " + fkFilters
-            .map((f) => {
-              const col = `"${f.column}"`;
-              const ref = `"${TEST_SCHEMA}"."${f.refTable}"."${f.refColumn ?? "id"}"`;
-              return `${col} IN (SELECT "${f.refColumn ?? "id"}" FROM "${TEST_SCHEMA}"."${f.refTable}")`;
-            })
-            .join(" AND ")
-        : "";
+      // satırları atla (FK violation engellenir). FK ref tablosu test
+      // schema'da yoksa o filter atlanır (veya tablo komple skip edilir).
+      let fkWhere = "";
+      if (fkFilters && fkFilters.length > 0) {
+        const validFilters: typeof fkFilters = [];
+        let allRefsExist = true;
+        for (const f of fkFilters) {
+          const ref = await db.$queryRaw<Array<{ exists: boolean }>>`
+            SELECT EXISTS (
+              SELECT 1 FROM information_schema.tables
+              WHERE table_schema = ${TEST_SCHEMA} AND table_name = ${f.refTable}
+            ) AS exists
+          `;
+          if (ref[0]?.exists) {
+            validFilters.push(f);
+          } else {
+            // Ref tablo test schema'da yok — tüm tabloyu atla (FK violation kesin)
+            allRefsExist = false;
+            break;
+          }
+        }
+        if (!allRefsExist) continue;
+        if (validFilters.length > 0) {
+          fkWhere =
+            " WHERE " +
+            validFilters
+              .map(
+                (f) =>
+                  `"${f.column}" IN (SELECT "${f.refColumn ?? "id"}" FROM "${TEST_SCHEMA}"."${f.refTable}")`,
+              )
+              .join(" AND ");
+        }
+      }
       await db.$executeRawUnsafe(
         `INSERT INTO "${TEST_SCHEMA}"."${name}" SELECT ${selectExpr} FROM "${PROD_SCHEMA}"."${name}"${fkWhere}${limitClause} ON CONFLICT DO NOTHING`,
       );
