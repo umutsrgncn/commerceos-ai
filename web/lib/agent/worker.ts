@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
 import { getActivePreview, startPreview, stopPreview } from "./preview";
 import { runTask } from "./runner";
-import { destroyWorktree, mergeBranchToMain, type Worktree } from "./worktree";
+import { destroyWorktree, mergeBranchToMain, pushMainToOrigin, type Worktree } from "./worktree";
 
 const POLL_INTERVAL_MS = 3000;
 const STALE_RECOVERY_MS = 3 * 60_000; // 3 dk hareket yoksa zombie say
@@ -218,16 +218,42 @@ async function handleActivePreview(): Promise<boolean> {
           summary: `main'e merge edildi: ${task.branchName}`,
           payload: { branch: task.branchName },
         });
+        // GitHub'a push — VPS deploy key'i read-only ise hata fırlatır.
+        // Merge YEREL'de zaten yapıldı, push fail olsa bile cleanup'a devam et.
+        let pushOk = true;
+        let pushErr: string | null = null;
+        try {
+          await pushMainToOrigin();
+          await emitAgentEvent({
+            taskId,
+            type: "COMMIT",
+            summary: "GitHub'a push edildi (origin/main).",
+          });
+        } catch (pErr) {
+          pushOk = false;
+          pushErr = pErr instanceof Error ? pErr.message : String(pErr);
+          await emitAgentEvent({
+            taskId,
+            type: "ERROR",
+            summary: `Push edilemedi (VPS deploy key read-only olabilir): ${pushErr.slice(0, 250)} — manuel push gerekli.`,
+          });
+        }
         await destroyWorktree(taskId, task.branchName);
         await emitAgentEvent({
           taskId,
           type: "NOTE",
           summary: "Worktree ve branch temizlendi.",
         });
-        // Task completedAt + tunnelUrl temizle ki bir daha sahiplenilmesin
         await db.agentTask.update({
           where: { id: taskId },
-          data: { tunnelUrl: null, port: null, completedAt: new Date() },
+          data: {
+            tunnelUrl: null,
+            port: null,
+            completedAt: new Date(),
+            errorMsg: pushOk
+              ? null
+              : `Merge OK ama GitHub push fail — manuel push gerekli. ${pushErr ?? ""}`.slice(0, 1000),
+          },
         });
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);

@@ -177,6 +177,17 @@ export async function mergeBranchToMain(branch: string, message: string) {
   );
 }
 
+/**
+ * Main branch'i GitHub origin'e push et. VPS deploy key'i read-only ise hata
+ * fırlatır — runner catch edip kullanıcıya raporlar (manuel push gerek).
+ */
+export async function pushMainToOrigin(): Promise<void> {
+  await exec("git", ["push", "origin", "main"], {
+    cwd: REPO_ROOT,
+    maxBuffer: 1024 * 1024 * 4,
+  });
+}
+
 export function repoRoot() {
   return REPO_ROOT;
 }
