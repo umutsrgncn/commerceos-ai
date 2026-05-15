@@ -59,6 +59,20 @@ export async function startPreview(opts: {
   } catch {
     testDbUrl = null;
   }
+  // Preview env'inden NEXTAUTH_URL / AUTH_URL'i ÇIKAR — yoksa tunnel'da login
+  // submit'i canlı domain'e (commerceos.cloud) redirect ediyor.
+  // Auth.js v5 + AUTH_TRUST_HOST=true ile request host header'ından çözüyor.
+  const previewEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...(testDbUrl ? { DATABASE_URL: testDbUrl } : {}),
+    NEXT_TELEMETRY_DISABLED: "1",
+    AUTH_TRUST_HOST: "true",
+  };
+  delete previewEnv.NEXTAUTH_URL;
+  delete previewEnv.AUTH_URL;
+  delete previewEnv.NEXT_PUBLIC_SITE_URL;
+  delete previewEnv.APP_URL;
+
   const devProc = spawn(
     "pnpm",
     [
@@ -73,11 +87,7 @@ export async function startPreview(opts: {
     ],
     {
       cwd: opts.wt.webPath,
-      env: {
-        ...process.env,
-        ...(testDbUrl ? { DATABASE_URL: testDbUrl } : {}),
-        NEXT_TELEMETRY_DISABLED: "1",
-      },
+      env: previewEnv,
       stdio: ["ignore", "pipe", "pipe"],
     },
   );
