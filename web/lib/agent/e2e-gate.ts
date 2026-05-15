@@ -139,11 +139,11 @@ export async function runE2eGate(opts: {
     });
   }
 
-  // Screenshot'ları topla (worktree içinden)
-  try {
-    const found = await collectScreenshots(outDir);
-    screenshots.push(...found);
-  } catch {}
+  // Static spec screenshot'larını TOPLAMA — kullanıcıyı boğuyor (admin-routes
+  // 31 URL test ediyor, her biri için failed-on-screenshot ürettiğinde dashboard
+  // 40+ alakasız thumbnail göstermek zorunda kalıyor.
+  // Asıl değişen sayfanın screenshot'ını dynamic-e2e zaten alıyor.
+  // Static spec'in görevi: build error / runtime crash yakalamak (sadece pass/fail).
 
   // DB'ye AgentTestRun + AgentScreenshot kaydet
   for (const t of testRows) {

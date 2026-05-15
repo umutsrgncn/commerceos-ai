@@ -265,7 +265,11 @@ async function handleActivePreview(): Promise<boolean> {
     return true;
   }
 
-  return true;
+  // PENDING/PLANNING/RUNNING/TESTING/FAILED — bu fonksiyon ele almaz.
+  // Özellikle PENDING: kullanıcı feedback gönderince task REVIEW → PENDING'e
+  // geçer. Eski preview hâlâ in-memory active olabilir; runner yeni iterasyon
+  // başlatınca eskisini kapatır. false dön → worker claimNextTask'a insin.
+  return false;
 }
 
 async function claimNextTask(): Promise<{ id: string; title: string } | null> {

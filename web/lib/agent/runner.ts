@@ -804,11 +804,24 @@ export async function runTask(taskId: string): Promise<void> {
               }`,
               payload: dyn,
             });
+            const screenshotPages = dyn.pages.filter((p) => p.screenshotUrl);
+            const urlsList = screenshotPages.map((p) => p.url).join(", ");
             await emitAgentEvent({
               taskId,
               type: "SCREENSHOT",
-              summary: `${dyn.pages.filter((p) => p.screenshotUrl).length} sayfa ekran görüntüsü alındı (değişiklik yapılanlar).`,
-              payload: { count: dyn.pages.length, source: "dynamic" },
+              summary:
+                screenshotPages.length > 0
+                  ? `Ekran görüntüsü alındı: ${urlsList}`
+                  : "Hiç ekran görüntüsü alınamadı.",
+              payload: {
+                count: screenshotPages.length,
+                source: "dynamic",
+                pages: screenshotPages.map((p) => ({
+                  url: p.url,
+                  screenshotUrl: p.screenshotUrl,
+                  status: p.status,
+                })),
+              },
             });
           }
         }

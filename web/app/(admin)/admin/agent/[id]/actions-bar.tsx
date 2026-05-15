@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, ExternalLink, Loader2, Square, X } from "lucide-react";
 import type { AgentTaskStatus } from "@prisma/client";
@@ -30,7 +30,14 @@ export function ActionsBar({
   const [pending, start] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [dialog, setDialog] = useState<DialogKind>(null);
+  const [isLocal, setIsLocal] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const h = window.location.hostname;
+    setIsLocal(h === "localhost" || h === "127.0.0.1");
+  }, []);
 
   const canDecide = status === "REVIEW";
   const canCancel =
@@ -53,28 +60,29 @@ export function ActionsBar({
     <>
       <div className="flex flex-col items-stretch gap-2 sm:items-end">
         <div className="flex flex-wrap items-center gap-2">
-          {port && (
+          {/* Local'de localhost, canlıda tunnel — kullanıcının kafasını karıştırmasın */}
+          {isLocal && port && (
             <a
-              href={`http://localhost:${port}/shop`}
+              href={`http://localhost:${port}/admin`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-xs font-medium hover:border-[color:var(--color-accent)]"
-              title="Worktree dev server (aynı makinede)"
+              className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/[0.05] px-3 py-2 text-xs font-medium text-emerald-700 hover:bg-emerald-500/[0.1] dark:text-emerald-300"
+              title="Worktree dev server (aynı makinede çalışıyor)"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              Önizleme (lokal)
+              Önizlemeyi aç (localhost:{port})
             </a>
           )}
-          {tunnelUrl && (
+          {!isLocal && tunnelUrl && (
             <a
               href={tunnelUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-md border border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-3 py-2 text-xs font-medium hover:border-[color:var(--color-accent)]"
-              title="Cloudflare tunnel (uzaktan erişim)"
+              className="inline-flex items-center gap-1.5 rounded-md border border-indigo-500/30 bg-indigo-500/[0.05] px-3 py-2 text-xs font-medium text-indigo-700 hover:bg-indigo-500/[0.1] dark:text-indigo-300"
+              title="Cloudflare tunnel ile uzaktan erişim"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              Tunnel
+              Önizlemeyi aç
             </a>
           )}
           {canCancel && (
