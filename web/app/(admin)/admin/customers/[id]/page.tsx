@@ -109,10 +109,15 @@ export default async function CustomerDetailPage({
                 {customer.email}
               </span>
               {customer.phone && (
-                <span className="inline-flex items-center gap-1.5">
+                <a
+                  href={`https://wa.me/${customer.phone.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 hover:text-[color:var(--color-accent)]"
+                >
                   <Phone className="h-3.5 w-3.5" />
                   {customer.phone}
-                </span>
+                </a>
               )}
               {addressLine && (
                 <span className="inline-flex items-center gap-1.5">
