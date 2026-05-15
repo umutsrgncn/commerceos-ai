@@ -6,7 +6,7 @@
 
 Otopilot 7 farklı işi paralel yönetir. AI Geliştirici doğal dilden kod yazar.
 Veritabanıyla Türkçe konuşursun, grafiklerle cevap döner.
-Tek panel — sipariş, ürün, müşteri, finans, KVKK, GİB, PayTR.
+Tek panel — sipariş, ürün, müşteri, finans, KVKK, GİB, iyzico.
 
 [**🌐 Canlı demo · commerceos.cloud**](https://commerceos.cloud) · [▶ Tanıtım](https://commerceos.cloud/watch) · [🎯 Admin panel](https://commerceos.cloud/login)
 
@@ -29,11 +29,12 @@ Tek panel — sipariş, ürün, müşteri, finans, KVKK, GİB, PayTR.
 
 ## 🚀 Bir bakışta
 
-CommerceOS, Türk e-ticaret operasyonunu **AI yönettiği** bir admin paneldir. Üç ana yetenek:
+CommerceOS, Türk e-ticaret operasyonunu **AI yönettiği** bir admin paneldir. Dört ana yetenek:
 
 1. **AI Geliştirici (flagship)** — Doğal dilden görev yaz → agent planlar, kodlar, test eder, önizleme açar, sen onaylarsın.
 2. **Otopilot** — 7 farklı operasyonel işi paralel yönetir: yorum cevabı, e-fatura, stok sipariş, havale eşleştirme, fiyat, segment, anomali.
 3. **Veritabanıyla Konuş** — Türkçe sor, AI read-only Postgres'e SQL atıp Türkçe yanıt ve grafik döndürür.
+4. **Finans AI — Nakit akışı tahmini** — 30/60/90 günlük gelir-gider forecast'i; scheduled ödemeler (maaş, kira, abonelik) + bekleyen siparişler ile gerçek bakiye projeksiyonu, eksiye düşeceğin günler için erken uyarı.
 
 Tümü **Pamuk** isimli demo bir tekstil markası üzerinden çalışır — 40 ürün, 85 müşteri, ~310 sipariş, banka, fatura, yorumlar — tamamı dolu canlı veriyle.
 
@@ -132,6 +133,29 @@ flowchart LR
   style review fill:#f59e0b,stroke:#92400e,color:#fff
   style exec fill:#06b6d4,stroke:#0e7490,color:#fff
 ```
+
+---
+
+## 🧠 AI Asistan & Araçlar
+
+Sayfanın istediğin yerinde AI tek tık uzaklıkta. Toplam **11 ayrı AI özelliği** — finans tarafında 4 tanesi gerçek dataya bağlı, Gemini 2.5 Pro ile yorumlanıyor.
+
+### Finans AI
+
+- **💸 Nakit akışı tahmini** — Son N günlük gelir + gider + scheduled ödemeler (maaş, kira, abonelik) + bekleyen siparişler birleşip 30/60/90 günlük forecast. Eksiye düşeceğin günler için **erken uyarı** (severity + tarih + öneri). Gemini sebebini Türkçe açıklar.
+- **📈 Turnaround planı** — Düşen KPI'larda (ciro, dönüşüm, ortalama sepet) AI Türkçe action plan üretir: hangi kategoriye kampanya, hangi yavaş ürünü indirim, hangi maliyet kalemi gözden geçirilmeli.
+- **💡 Finans içgörüleri** — Finans dashboard'unda nakit, kâr/zarar, gider eğilimi → AI bullet madde özet (3-5 satır).
+- **⚠️ Anomali tarama** — Saatlik metrik tarama: iade oranı sıçraması, beklenmedik gider, banka çıkışı vs. anomali tespiti + sebep tahmini.
+
+### Operasyon AI
+
+- **🔎 Veritabanı ile Türkçe konuş** _(aşağıdaki ana özellik)_ — Read-only Postgres üzerinden SQL + Türkçe + grafik
+- **📸 Fiş OCR → otomatik gider** — Fişi fotoğrafla, AI tarih/tutar/KDV/kategori doldurur (~6sn)
+- **📝 Ürün açıklaması yazımı** — Başlık + öneriler → SEO copy (Gemini streaming, ~8sn)
+- **🎨 Ürün görseli üretimi** — Prompt → AI ile foto üretimi
+- **✉️ Kampanya yazımı** — Segment + ton → kişiselleştirilmiş e-posta
+- **👥 Müşteri segmentasyonu** — VIP / sadık / risky etiketleme + güven skoru + Türkçe gerekçe
+- **⭐ Yorum sentiment & flag** — Negatif → otomatik özür + iade workflow
 
 ---
 
@@ -264,82 +288,100 @@ WHERE p.sku = 'PT-ESOFMAN-ALTI-GRI-193';
 
 ## 📸 Görsel turne
 
+> Hem **light** hem **dark** tema mevcut — kullanıcı admin sidebar'ından geçiş yapar. Aşağıda ikisi de karışık.
+
 <table>
 <tr>
 <td width="50%">
 
-**Yönetici dashboard (light mode)**
+**Yönetici dashboard (dark)**
 
-![Dashboard](https://commerceos.cloud/team/shot-dashboard.jpg)
+![Dashboard](https://commerceos.cloud/team/shot-dashboard-dark.jpg)
 
 </td>
 <td width="50%">
 
-**AI Geliştirici görev listesi**
+**AI Geliştirici görev listesi (light)**
 
-![Agent](https://commerceos.cloud/team/shot-agent.jpg)
+![Agent](https://commerceos.cloud/team/shot-agent-dark.jpg)
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-**Banka hareketleri (AI eşleştirme)**
+**Otopilot — 7 paralel iş (dark)**
+
+![Autopilot](https://commerceos.cloud/team/shot-autopilot-dark.jpg)
+
+</td>
+<td width="50%">
+
+**Banka hareketleri · AI eşleştirme (light)**
 
 ![Bank](https://commerceos.cloud/team/shot-bank-dark.jpg)
 
 </td>
+</tr>
+<tr>
 <td width="50%">
 
-**Sipariş yönetimi**
+**Finans + nakit akışı tahmini (light)**
 
-![Orders](https://commerceos.cloud/team/shot-orders.jpg)
+![Finance](https://commerceos.cloud/team/shot-finance-dark.jpg)
+
+</td>
+<td width="50%">
+
+**Analitik trendler (light)**
+
+![Analytics](https://commerceos.cloud/team/shot-analytics-light.jpg)
 
 </td>
 </tr>
 <tr>
 <td width="50%">
 
-**Ürün yönetimi**
+**Sipariş yönetimi (light)**
 
-![Products](https://commerceos.cloud/team/shot-products.jpg)
+![Orders](https://commerceos.cloud/team/shot-orders-light.jpg)
 
 </td>
 <td width="50%">
 
-**Müşteri segmentasyonu**
+**Ürün yönetimi (light)**
+
+![Products](https://commerceos.cloud/team/shot-products-light.jpg)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Müşteri segmentasyonu (light)**
 
 ![Customers](https://commerceos.cloud/team/shot-customers.jpg)
 
 </td>
-</tr>
-<tr>
 <td width="50%">
 
-**Finans + kâr/zarar**
-
-![Finance](https://commerceos.cloud/team/shot-finance.jpg)
-
-</td>
-<td width="50%">
-
-**Analitik trendler**
-
-![Analytics](https://commerceos.cloud/team/shot-analytics-dark.jpg)
-
-</td>
-</tr>
-<tr>
-<td width="50%">
-
-**KVKK veri silme talepleri**
+**KVKK veri silme talepleri (light)**
 
 ![Data Requests](https://commerceos.cloud/team/shot-data-requests.jpg)
 
 </td>
+</tr>
+<tr>
 <td width="50%">
 
-**Gelecek ödemeler**
+**Yorumlar · AI sentiment**
+
+![Reviews](https://commerceos.cloud/team/shot-reviews.jpg)
+
+</td>
+<td width="50%">
+
+**Gelecek ödemeler · scheduled payments**
 
 ![Scheduled](https://commerceos.cloud/team/shot-scheduled.jpg)
 
@@ -353,14 +395,23 @@ WHERE p.sku = 'PT-ESOFMAN-ALTI-GRI-193';
 <tr>
 <td width="50%">
 
-**Mağaza ana sayfa**
+**Mağaza ana sayfa — hero + öne çıkanlar**
 
 ![Shop Home](https://commerceos.cloud/team/shot-shop-home.jpg)
 
 </td>
 <td width="50%">
 
-**Ürün detay**
+**Kategori sayfası — filtreler + sıralama**
+
+![Shop Category](https://commerceos.cloud/team/shot-shop-category.jpg)
+
+</td>
+</tr>
+<tr>
+<td colspan="2">
+
+**Ürün detay — beden seçimi, sepete ekle, ilgili ürünler**
 
 ![Shop Product](https://commerceos.cloud/team/shot-shop-product.jpg)
 
@@ -370,29 +421,13 @@ WHERE p.sku = 'PT-ESOFMAN-ALTI-GRI-193';
 
 ---
 
-## 🧠 AI Asistan & Araçlar
-
-Sayfanın istediğin yerinde AI tek tık uzaklıkta:
-
-- **🔎 Veritabanı ile Türkçe konuş** _(yukarıdaki ana özellik)_
-- **📸 Fiş OCR → otomatik gider** — Fişi fotoğrafla, AI tarih/tutar/KDV/kategori doldurur (6sn)
-- **📝 Ürün açıklaması yazımı** — Başlık + öneriler → SEO copy (Gemini streaming, 8sn)
-- **🎨 Ürün görseli üretimi** — Prompt → 3 stil varyant
-- **✉️ Kampanya yazımı** — Segment + ton → kişiselleştirilmiş e-posta
-- **💬 Sipariş mesaj önerisi** — Sipariş bağlamı → cevap taslağı (WhatsApp/SMS/e-posta)
-- **📊 Satış içgörüleri** — Dönem stats → AI bullet madde
-- **⭐ Yorum sentiment & flag** — Negatif → otomatik özür + iade workflow
-- **🏷️ Yavaş ürünlere fiyat taraması** — Toplu AI fiyat önerisi
-
----
-
 ## 🇹🇷 Türkiye altyapısı
 
 | Entegrasyon | Açıklama |
 |---|---|
 | **KVKK** | Veri silme talepleri akışı (`/shop/account/settings` → admin onayı), çerez yönetimi, AI ile gizlilik metni üretimi |
 | **GİB** | E-fatura / e-arşiv UBL-TR 1.2 XML, otopilot otomatik gönderim |
-| **PayTR** | 3DS sandbox + production, callback handler |
+| **iyzico** | 3DS Checkout Form sandbox + production, HMAC-signed callback handler |
 | **Banka** | EFT/havale CSV import + AI semantik eşleştirme (Garanti BBVA, İş Bankası, Yapı Kredi, Akbank) |
 | **Kargo** | Çoklu kurye desteği (carrier alanı), tracking number |
 
