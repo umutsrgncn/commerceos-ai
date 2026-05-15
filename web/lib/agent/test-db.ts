@@ -113,16 +113,39 @@ export async function seedTestSchema(): Promise<void> {
 
   for (const { name, limit } of copyTables) {
     try {
+      // Public ve test schema'da farklı enum tipleri olduğu için SELECT * çalışmaz
+      // (PostgreSQL "type Role of public ≠ type Role of commerceos_test" der).
+      // Kolon listesini al, enum kolonlarını text üzerinden cast et.
+      const cols = await db.$queryRaw<
+        Array<{ column_name: string; data_type: string; udt_name: string }>
+      >`
+        SELECT column_name, data_type, udt_name
+        FROM information_schema.columns
+        WHERE table_schema = ${PROD_SCHEMA} AND table_name = ${name}
+        ORDER BY ordinal_position
+      `;
+      if (cols.length === 0) {
+        // Tablo public'te yok — sessizce atla
+        continue;
+      }
+      const selectExpr = cols
+        .map((c) => {
+          const q = `"${c.column_name}"`;
+          // USER-DEFINED = enum / composite — text üzerinden test schema'nın tipine cast et
+          if (c.data_type === "USER-DEFINED") {
+            return `${q}::text::"${TEST_SCHEMA}"."${c.udt_name}"`;
+          }
+          return q;
+        })
+        .join(", ");
       const limitClause = limit ? ` LIMIT ${limit}` : "";
-      // ON CONFLICT DO NOTHING — id çakışırsa atla (idempotent reseed için)
       await db.$executeRawUnsafe(
-        `INSERT INTO "${TEST_SCHEMA}"."${name}" SELECT * FROM "${PROD_SCHEMA}"."${name}"${limitClause} ON CONFLICT DO NOTHING`,
+        `INSERT INTO "${TEST_SCHEMA}"."${name}" SELECT ${selectExpr} FROM "${PROD_SCHEMA}"."${name}"${limitClause} ON CONFLICT DO NOTHING`,
       );
     } catch (err) {
-      // Tablo public'te yoksa veya başka hata → sessizce atla, agent'ı bloklamayalım
       const msg = err instanceof Error ? err.message : String(err);
       // eslint-disable-next-line no-console
-      console.warn(`[test-db] seed ${name} atlandı: ${msg.slice(0, 100)}`);
+      console.warn(`[test-db] seed ${name} atlandı: ${msg.slice(0, 200)}`);
     }
   }
 }
