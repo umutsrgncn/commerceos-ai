@@ -140,41 +140,52 @@ export async function commitWorktree(
   return { ok: true, sha: sha.trim(), filesChanged };
 }
 
-export async function mergeBranchToMain(branch: string, message: string) {
-  // Merge commit için committer identity gerekli — VPS root user'da global git config
-  // yoktur, bunu inline -c flag'i ile veriyoruz. Sabit identity: umutsrgncn (proje sahibi).
-  const author = {
-    name: "umutsrgncn",
-    email: "56017037+umutsrgncn@users.noreply.github.com",
-  };
+export async function mergeBranchToMain(branch: string, _message: string) {
+  // Agent branch main'den dallandı ve sadece 1 agent commit'i içeriyor —
+  // FF-only ile linear history; merge commit yaratma. GitHub'da kullanıcı
+  // sadece "CommerceOS-Agent-Project-Feature ... committed" görür, ekstra
+  // "umutsrgncn merged" kafa karışıklığı olmaz.
+  // FF fail ederse (main bu süre içinde ilerlemişse), no-ff fallback ile
+  // umutsrgncn identity'siyle merge — bu nadir durum.
   await exec("git", ["checkout", "main"], { cwd: REPO_ROOT });
-  await exec(
-    "git",
-    [
-      "-c",
-      `user.name=${author.name}`,
-      "-c",
-      `user.email=${author.email}`,
-      "-c",
-      "commit.gpgsign=false",
-      "merge",
-      "--no-ff",
-      branch,
-      "-m",
-      message,
-    ],
-    {
+  try {
+    await exec("git", ["merge", "--ff-only", branch], {
       cwd: REPO_ROOT,
-      env: {
-        ...process.env,
-        GIT_AUTHOR_NAME: author.name,
-        GIT_AUTHOR_EMAIL: author.email,
-        GIT_COMMITTER_NAME: author.name,
-        GIT_COMMITTER_EMAIL: author.email,
-      },
       maxBuffer: 1024 * 1024 * 4,
-    },
-  );
+    });
+  } catch {
+    const author = {
+      name: "umutsrgncn",
+      email: "56017037+umutsrgncn@users.noreply.github.com",
+    };
+    await exec(
+      "git",
+      [
+        "-c",
+        `user.name=${author.name}`,
+        "-c",
+        `user.email=${author.email}`,
+        "-c",
+        "commit.gpgsign=false",
+        "merge",
+        "--no-ff",
+        branch,
+        "-m",
+        _message,
+      ],
+      {
+        cwd: REPO_ROOT,
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: author.name,
+          GIT_AUTHOR_EMAIL: author.email,
+          GIT_COMMITTER_NAME: author.name,
+          GIT_COMMITTER_EMAIL: author.email,
+        },
+        maxBuffer: 1024 * 1024 * 4,
+      },
+    );
+  }
 }
 
 /**
