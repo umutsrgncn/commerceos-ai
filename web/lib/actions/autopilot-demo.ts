@@ -157,7 +157,11 @@ export async function demoBankPaymentAction(): Promise<DemoResult> {
   const order = await db.order.findFirst({
     where: { status: "PENDING" },
     orderBy: { createdAt: "desc" },
-    include: { customer: true },
+    include: {
+      customer: {
+        select: { id: true, name: true, email: true, phone: true },
+      },
+    },
   });
   if (!order) {
     return {
