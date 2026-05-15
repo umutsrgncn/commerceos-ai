@@ -658,9 +658,11 @@ export async function runTask(taskId: string): Promise<void> {
     await ensureNotCancelled(taskId);
 
     // ─── 4) Commit (varsa) ───
+    // Author kuralı: agent commit'leri umutsrgncn (proje sahibi) altına atılır.
+    // "agent <agent@commerceos.local>" gibi takma kimlikler GitHub'da yabancı görünür.
     const commit = await commitWorktree(wt, `agent: ${task.title}`, {
-      name: "agent",
-      email: "agent@commerceos.local",
+      name: "umutsrgncn",
+      email: "56017037+umutsrgncn@users.noreply.github.com",
     });
     if (commit.ok) {
       await emitAgentEvent({
