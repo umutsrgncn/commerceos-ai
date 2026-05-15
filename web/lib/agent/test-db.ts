@@ -149,6 +149,17 @@ export async function seedTestSchema(): Promise<void> {
         // Tablo public'te yok — sessizce atla
         continue;
       }
+      // Test schema'da tablo var mı? (Prisma schema'da olmayan ama public'te
+      // var olan tablolar için defansif — örn. manuel BankAccount)
+      const testTbl = await db.$queryRaw<Array<{ exists: boolean }>>`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = ${TEST_SCHEMA} AND table_name = ${name}
+        ) AS exists
+      `;
+      if (!testTbl[0]?.exists) {
+        continue;
+      }
       const selectExpr = cols
         .map((c) => {
           const q = `"${c.column_name}"`;
