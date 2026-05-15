@@ -66,7 +66,10 @@ export default defineConfig({
   webServer: {
     command: `pnpm dev --port ${PORT}`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    // Agent runner'ında dev server worktree'de zaten ayrı süreçte başlatılıyor —
+    // Playwright kendi başlatmaya kalkmasın, port çakışmasında ölmesin. Local
+    // dev'de de zaten dev server açık olur, reuse zararsız.
+    reuseExistingServer: true,
     stdout: "ignore",
     stderr: "pipe",
     timeout: 120_000,

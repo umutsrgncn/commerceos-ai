@@ -4,6 +4,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { db } from "@/lib/db";
+import { getTestDatabaseUrl } from "./test-db";
 
 const exec = promisify(execFile);
 
@@ -58,6 +59,16 @@ export async function runE2eGate(opts: {
   let stdoutText = "";
   let stderrText = "";
 
+  // Test schema URL'i — Playwright globalSetup canlı public'e değil
+  // commerceos_test'e yazsın. Ayrıca DATABASE_URL'i explicit geçiriyoruz çünkü
+  // tsx --env-file ile yüklenen env child spawn'a güvenilir geçmeyebiliyor.
+  let testDbUrl: string | null = null;
+  try {
+    testDbUrl = getTestDatabaseUrl();
+  } catch {
+    testDbUrl = null;
+  }
+
   try {
     const { stdout, stderr } = await exec(
       "pnpm",
@@ -73,11 +84,10 @@ export async function runE2eGate(opts: {
         cwd: opts.webPath,
         env: {
           ...process.env,
+          ...(testDbUrl ? { DATABASE_URL: testDbUrl } : {}),
           E2E_PORT: String(opts.port),
           E2E_BASEURL: `http://localhost:${opts.port}`,
-          // Agent test ortamında AI mock'unu zorla — gerçek API çağrısı olmasın
           E2E_REAL_AI: "0",
-          // Sessizce çık, agent'a stdout vermeyelim
           CI: "1",
         },
         maxBuffer: 1024 * 1024 * 8,
