@@ -2,7 +2,7 @@ import type { Content, FunctionCall, Part } from "@google/generative-ai";
 
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
-import { filterTestable, getChangedPages } from "./changed-pages";
+import { filterTestable, getChangedPages, resolveDynamicUrl } from "./changed-pages";
 import { compactHistory, summaryToText } from "./compact";
 import { runDynamicE2e } from "./dynamic-e2e";
 import { runE2eGate, summarizeE2eResult } from "./e2e-gate";
@@ -11,7 +11,7 @@ import { buildAgentTurnPrompt, buildPlannerPrompt, SYSTEM_PROMPT } from "./promp
 import { formatIssuesForAgent, lintChangedFiles } from "./rsc-lint";
 import { startPreview, stopPreview } from "./preview";
 import { buildScopeBriefing, getE2eSpecsForScopes, getScopesByIds, type AgentScope } from "./scopes";
-import { resetTestData } from "./test-db";
+import { getTestDatabaseUrl, resetTestData } from "./test-db";
 import { execTool, makeReadFilesMap, TOOL_DECLS, type AgentContext } from "./tools";
 import { filterAgentRelevantErrors, runTsc } from "./tsc-gate";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
@@ -779,14 +779,30 @@ export async function runTask(taskId: string): Promise<void> {
       // ─── 7b) Dinamik e2e — agent'ın değiştirdiği SAYFAlar için ───
       try {
         const allChanged = await getChangedPages(wt.path);
-        const changedPages = filterTestable(allChanged);
+        // Statik route'lar direkt geçer. Dinamik route'lar için test DB'den gerçek
+        // id/slug çekip placeholder'ı doldurmaya çalış. Çözülemeyenler atlanır.
+        const staticPages = filterTestable(allChanged);
+        const dynamicPages = allChanged.filter((p) => p.isDynamic);
+        const resolvedDynamics: typeof allChanged = [];
+        const testDbUrl = (() => {
+          try { return getTestDatabaseUrl(); } catch { return null; }
+        })();
+        if (testDbUrl) {
+          for (const p of dynamicPages) {
+            const resolved = await resolveDynamicUrl(p.url, testDbUrl);
+            if (resolved) {
+              resolvedDynamics.push({ ...p, url: resolved, isDynamic: false });
+            }
+          }
+        }
+        const changedPages = [...staticPages, ...resolvedDynamics];
         if (allChanged.length > 0) {
           await emitAgentEvent({
             taskId,
             type: "STATUS",
             summary: `Değişen ${allChanged.length} sayfa için anlık test + screenshot…`,
             payload: {
-              pages: allChanged.map((p) => p.url),
+              pages: changedPages.map((p) => p.url),
               dynamicSkipped: allChanged.length - changedPages.length,
             },
           });
