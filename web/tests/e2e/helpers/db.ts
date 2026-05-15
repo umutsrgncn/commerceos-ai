@@ -1,13 +1,10 @@
 /**
  * E2E test'leri için Prisma helper.
  *
- * UI'dan setup yapmaktansa direkt DB'ye yaz — testler hızlı ve deterministik
- * olsun. Tüm seed entity'leri E2E_ prefix'iyle yazılır, cleanup script'i bu
- * prefix'e bakar.
+ * Testler ASLA public schema'ya yazmamalı — DATABASE_URL parse edilip
+ * schema=commerceos_test olduğu doğrulanmadan PrismaClient açılmaz.
  *
- * NOT: Test database ile dev database AYNI kullanır (hackathon scope —
- * production'da ayrı database önerilir). Cleanup E2E_ prefix'ine bakar,
- * dev verilerini bozmaz.
+ * Cleanup E2E_ prefix'ine bakar; test data izole tutulur.
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -15,8 +12,35 @@ import { E2E_PREFIX } from "./test-user";
 
 let prisma: PrismaClient | null = null;
 
+/**
+ * DATABASE_URL'in test schema'sına bağlı olduğunu KESİN doğrula.
+ * public veya schema parametresiz URL ile e2e koşulamaz — production veri
+ * kaybı riskini sıfırlamak için.
+ */
+export function assertTestSchema(): void {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      "E2E ABORTED: DATABASE_URL set değil. Testler asla public'e dokunmamalı.",
+    );
+  }
+  if (url.includes("schema=public")) {
+    throw new Error(
+      `E2E ABORTED: DATABASE_URL schema=public içeriyor. Testler asla canlı public'e yazmaz. ` +
+        `Setup'ta schema=commerceos_test ile çalıştır.`,
+    );
+  }
+  if (!url.includes("schema=commerceos_test")) {
+    throw new Error(
+      `E2E ABORTED: DATABASE_URL schema=commerceos_test içermiyor. ` +
+        `Mevcut URL'nin schema kısmı belirsiz — güvenlik için reddedildi.`,
+    );
+  }
+}
+
 export function getDb(): PrismaClient {
   if (!prisma) {
+    assertTestSchema();
     prisma = new PrismaClient({
       log: process.env.E2E_DEBUG_DB === "1" ? ["query", "error"] : ["error"],
     });

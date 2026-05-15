@@ -6,11 +6,15 @@
  * 3. Test admin'inin var olduğundan emin ol (seed çalışmamışsa burada oluştur)
  */
 
-import { setAutoPilotEnabled, cleanupE2eData, getDb } from "./helpers/db";
+import { setAutoPilotEnabled, cleanupE2eData, getDb, assertTestSchema } from "./helpers/db";
 import { TEST_ADMIN } from "./helpers/test-user";
 import bcrypt from "bcryptjs";
 
 export default async function globalSetup() {
+  // İLK İŞ: schema=commerceos_test güvencesi — herhangi bir tablo işlemine
+  // başlamadan önce DATABASE_URL'in production'a bakmadığını kanıtla.
+  assertTestSchema();
+  console.log("[e2e] schema=commerceos_test doğrulandı, public izole");
   console.log("[e2e] global setup başlıyor...");
 
   // 1) Otopilot OFF + onboarding completed (modal block etmesin)

@@ -10,17 +10,35 @@ const PROD_SCHEMA = "public";
 /**
  * Worktree dev server için DATABASE_URL — schema=commerceos_test ile.
  * Main app her zaman public schema'da kalır.
+ *
+ * DEFANSIF: Dönen URL'de schema=commerceos_test olduğunu KESİN bir şekilde
+ * doğrula — herhangi bir parse hatasında throw, asla sessizce public'e
+ * düşmesin. Production veriyi yok etme riskini sıfırlamak için.
  */
 export function getTestDatabaseUrl(): string {
   const base = process.env.DATABASE_URL;
   if (!base) throw new Error("DATABASE_URL env yok");
-  // schema=public → schema=commerceos_test
+  let result: string;
   if (base.includes(`schema=${PROD_SCHEMA}`)) {
-    return base.replace(`schema=${PROD_SCHEMA}`, `schema=${TEST_SCHEMA}`);
+    result = base.replace(`schema=${PROD_SCHEMA}`, `schema=${TEST_SCHEMA}`);
+  } else if (base.includes(`schema=${TEST_SCHEMA}`)) {
+    result = base;
+  } else {
+    const sep = base.includes("?") ? "&" : "?";
+    result = `${base}${sep}schema=${TEST_SCHEMA}`;
   }
-  // schema param yoksa ekle
-  const sep = base.includes("?") ? "&" : "?";
-  return `${base}${sep}schema=${TEST_SCHEMA}`;
+  // Son URL kontrolü — schema=commerceos_test geçmiyorsa BIRAK
+  if (!result.includes(`schema=${TEST_SCHEMA}`)) {
+    throw new Error(
+      `getTestDatabaseUrl güvenlik kontrolü fail: schema=${TEST_SCHEMA} URL'de yok`,
+    );
+  }
+  if (result.includes(`schema=${PROD_SCHEMA}`)) {
+    throw new Error(
+      `getTestDatabaseUrl güvenlik kontrolü fail: schema=${PROD_SCHEMA} kalıntısı var`,
+    );
+  }
+  return result;
 }
 
 /**
@@ -79,39 +97,42 @@ export async function truncateTestSchema(): Promise<void> {
  */
 export async function seedTestSchema(): Promise<void> {
   // FK dependency order — Prisma schema'daki ilişkilere göre
-  // Parent tablolar ilk:
-  const copyTables: Array<{ name: string; limit?: number }> = [
+  // Parent tablolar ilk + child tabloların fkFilter'ı parent'a referans verir
+  // (limit'lerden kaynaklı FK violation'ı önler; sadece test schema'da parent'ı
+  // olan child satırlar kopyalanır)
+  type FK = { column: string; refTable: string; refColumn?: string };
+  const copyTables: Array<{ name: string; limit?: number; fkFilters?: FK[] }> = [
     { name: "User", limit: 20 },
     { name: "Category" },
     { name: "Supplier" },
     { name: "Customer", limit: 30 },
-    { name: "Address", limit: 50 },
+    { name: "Address", limit: 50, fkFilters: [{ column: "customerId", refTable: "Customer" }] },
     { name: "Product", limit: 50 },
-    { name: "ProductVariant", limit: 100 },
-    { name: "Inventory", limit: 100 },
+    { name: "ProductVariant", limit: 100, fkFilters: [{ column: "productId", refTable: "Product" }] },
+    { name: "Inventory", limit: 100, fkFilters: [{ column: "productId", refTable: "Product" }] },
     { name: "Discount" },
-    { name: "Order", limit: 30 },
-    { name: "OrderItem", limit: 100 },
-    { name: "Payment", limit: 30 },
-    { name: "Review", limit: 50 },
-    { name: "WishlistItem", limit: 50 },
-    { name: "Cart", limit: 10 },
-    { name: "CartItem", limit: 30 },
+    { name: "Order", limit: 30, fkFilters: [{ column: "customerId", refTable: "Customer" }] },
+    { name: "OrderItem", limit: 100, fkFilters: [{ column: "orderId", refTable: "Order" }, { column: "productId", refTable: "Product" }] },
+    { name: "Payment", limit: 30, fkFilters: [{ column: "orderId", refTable: "Order" }] },
+    { name: "Review", limit: 50, fkFilters: [{ column: "productId", refTable: "Product" }] },
+    { name: "WishlistItem", limit: 50, fkFilters: [{ column: "customerId", refTable: "Customer" }, { column: "productId", refTable: "Product" }] },
+    { name: "Cart", limit: 10, fkFilters: [{ column: "customerId", refTable: "Customer" }] },
+    { name: "CartItem", limit: 30, fkFilters: [{ column: "cartId", refTable: "Cart" }, { column: "productId", refTable: "Product" }] },
     { name: "ActivityLog", limit: 100 },
     { name: "SalesGoal" },
     { name: "Expense", limit: 50 },
     { name: "ScheduledExpense", limit: 30 },
     { name: "BankAccount" },
-    { name: "BankTransaction", limit: 50 },
-    { name: "Invoice", limit: 30 },
+    { name: "BankTransaction", limit: 50, fkFilters: [{ column: "bankAccountId", refTable: "BankAccount" }] },
+    { name: "Invoice", limit: 30, fkFilters: [{ column: "orderId", refTable: "Order" }] },
     { name: "Anomaly", limit: 30 },
     { name: "Notification", limit: 30 },
-    { name: "DataRequest", limit: 10 },
+    { name: "DataRequest", limit: 10, fkFilters: [{ column: "customerId", refTable: "Customer" }] },
     { name: "CookieConsent", limit: 30 },
     { name: "AutopilotEvent", limit: 50 },
   ];
 
-  for (const { name, limit } of copyTables) {
+  for (const { name, limit, fkFilters } of copyTables) {
     try {
       // Public ve test schema'da farklı enum tipleri olduğu için SELECT * çalışmaz
       // (PostgreSQL "type Role of public ≠ type Role of commerceos_test" der).
@@ -139,8 +160,19 @@ export async function seedTestSchema(): Promise<void> {
         })
         .join(", ");
       const limitClause = limit ? ` LIMIT ${limit}` : "";
+      // FK filter — child tabloların kopyalanan parent ID'leri olmayan
+      // satırları atla (FK violation engellenir).
+      const fkWhere = (fkFilters && fkFilters.length > 0)
+        ? " WHERE " + fkFilters
+            .map((f) => {
+              const col = `"${f.column}"`;
+              const ref = `"${TEST_SCHEMA}"."${f.refTable}"."${f.refColumn ?? "id"}"`;
+              return `${col} IN (SELECT "${f.refColumn ?? "id"}" FROM "${TEST_SCHEMA}"."${f.refTable}")`;
+            })
+            .join(" AND ")
+        : "";
       await db.$executeRawUnsafe(
-        `INSERT INTO "${TEST_SCHEMA}"."${name}" SELECT ${selectExpr} FROM "${PROD_SCHEMA}"."${name}"${limitClause} ON CONFLICT DO NOTHING`,
+        `INSERT INTO "${TEST_SCHEMA}"."${name}" SELECT ${selectExpr} FROM "${PROD_SCHEMA}"."${name}"${fkWhere}${limitClause} ON CONFLICT DO NOTHING`,
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

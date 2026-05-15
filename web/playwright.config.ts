@@ -70,6 +70,13 @@ export default defineConfig({
     // Playwright kendi başlatmaya kalkmasın, port çakışmasında ölmesin. Local
     // dev'de de zaten dev server açık olur, reuse zararsız.
     reuseExistingServer: true,
+    // NEXTAUTH_URL/AUTH_URL — testte LOCALHOST olmalı; production env'i
+    // (commerceos.cloud) miras alınırsa login submit canlıya redirect olur.
+    env: {
+      NEXTAUTH_URL: baseURL,
+      AUTH_URL: baseURL,
+      AUTH_TRUST_HOST: "true",
+    },
     stdout: "ignore",
     stderr: "pipe",
     timeout: 120_000,
