@@ -141,11 +141,40 @@ export async function commitWorktree(
 }
 
 export async function mergeBranchToMain(branch: string, message: string) {
+  // Merge commit için committer identity gerekli — VPS root user'da global git config
+  // yoktur, bunu inline -c flag'i ile veriyoruz. Sabit identity: umutsrgncn (proje sahibi).
+  const author = {
+    name: "umutsrgncn",
+    email: "56017037+umutsrgncn@users.noreply.github.com",
+  };
   await exec("git", ["checkout", "main"], { cwd: REPO_ROOT });
-  await exec("git", ["merge", "--no-ff", branch, "-m", message], {
-    cwd: REPO_ROOT,
-    maxBuffer: 1024 * 1024 * 4,
-  });
+  await exec(
+    "git",
+    [
+      "-c",
+      `user.name=${author.name}`,
+      "-c",
+      `user.email=${author.email}`,
+      "-c",
+      "commit.gpgsign=false",
+      "merge",
+      "--no-ff",
+      branch,
+      "-m",
+      message,
+    ],
+    {
+      cwd: REPO_ROOT,
+      env: {
+        ...process.env,
+        GIT_AUTHOR_NAME: author.name,
+        GIT_AUTHOR_EMAIL: author.email,
+        GIT_COMMITTER_NAME: author.name,
+        GIT_COMMITTER_EMAIL: author.email,
+      },
+      maxBuffer: 1024 * 1024 * 4,
+    },
+  );
 }
 
 export function repoRoot() {
