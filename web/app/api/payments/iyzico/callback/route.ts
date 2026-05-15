@@ -51,13 +51,27 @@ export async function POST(req: NextRequest) {
   });
 }
 
+/** HTML attribute / text escape — XSS koruması */
+function htmlEscape(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function html(message: string, redirectUrl: string | null): string {
+  // redirectUrl bizim oluşturduğumuz internal path ama yine de defansif escape;
+  // message dış kaynaklı olabilir — kesin escape.
+  const safeMsg = htmlEscape(message);
+  const safeUrl = redirectUrl ? htmlEscape(redirectUrl) : null;
   return `<!DOCTYPE html>
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
   <title>Ödeme — CommerceOS</title>
-  ${redirectUrl ? `<meta http-equiv="refresh" content="1;url=${redirectUrl}">` : ""}
+  ${safeUrl ? `<meta http-equiv="refresh" content="1;url=${safeUrl}">` : ""}
   <style>
     body{font-family:system-ui;display:grid;place-items:center;min-height:100vh;margin:0;background:#0a0a0a;color:#fff}
     .card{padding:32px;border:1px solid #333;border-radius:12px;text-align:center;max-width:400px}
@@ -68,8 +82,8 @@ function html(message: string, redirectUrl: string | null): string {
 </head>
 <body>
   <div class="card">
-    <h1>${message}</h1>
-    ${redirectUrl ? `<p>Yönlendiriliyorsunuz... <a href="${redirectUrl}">Tıkla</a></p>` : ""}
+    <h1>${safeMsg}</h1>
+    ${safeUrl ? `<p>Yönlendiriliyorsunuz... <a href="${safeUrl}">Tıkla</a></p>` : ""}
   </div>
 </body>
 </html>`;

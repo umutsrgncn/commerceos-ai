@@ -11,6 +11,28 @@ const COOKIE_NAME = "commerceos_shop_session";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 gün
 const SECRET = process.env.AUTH_SECRET ?? "dev-only-secret-change-me";
 
+/**
+ * Open redirect koruması: `?next=` parametresi sadece kendi sitemizin
+ * relative path'ine yönlendirebilsin. `https://kötü.com` / `//attacker.com`
+ * gibi external veya protocol-relative URL'ler reddedilir, fallback path döner.
+ */
+export function safeShopRedirect(next: string | undefined, fallback = "/shop/account"): string {
+  if (!next || typeof next !== "string") return fallback;
+  const trimmed = next.trim();
+  if (!trimmed) return fallback;
+  // Protocol-relative (//host) ve absolute URL (http://...) reddet
+  if (trimmed.startsWith("//") || /^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
+    return fallback;
+  }
+  if (!trimmed.startsWith("/")) return fallback;
+  if (trimmed.includes("\\")) return fallback;
+  // Whitelist: yalnızca kendi route'larımız
+  if (!trimmed.startsWith("/shop") && !trimmed.startsWith("/admin")) {
+    return fallback;
+  }
+  return trimmed;
+}
+
 /** HMAC ile imzalı cookie payload: customerId:timestamp:sig */
 function sign(customerId: string): string {
   const ts = Math.floor(Date.now() / 1000).toString();

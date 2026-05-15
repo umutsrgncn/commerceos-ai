@@ -18,6 +18,18 @@ function slugify(s: string) {
     .slice(0, 40);
 }
 
+/**
+ * Commit message'ından newline ve control karakterleri çıkar.
+ * execFile shell injection vermez ama multi-line message subtle ekleme yapar.
+ */
+function sanitizeMessage(msg: string): string {
+  return msg
+    .replace(/[\r\n\t\v\f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 500);
+}
+
 export type Worktree = {
   taskId: string;
   branch: string;
@@ -132,7 +144,7 @@ export async function commitWorktree(
       "commit.gpgsign=false",
       "commit",
       "-m",
-      message,
+      sanitizeMessage(message),
     ],
     { cwd: wt.path, maxBuffer: 1024 * 1024 * 4 },
   );
@@ -171,7 +183,7 @@ export async function mergeBranchToMain(branch: string, _message: string) {
         "--no-ff",
         branch,
         "-m",
-        _message,
+        sanitizeMessage(_message),
       ],
       {
         cwd: REPO_ROOT,

@@ -9,14 +9,12 @@ import {
   loginCustomer,
   logoutCustomer,
   registerCustomer,
+  safeShopRedirect,
   type AuthActionState,
 } from "./auth";
 
 function safeNext(next: string | null | undefined): string {
-  if (!next) return "/shop/account";
-  // Sadece kendi domain'imize redirect
-  if (next.startsWith("/shop") || next.startsWith("/")) return next;
-  return "/shop/account";
+  return safeShopRedirect(next ?? undefined, "/shop/account");
 }
 
 export async function loginAction(

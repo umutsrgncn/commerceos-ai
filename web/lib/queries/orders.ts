@@ -48,7 +48,17 @@ export async function getOrderById(id: string) {
   return db.order.findUnique({
     where: { id },
     include: {
-      customer: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+          notes: true,
+          aiSegment: true,
+        },
+      },
       items: {
         include: {
           product: { select: { id: true, name: true, sku: true } },

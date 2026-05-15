@@ -94,13 +94,13 @@ export default async function ProfilePage() {
               Şifre
             </CardTitle>
             <CardDescription>
-              {user.hashedPassword
+              {user.hasPassword
                 ? "Mevcut şifreyle doğrulayıp yenile"
                 : "OAuth ile giriş yaptığın için şifre yok"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {user.hashedPassword ? (
+            {user.hasPassword ? (
               <PasswordForm />
             ) : (
               <p className="text-sm text-[color:var(--color-muted)]">

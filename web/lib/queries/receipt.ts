@@ -8,7 +8,15 @@ export async function getReceiptData(orderId: string) {
   return db.order.findUnique({
     where: { id: orderId },
     include: {
-      customer: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+        },
+      },
       items: {
         include: {
           product: { select: { sku: true } },

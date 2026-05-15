@@ -66,7 +66,15 @@ export async function getInvoiceById(id: string) {
     include: {
       order: {
         include: {
-          customer: true,
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true,
+              address: true,
+            },
+          },
           items: { include: { product: { select: { sku: true } } } },
         },
       },

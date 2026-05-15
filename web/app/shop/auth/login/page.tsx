@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { getCurrentCustomer } from "@/lib/shop/auth";
+import { getCurrentCustomer, safeShopRedirect } from "@/lib/shop/auth";
 import { LoginForm } from "./components/login-form";
 
 export const metadata = { title: "Giriş · Pamuk" };
@@ -13,7 +13,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const sp = await searchParams;
-  const next = sp.next ?? "/shop/account";
+  const next = safeShopRedirect(sp.next, "/shop/account");
 
   // Zaten giriş yapmışsa hesabına yönlendir
   const current = await getCurrentCustomer();

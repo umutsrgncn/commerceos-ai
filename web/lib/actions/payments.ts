@@ -37,7 +37,15 @@ export async function createPaymentLinkAction(
   const order = await db.order.findUnique({
     where: { id: orderId },
     include: {
-      customer: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          address: true,
+        },
+      },
       items: { include: { product: { include: { category: true } } } },
     },
   });
