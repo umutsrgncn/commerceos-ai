@@ -3,7 +3,7 @@ import path from "node:path";
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
 import { getActivePreview, startPreview, stopPreview } from "./preview";
-import { runTask } from "./runner";
+import { runTaskWithAgent as runTask } from "./agent-runner";
 import { destroyWorktree, mergeBranchToMain, pushMainToOrigin, type Worktree } from "./worktree";
 
 const POLL_INTERVAL_MS = 3000;
@@ -244,6 +244,7 @@ async function handleActivePreview(): Promise<boolean> {
           type: "NOTE",
           summary: "Worktree ve branch temizlendi.",
         });
+        await restartWebService(taskId);
         await db.agentTask.update({
           where: { id: taskId },
           data: {
@@ -325,4 +326,33 @@ async function claimNextTask(): Promise<{ id: string; title: string } | null> {
 
 function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
+}
+
+/**
+ * Merge sonrası canlı web servisini restart — Next.js production server
+ * /public statiklerini başlangıçta cache'liyor, restart olmadan yeni dosyalar
+ * görünmüyor.
+ */
+async function restartWebService(taskId: string): Promise<void> {
+  const { spawn } = await import("node:child_process");
+  await emitAgentEvent({
+    taskId,
+    type: "NOTE",
+    summary: "Canlı servis restart ediliyor (commerceos-web)…",
+  });
+  await new Promise<void>((resolve) => {
+    const child = spawn("systemctl", ["restart", "commerceos-web"], {
+      stdio: "ignore",
+      detached: true,
+    });
+    child.on("close", () => resolve());
+    child.on("error", () => resolve()); // hata olsa bile worker akışı durmasın
+    // Detach + max 10sn bekle
+    setTimeout(() => resolve(), 10_000);
+  });
+  await emitAgentEvent({
+    taskId,
+    type: "NOTE",
+    summary: "Canlı servis restart komutu gönderildi.",
+  });
 }
