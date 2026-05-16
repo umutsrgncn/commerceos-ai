@@ -14,6 +14,7 @@ import { buildScopeBriefing, getE2eSpecsForScopes, getScopesByIds, type AgentSco
 import { getTestDatabaseUrl, resetTestData } from "./test-db";
 import { execTool, makeReadFilesMap, TOOL_DECLS, type AgentContext } from "./tools";
 import { captureTscBaseline, filterAgentRelevantErrors, runTsc, type TscBaseline } from "./tsc-gate";
+import { captureSnapshot, checkSignatureChanges, type SignatureMap } from "./signature-gate";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
 const MAX_ITERATIONS = 25;
@@ -103,6 +104,21 @@ export async function runTask(taskId: string): Promise<void> {
         // eslint-disable-next-line no-console
         console.warn("[runner] tsc baseline alınamadı:", e);
         tscBaseline = new Set();
+      });
+
+    // Signature baseline — public function/const'ların parametre + return type
+    // imzalarını snapshot al. TSC tüketici tarafı 'any' ise signature
+    // değişikliğini yakalayamaz; bu gate o boşluğu kapatır (runtime'da
+    // patlayacak signature değişimlerini yakalar).
+    let signatureBaseline: SignatureMap | null = null;
+    captureSnapshot(wt.webPath)
+      .then((s) => {
+        signatureBaseline = s;
+      })
+      .catch((e) => {
+        // eslint-disable-next-line no-console
+        console.warn("[runner] signature baseline alınamadı:", e);
+        signatureBaseline = new Map();
       });
     if (!isIteration) {
       await emitAgentEvent({
@@ -550,7 +566,44 @@ export async function runTask(taskId: string): Promise<void> {
           });
           const tscResult = await runTsc(wt.webPath, tscBaseline ?? new Set());
           if (tscResult.ok) {
-            // tsc temiz → sticky error temizle
+            // TSC clean — signature gate (runtime contract koruması)
+            const sigResult = await checkSignatureChanges(
+              wt.webPath,
+              signatureBaseline ?? new Map(),
+            );
+            if (!sigResult.ok) {
+              tscRetries += 1;
+              const brokenList = sigResult.broken.slice(0, 5).join("\n");
+              const sigErr =
+                `PUBLIC API CONTRACT İHLALİ — TSC clean olsa bile şu public export'ların signature'ları değişti:\n\n${brokenList}\n\n` +
+                `Bu fonksiyonlar başka dosyalar tarafından kullanılıyor olabilir (scope dışı — yazma yetkin yok).\n` +
+                `Sen değiştirsen TYPE inference tüketici tarafta 'any' olabilir → tsc geçer ama RUNTIME patlar.\n\n` +
+                `ÇÖZÜM: Eski signature'ı RESTORE et:\n` +
+                `- Eski parametre sırasını ve sayısını koru.\n` +
+                `- Eski return type'ı koru (Array vs Object değişikliği yapma).\n` +
+                `- Yeni davranış için yeni parametreyi OPSIYONEL ekle (function X(old, newOpt?)) veya yeni isimle EK export.\n` +
+                `- Eski export'u SİLME, YENİDEN ADLANDIRMA, return type'ını DEĞİŞTİRME.`;
+              await emitAgentEvent({
+                taskId,
+                type: "ERROR",
+                summary: `Public API contract ihlal edildi (${sigResult.broken.length}) — finish geri alındı, deneme ${tscRetries}/${MAX_TSC_RETRIES}.`,
+                payload: { gate: "signature", count: sigResult.broken.length, retry: tscRetries },
+              });
+              if (tscRetries >= MAX_TSC_RETRIES) {
+                tscDirty = true;
+                tscDirtyReason = `Public API contract ihlal edildi (${sigResult.broken.length} export) ve agent ${MAX_TSC_RETRIES} denemede düzeltemedi.`;
+                break;
+              }
+              activeTscError = sigErr;
+              responseParts.push({
+                functionResponse: {
+                  name: "finish",
+                  response: { ok: false, error: sigErr },
+                },
+              });
+              continue;
+            }
+            // tsc + signature temiz → sticky error temizle
             activeTscError = null;
             activeRewriteHint = null;
             finished = true;
@@ -558,7 +611,7 @@ export async function runTask(taskId: string): Promise<void> {
             await emitAgentEvent({
               taskId,
               type: "NOTE",
-              summary: `Bitti: ${finalSummary} (tsc temiz)`,
+              summary: `Bitti: ${finalSummary} (tsc + signature temiz)`,
               payload: { summary: finalSummary, tsc: "clean" },
             });
             break;
