@@ -246,6 +246,17 @@ export const AGENT_SCOPES: AgentScope[] = [
     e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
   },
   {
+    id: "admin_activity",
+    group: "admin",
+    label: "Admin · Aktivite",
+    shortDesc: "Sistem aktivite log'u — agent task, otopilot aksiyon, audit",
+    agentBriefing:
+      "Aktivite log sayfası — agent task'lar, otopilot aksiyonlar, sistem audit. Dosya: web/app/(admin)/admin/activity/page.tsx. Queries: web/lib/queries/activity.ts.",
+    writeGlobs: [/^web\/app\/\(admin\)\/admin\/activity\//],
+    libGlobs: [/^web\/lib\/queries\/activity/],
+    e2eSpecs: ["tests/e2e/specs/admin-smoke/admin-routes.spec.ts"],
+  },
+  {
     id: "admin_sidebar",
     group: "shared",
     label: "Admin · Sidebar & Topbar",
