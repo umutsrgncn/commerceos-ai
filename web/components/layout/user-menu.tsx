@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Menu } from "@ark-ui/react/menu";
 import { Portal } from "@ark-ui/react/portal";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
@@ -28,6 +29,11 @@ export function UserMenu({
     role?: string;
   };
 }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const initials = (user.name ?? user.email ?? "?")
     .split(" ")
     .map((part) => part[0])
@@ -35,6 +41,19 @@ export function UserMenu({
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  if (!mounted) {
+    return (
+      <div
+        aria-hidden
+        className="flex items-center gap-2 rounded-full p-1"
+      >
+        <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-xs font-semibold text-white">
+          {initials}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <Menu.Root>

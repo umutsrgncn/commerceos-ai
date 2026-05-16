@@ -254,6 +254,13 @@ export function NotificationBell() {
   const [items, setItems] = useState<Item[]>([]);
   const [lastReadAt, setLastReadAt] = useState<number>(0);
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Ark-UI Menu SSR'da deterministik olmayan ID üretiyor; hydration mismatch
+  // önlemek için client mount sonrası render et.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const stored = Number(localStorage.getItem(READ_AT_KEY)) || 0;
@@ -288,6 +295,18 @@ export function NotificationBell() {
     const now = Date.now();
     setLastReadAt(now);
     localStorage.setItem(READ_AT_KEY, String(now));
+  }
+
+  // Mount öncesi placeholder — layout shift olmaması için aynı boyut
+  if (!mounted) {
+    return (
+      <div
+        aria-hidden
+        className="grid h-9 w-9 place-items-center rounded-lg text-[color:var(--color-muted)]"
+      >
+        <Bell className="h-4 w-4" />
+      </div>
+    );
   }
 
   return (

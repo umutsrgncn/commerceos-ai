@@ -9,6 +9,8 @@ import {
   SmoothScroll,
 } from "@/components/landing/landing-effects";
 import { AiDeveloperSection } from "@/components/landing/ai-developer";
+import { HeroDemo } from "@/components/landing/HeroDemo";
+import { DarkLock } from "@/components/landing/dark-lock";
 import { LandingFeatures } from "@/components/landing/landing-features";
 import { Spotlight } from "@/components/aceternity/spotlight";
 import { TextGenerateEffect } from "@/components/aceternity/text-generate";
@@ -47,6 +49,7 @@ export default function HomePage() {
         body::-webkit-scrollbar { display: none; }
       `}</style>
 
+      <DarkLock />
       <SmoothScroll />
 
       <main className="relative min-h-screen bg-black text-white selection:bg-fuchsia-500/40">
@@ -177,29 +180,10 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* Dashboard preview */}
+            {/* Dashboard preview — canlı animasyonlu mock */}
             <div className="relative mx-auto mt-16 max-w-5xl">
               <div className="absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-indigo-500/30 via-fuchsia-500/20 to-emerald-500/20 opacity-60 blur-2xl" />
-              <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-black shadow-2xl">
-                <div className="flex items-center gap-1.5 border-b border-white/[0.06] bg-white/[0.02] px-4 py-2.5">
-                  <span className="h-2.5 w-2.5 rounded-full bg-red-500/70" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500/70" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/70" />
-                  <span className="ml-3 text-[10px] font-mono text-white/40">
-                    commerceos.cloud/admin
-                  </span>
-                </div>
-                <div className="relative aspect-[16/10]">
-                  <Image
-                    src="/team/shot-dashboard-dark.jpg"
-                    alt="CommerceOS Dashboard"
-                    fill
-                    sizes="(min-width: 1024px) 1024px, 100vw"
-                    priority
-                    className="object-cover object-top"
-                  />
-                </div>
-              </div>
+              <HeroDemo />
             </div>
           </div>
         </section>
