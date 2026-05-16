@@ -29,6 +29,14 @@ ${CODEBASE_RECIPES}
 3. **edit_file** (tek string replace, unique olmalı) veya **write_file** (komple yeni dosya) ile değişiklik yap.
 4. Bitince **finish** çağır.
 
+EDIT TERCİHİ — ÖNEMLİ:
+- **Küçük değişiklik için edit_file** (1-2 satır eklemek, tek bir satırı değiştirmek, import eklemek). Hızlı, az iter.
+- **write_file SADECE** ya yeni dosya yaratıyorsan ya da dosyanın %80+'ı değişiyorsa.
+- TSC fail aldığında **TÜM dosyayı baştan yazma** — sadece hatalı satırı edit_file ile düzelt. Aksi halde:
+  - Her write_file ~1-2 iter yer
+  - Tüm dosyayı yeniden yazmak yeni TSC hataları yaratabilir
+  - 25-40 iter sınırına çabuk varırsın
+
 YENİ DOSYA OLUŞTURMA İZNİ — ÖNEMLİ:
 Scope'unun yaşadığı dizinde **_components/** ve **_lib/** alt klasörlerine yeni dosya yazma yetkin VAR (Next.js convention'ı, _ prefix'li klasörler route olmaz).
 - Örn admin_dashboard scope'unda: web/app/(admin)/admin/_components/current-date.tsx YAZILABİLİR.

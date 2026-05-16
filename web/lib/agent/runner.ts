@@ -17,7 +17,7 @@ import { captureTscBaseline, filterAgentRelevantErrors, runTsc, type TscBaseline
 import { captureSnapshot, checkSignatureChanges, type SignatureMap } from "./signature-gate";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
-const MAX_ITERATIONS = 25;
+const MAX_ITERATIONS = 40;
 const MAX_TSC_RETRIES = 5;
 /** Bir iterasyonda <500 token harcanırsa "ilerleme yok" sayılır. */
 const DIMINISHING_TOKEN_DELTA = 500;
@@ -743,14 +743,21 @@ export async function runTask(taskId: string): Promise<void> {
 
     if (!finished) {
       // Loop max iter'da bitirildi ama agent finish çağırmadı VE tsc clean
-      // değil. Bu broken state — commit atılmamalı.
+      // değil. Bu broken state — commit atılmamalı. Tool kullanım istatistiğini
+      // mesaja koy ki kullanıcı gerçek sebebi görsün (yüzeysel "tsc clean değil"
+      // yerine).
+      const writeCount = Array.from(ctx.editsPerFile.values()).reduce((a, b) => a + b, 0);
+      const fileCount = ctx.editsPerFile.size;
       tscDirty = true;
       tscDirtyReason = tscDirtyReason ||
-        `Agent ${MAX_ITERATIONS} iterasyon içinde finish'e ulaşamadı (tsc clean değil).`;
+        `Agent ${MAX_ITERATIONS} iterasyon içinde finish'e ulaşamadı. ` +
+        `${fileCount} dosyada ${writeCount} edit/write yaptı, ama TypeScript clean'e ulaşamadı. ` +
+        `(Genelde sebep: tüm dosyayı baştan yazmak yerine micro-edit yapmalı; veya hatayı doğru anlamamış.) ` +
+        `Detayları aşağıdaki event akışından inceleyebilirsin.`;
       await emitAgentEvent({
         taskId,
         type: "NOTE",
-        summary: `Max iterasyon (${MAX_ITERATIONS}) doldu, agent görevi bitiremedi — broken commit atılmıyor.`,
+        summary: `Max iterasyon (${MAX_ITERATIONS}) doldu — broken commit atılmıyor. (${fileCount} dosya, ${writeCount} edit)`,
       });
     }
 
