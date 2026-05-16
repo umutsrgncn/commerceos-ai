@@ -131,12 +131,15 @@ export async function POST(req: Request) {
       );
     }
 
-    return Response.json({
-      ok: true,
-      urls,
-      prompt: data.prompt,
-      analyzed: data.analyzed_description,
-    });
+    return Response.json(
+      {
+        ok: true,
+        urls,
+        prompt: data.prompt,
+        analyzed: data.analyzed_description,
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return Response.json(

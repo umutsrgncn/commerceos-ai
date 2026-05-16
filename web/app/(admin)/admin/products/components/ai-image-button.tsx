@@ -186,9 +186,9 @@ export function AiImageButton({ getInput, onUrls }: Props) {
             onClick={closeModal}
           />
 
-          <div className="relative w-full max-w-2xl rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-[color:var(--color-border)] px-6 py-4">
+          <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-bg)] shadow-2xl">
+            {/* Header — sabit */}
+            <div className="flex shrink-0 items-center justify-between border-b border-[color:var(--color-border)] px-6 py-4">
               <div>
                 <div className="flex items-center gap-2">
                   <span className="grid h-7 w-7 place-items-center rounded-md bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white">
@@ -211,8 +211,8 @@ export function AiImageButton({ getInput, onUrls }: Props) {
               </Button>
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b border-[color:var(--color-border)] px-4">
+            {/* Tabs — sabit */}
+            <div className="flex shrink-0 border-b border-[color:var(--color-border)] px-4">
               <TabButton active={tab === "prompt"} onClick={() => { setTab("prompt"); resetAll(); }}>
                 <Sparkles className="h-3.5 w-3.5" />
                 Promptan üret
@@ -223,7 +223,8 @@ export function AiImageButton({ getInput, onUrls }: Props) {
               </TabButton>
             </div>
 
-            <div className="space-y-5 p-6">
+            {/* İçerik — scrollable */}
+            <div className="flex-1 space-y-5 overflow-y-auto p-6">
               {tab === "upload" && (
                 <UploadDropzone
                   files={files}
@@ -354,8 +355,8 @@ export function AiImageButton({ getInput, onUrls }: Props) {
               )}
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 border-t border-[color:var(--color-border)] px-6 py-4">
+            {/* Actions — sabit alt */}
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-[color:var(--color-border)] bg-[color:var(--color-bg)] px-6 py-4">
               {previews.length > 0 ? (
                 <>
                   <Button

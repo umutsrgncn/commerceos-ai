@@ -95,12 +95,14 @@ VISION_MODEL = "gemini-2.5-pro"
 
 VISION_INSTRUCTION = (
     "Bu kullanıcı yüklediği bir e-ticaret ürün fotoğrafı. Görseli analiz et ve "
-    "**Imagen 4 için kısa, nesne-odaklı bir İngilizce prompt** üret. Prompt:\n"
-    "- Ürünün ne olduğunu söyle (örn: \"black cotton t-shirt with white logo\").\n"
-    "- Malzeme, renk, dokuyu tek cümlede yaz.\n"
-    "- İnsan/model/figure/posed/wearing gibi kelimeler KULLANMA "
-    "(Imagen safety filter tetikliyor).\n"
-    "- Sadece **prompt** döndür, başka açıklama yok. Max 60 kelime."
+    "TAM olarak şu JSON formatında dön, **başka hiçbir metin yok**:\n"
+    '{"tr": "<Türkçe ürün açıklaması — 1 cümle, max 25 kelime>", '
+    '"en_prompt": "<English Imagen prompt — object-focused, max 60 words, '
+    'NO words like person/model/wearing/posed>"}\n\n'
+    "Örnek tr: \"Siyah pamuklu tişört, ön göğüste küçük beyaz logo, klasik kesim\"\n"
+    "Örnek en_prompt: \"black cotton t-shirt with small white chest logo, classic fit, "
+    "soft cotton texture\"\n"
+    "Önemli: Yalnızca JSON dön, markdown code fence olmadan."
 )
 
 
@@ -114,8 +116,8 @@ def _decode_image(b64: str) -> bytes:
         raise HTTPException(status_code=400, detail=f"Geçersiz görsel: {err}") from err
 
 
-async def _analyze_with_vision(image_bytes_list: list[bytes]) -> str:
-    """Gemini Vision ile ürün açıklaması + Imagen prompt'u üret."""
+async def _analyze_with_vision(image_bytes_list: list[bytes]) -> tuple[str, str]:
+    """Gemini Vision ile (Türkçe açıklama, İngilizce Imagen promptu) döner."""
     client = genai.Client(api_key=get_settings().gemini_api_key)
     parts: list[types.Part] = [types.Part.from_text(text=VISION_INSTRUCTION)]
     for b in image_bytes_list:
@@ -130,12 +132,28 @@ async def _analyze_with_vision(image_bytes_list: list[bytes]) -> str:
         raise HTTPException(
             status_code=502, detail=f"Görsel analizi başarısız: {err}"
         ) from err
-    text = (resp.text or "").strip()
-    if not text:
+
+    raw = (resp.text or "").strip()
+    if not raw:
         raise HTTPException(
             status_code=422, detail="AI yüklenen fotoğraftan açıklama çıkaramadı."
         )
-    return text
+
+    # JSON parse — markdown fence varsa temizle
+    import json
+    import re
+    cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.MULTILINE).strip()
+    try:
+        data = json.loads(cleaned)
+        tr = str(data.get("tr", "")).strip()
+        en = str(data.get("en_prompt", "")).strip()
+        if not tr or not en:
+            raise ValueError("tr/en_prompt eksik")
+        return tr, en
+    except Exception:
+        # JSON dönmediyse: raw'ı her iki yerde kullan (fallback)
+        log.warning("vision JSON parse fail, fallback raw=%s", raw[:200])
+        return raw, raw
 
 
 @router.post("/improve", response_model=ImproveImageResponse)
@@ -143,12 +161,12 @@ async def improve_image(req: ImproveImageRequest) -> ImproveImageResponse:
     """Kullanıcı fotoğraflarından e-ticaret studio görseli üret."""
     image_bytes = [_decode_image(b) for b in req.source_images_b64]
 
-    # 1) Vision analizi → kompakt prompt
-    derived_prompt = await _analyze_with_vision(image_bytes)
+    # 1) Vision analizi → (TR açıklama UI'a, EN prompt Imagen'e)
+    tr_desc, en_prompt = await _analyze_with_vision(image_bytes)
 
     # 2) Style template'ini sar
     style_template = STYLE_TEMPLATES.get(req.style, STYLE_TEMPLATES["studio"])
-    final_prompt = style_template.format(subject=derived_prompt.rstrip("."))
+    final_prompt = style_template.format(subject=en_prompt.rstrip("."))
     if req.extra_hint:
         clean = req.extra_hint.strip().replace("\n", " ")
         final_prompt = f"{final_prompt}. Note: {clean[:200]}"
@@ -174,5 +192,5 @@ async def improve_image(req: ImproveImageRequest) -> ImproveImageResponse:
     return ImproveImageResponse(
         images_b64=[base64.b64encode(b).decode("ascii") for b in images],
         prompt=final_prompt,
-        analyzed_description=derived_prompt,
+        analyzed_description=tr_desc,
     )
