@@ -13,7 +13,7 @@ import { startPreview, stopPreview } from "./preview";
 import { buildScopeBriefing, getE2eSpecsForScopes, getScopesByIds, type AgentScope } from "./scopes";
 import { getTestDatabaseUrl, resetTestData } from "./test-db";
 import { execTool, makeReadFilesMap, TOOL_DECLS, type AgentContext } from "./tools";
-import { filterAgentRelevantErrors, runTsc } from "./tsc-gate";
+import { captureTscBaseline, filterAgentRelevantErrors, runTsc, type TscBaseline } from "./tsc-gate";
 import { commitWorktree, createWorktree, destroyWorktree, type Worktree } from "./worktree";
 
 const MAX_ITERATIONS = 25;
@@ -89,6 +89,21 @@ export async function runTask(taskId: string): Promise<void> {
       where: { id: taskId },
       data: { branchName: wt.branch, worktreePath: wt.path },
     });
+
+    // TSC baseline — task başında olan hataları snapshot al. Agent değiştirmeye
+    // başlamadan önce. Sonra finish gate'te baseline'a göre YENİ hata var mı
+    // bakarız (cross-impact export rename gibi başka dosyada patlayan hatalar
+    // da burada yakalanır).
+    let tscBaseline: TscBaseline | null = null;
+    captureTscBaseline(wt.webPath)
+      .then((b) => {
+        tscBaseline = b;
+      })
+      .catch((e) => {
+        // eslint-disable-next-line no-console
+        console.warn("[runner] tsc baseline alınamadı:", e);
+        tscBaseline = new Set();
+      });
     if (!isIteration) {
       await emitAgentEvent({
         taskId,
@@ -519,14 +534,17 @@ export async function runTask(taskId: string): Promise<void> {
             continue;
           }
 
-          // ── tsc gate ── finish öncesi TypeScript doğrulaması
+          // ── tsc gate ── finish öncesi TypeScript doğrulaması.
+          // Baseline diff: task başında snapshot alındı; agent'ın yarattığı
+          // YENİ hatalar (hangi dosyada olursa olsun) reject eder.
+          // Eğer baseline henüz alınamadıysa (async race), boş set ile çalış —
+          // tüm hatalar fail sayılır (güvenli taraf).
           await emitAgentEvent({
             taskId,
             type: "STATUS",
             summary: "Finish öncesi TypeScript kontrolü…",
           });
-          const touchedFiles = Array.from(ctx.editsPerFile.keys());
-          const tscResult = await runTsc(wt.webPath, touchedFiles);
+          const tscResult = await runTsc(wt.webPath, tscBaseline ?? new Set());
           if (tscResult.ok) {
             // tsc temiz → sticky error temizle
             activeTscError = null;
