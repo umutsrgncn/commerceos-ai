@@ -117,7 +117,7 @@ export default function HomePage() {
             <h1 className="mt-7 text-balance text-5xl font-semibold leading-[1.04] tracking-tight sm:text-7xl">
               E-ticaretin{" "}
               <span className="bg-gradient-to-br from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">
-                AI yönettiği
+                AI ile yönetildiği
               </span>
               <br />
               admin paneli
