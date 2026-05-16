@@ -263,6 +263,10 @@ export async function runTask(taskId: string): Promise<void> {
     let iteration = 0;
     let finished = false;
     let totalTokens = 0;
+    // tscDirty: agent finish'e tsc CLEAN ile ulaşamadı (max iter doldu veya
+    // max tsc retry'a takıldı). Bu durumda commit atılmaz, task FAILED'a çekilir.
+    let tscDirty = false;
+    let tscDirtyReason = "";
     let tscRetries = 0;
     // Diminishing returns takibi — agent dönüp duruyorsa otomatik bitir
     let lastTotalTokens = 0;
@@ -564,21 +568,40 @@ export async function runTask(taskId: string): Promise<void> {
           const relevantErrors = filterAgentRelevantErrors(tscResult.errors);
           const errBody = (relevantErrors || tscResult.errors).slice(0, 3500);
 
+          // Cross-impact uyarısı: scope DIŞI dosyalardan gelen hata ise,
+          // agent o dosyaya yazamaz → backward-compatible çözüm sun.
+          let crossImpactHint = "";
+          const touchedFiles = Array.from(ctx.editsPerFile.keys());
+          const errFiles = (errBody.match(/^[^(]+\(\d+,\d+\):/gm) ?? [])
+            .map((m) => m.replace(/\(\d+,\d+\):$/, ""));
+          const outsideScope = errFiles.filter(
+            (f) => !touchedFiles.some((tf) => f.includes(tf) || tf.includes(f)),
+          );
+          if (outsideScope.length > 0) {
+            const unique = Array.from(new Set(outsideScope)).slice(0, 5);
+            crossImpactHint =
+              `\n\nCROSS-IMPACT UYARISI: Hatalar scope DIŞI dosyalardan geliyor:\n  ${unique.join("\n  ")}\n\n` +
+              `Bu dosyalara YAZAMAZSIN (scope dışı). Senin değişikliğin onların import'unu kırdı.\n` +
+              `ÇÖZÜM: Kendi dosyandaki değişikliği geriye-uyumlu (backward-compatible) yap:\n` +
+              `- Eski export ismini ve signature'ını KORU.\n` +
+              `- Yeni davranış için ya yeni param'ı OPSIYONEL ekle, ya da yeni isimle EK export ver.\n` +
+              `- Eski export'u silme/yeniden adlandırma.`;
+          }
+
           if (tscRetries >= MAX_TSC_RETRIES) {
+            tscDirty = true;
+            tscDirtyReason = `Agent ${MAX_TSC_RETRIES} TypeScript düzeltme denemesi yaptı ama clean'e ulaşamadı — ${tscResult.errorCount} hata kaldı. Broken kod canlıya gitmesin diye commit atılmıyor.`;
             await emitAgentEvent({
               taskId,
               type: "ERROR",
-              summary: `Max ${MAX_TSC_RETRIES} tsc denemesi doldu — kabul ediliyor, kullanıcı önizlemede görsün.`,
+              summary: `Max ${MAX_TSC_RETRIES} tsc denemesi doldu — task FAILED'a çekiliyor, broken commit atılmıyor.`,
               payload: { tsc: "max-retries", errorCount: tscResult.errorCount },
             });
-            // tsc temizlenemedi ama agent'ı sonsuza dek tıkamayalım — finish'i kabul et
-            finished = true;
-            finalSummary = out.finish.summary;
             break;
           }
 
-          // Sticky context — bu hatayı her iter'de hatırlatacağız
-          activeTscError = errBody;
+          // Sticky context — bu hatayı her iter'de hatırlatacağız (cross-impact hint dahil)
+          activeTscError = errBody + crossImpactHint;
 
           // Aynı dosyayı 3+ kez edit'lediyse + hâlâ fail → "baştan yaz" sticky uyarısı
           // Bu, agent'ın micro-edit ölüm-döngüsüne girmesini engeller
@@ -601,7 +624,7 @@ export async function runTask(taskId: string): Promise<void> {
               name: "finish",
               response: {
                 ok: false,
-                error: `Finish reddedildi: TypeScript hataları var. Bu hataları düzelt, sonra finish'i tekrar çağır.\n\n${errBody}`,
+                error: `Finish reddedildi: TypeScript hataları var. Bu hataları düzelt, sonra finish'i tekrar çağır.\n\n${errBody}${crossImpactHint}`,
               },
             },
           });
@@ -666,14 +689,40 @@ export async function runTask(taskId: string): Promise<void> {
     }
 
     if (!finished) {
+      // Loop max iter'da bitirildi ama agent finish çağırmadı VE tsc clean
+      // değil. Bu broken state — commit atılmamalı.
+      tscDirty = true;
+      tscDirtyReason = tscDirtyReason ||
+        `Agent ${MAX_ITERATIONS} iterasyon içinde finish'e ulaşamadı (tsc clean değil).`;
       await emitAgentEvent({
         taskId,
         type: "NOTE",
-        summary: `Max iterasyon (${MAX_ITERATIONS}) doldu, devam edilmiyor.`,
+        summary: `Max iterasyon (${MAX_ITERATIONS}) doldu, agent görevi bitiremedi — broken commit atılmıyor.`,
       });
     }
 
     await ensureNotCancelled(taskId);
+
+    // tscDirty ise commit atma + task FAILED + cleanup
+    if (tscDirty) {
+      await emitAgentEvent({
+        taskId,
+        type: "ERROR",
+        summary: tscDirtyReason,
+      });
+      await db.agentTask.update({
+        where: { id: taskId },
+        data: {
+          status: "FAILED",
+          errorMsg: tscDirtyReason.slice(0, 1000),
+          completedAt: new Date(),
+        },
+      });
+      if (wt.branch) {
+        try { await destroyWorktree(taskId, wt.branch); } catch {}
+      }
+      return;
+    }
 
     // ─── 4) Commit (varsa) ───
     // Agent kendi kimliğiyle commit atar — GitHub'da "agent değişikliği vs

@@ -46,6 +46,16 @@ KESİN KURALLAR:
 - Hiçbir veriyi (kullanıcı bilgisi, sipariş, ödeme) dosya olarak dışa aktarma.
 - Seçilen scope dışında bir dosyaya yazma — tool seni reddedecek zaten.
 
+PUBLIC EXPORT KURALI — KRİTİK (en sık yapılan hata):
+- Bir dosyada **export edilen** function/const/type'ı YENİDEN ADLANDIRMA veya SİL.
+- Signature (parametre yapısı) değişikliği aynı zamanda **breaking change**'tir: \`listX(n)\` → \`listX({page,limit})\` yapma.
+- Çünkü o export başka dosyalarda kullanılabilir, onları SEN değiştiremezsin (scope dışı).
+- Eğer signature değişikliği GEREKİYORSA:
+  1. **Yeni bir function ekle** farklı isimle: \`listX(n)\` korunur, yanına \`listXPaged({page,limit})\` koy.
+  2. **Veya parametreyi opsiyonel yap** ki eski çağrılar bozulmasın: \`listX(opts?: {page?,limit?})\`.
+- Bir dosyaya yazmadan ÖNCE: o dosyadaki export'ların başka yerlerde kullanılıp kullanılmadığını **grep** ile kontrol et.
+- Örnek doğru pattern: \`grep "from \"@/lib/queries/activity\"" web/\` → eğer başka import varsa, signature'ı KORU.
+
 Hata / çıkış durumları — DİKKAT, bu çok önemli:
 
 1) **Aranan şey kodda yok** (grep 0 hit, dosya yok, "kaldır" denen element mevcut değil):

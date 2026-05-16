@@ -71,7 +71,7 @@ export function stripTrailingWs(s: string): string {
 export function findFuzzyMatch(
   fileContent: string,
   search: string,
-): { actual: string; method: "exact" | "stripped" | "quotes" | "ws" } | null {
+): { actual: string; method: "exact" | "stripped" | "quotes" | "ws" | "indent" } | null {
   // 1) Exact
   if (fileContent.includes(search)) {
     return { actual: search, method: "exact" };
@@ -99,14 +99,41 @@ export function findFuzzyMatch(
   const wsFile = stripTrailingWs(normFile);
   idx = wsFile.indexOf(wsSearch);
   if (idx !== -1) {
-    // Whitespace stripped çakışmasını orijinal dosyada bulmak zor;
-    // en yakın approximate: orijinal dosyada wsSearch satırlarını sıralı ara
-    // Burada bilinçli olarak ws-stripped halini döndürüyoruz — yazma sırasında
-    // editFile dosyayı stripTrailingWs(file).replace(wsSearch, ...) ile değiştirir
     return { actual: wsSearch, method: "ws" };
   }
 
+  // 5) Indent-tolerant: agent indent farkıyla kopyalamış olabilir. Her satırın
+  // başındaki whitespace'i strip et, dosyada da strip et, eşleştirmeyi dene.
+  // Eğer bulunursa orijinal dosyadaki indentasyon korunarak döndür.
+  const indentNormalized = indentNormalize(wsSearch);
+  if (indentNormalized && indentNormalized !== wsSearch) {
+    const fileIndentNorm = indentNormalize(wsFile);
+    const indentIdx = fileIndentNorm.indexOf(indentNormalized);
+    if (indentIdx !== -1) {
+      // Orijinal dosyada bu pasajı bulmak için: indent-normalized içerikten
+      // önceki ile aynı sayıda satıra dosya içinde geri sayıp orijinali çıkar
+      const searchLineCount = indentNormalized.split("\n").length;
+      const fileLines = wsFile.split("\n");
+      const fileNormLines = fileIndentNorm.split("\n");
+      for (let i = 0; i <= fileNormLines.length - searchLineCount; i++) {
+        const slice = fileNormLines.slice(i, i + searchLineCount).join("\n");
+        if (slice === indentNormalized) {
+          const original = fileLines.slice(i, i + searchLineCount).join("\n");
+          return { actual: original, method: "indent" };
+        }
+      }
+    }
+  }
+
   return null;
+}
+
+/** Her satırın baş whitespace'ini sıyır — indent farkı toleransı için. */
+function indentNormalize(s: string): string {
+  return s
+    .split("\n")
+    .map((ln) => ln.replace(/^[ \t]+/, ""))
+    .join("\n");
 }
 
 /**
