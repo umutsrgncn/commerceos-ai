@@ -3,7 +3,8 @@ import { formatMoney } from "@/lib/format";
 
 describe("formatMoney", () => {
   it("renders TRY minor units with the lira symbol", () => {
-    expect(formatMoney(123456, "TRY")).toMatch(/123\.456,00/);
+    // 123456 kuruş = 1234,56 ₺ (formatMoney /100 ile lira'ya çevirir)
+    expect(formatMoney(123456, "TRY")).toMatch(/1\.234,56/);
     expect(formatMoney(123456, "TRY")).toContain("₺");
   });
 
