@@ -6,8 +6,9 @@ import { seedExpense, getDb } from "../../helpers/db";
 test.describe("Expenses", () => {
   test("/admin/expenses listesi yüklenir", async ({ authedPage }) => {
     await authedPage.goto(ROUTES.expenses);
+    // "Giderler" h1 + "Henüz gider yok" h3 ikisi de /Gider/i'ye uyuyor; exact h1'i hedefle.
     await expect(
-      authedPage.getByRole("heading", { name: /Gider/i }),
+      authedPage.getByRole("heading", { name: "Giderler", level: 1 }),
     ).toBeVisible();
   });
 

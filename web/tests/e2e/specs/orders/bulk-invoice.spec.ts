@@ -34,6 +34,17 @@ test.describe("Bulk invoice", () => {
   test("'Hepsine kes' butonu Discount oluşturmaz, fatura oluşturur", async ({
     authedPage,
   }) => {
+    // issueInvoiceAction taxId zorunlu — yoksa "Şirket vergi numarası eksik"
+    // ile fail edip Invoice oluşturmaz, sonra DB check null bulur.
+    const db = getDb();
+    await db.systemSettings.update({
+      where: { id: "default" },
+      data: {
+        taxId: "1234567890",
+        companyName: "E2E Test A.Ş.",
+      },
+    });
+
     // 2 farklı sipariş seed et
     const c = await seedCustomer({ name: e2eName("BulkApply") });
     const p = await seedProduct({ name: e2eName("BulkApplyProd") });
@@ -73,8 +84,7 @@ test.describe("Bulk invoice", () => {
     // Bulk işlem sırası 2-3 sn (her invoice ayrı GIB mock call + DB)
     await authedPage.waitForTimeout(5000);
 
-    // DB'de Invoice'lar oluştu mu?
-    const db = getDb();
+    // DB'de Invoice'lar oluştu mu? (db beforeBlock'ta zaten alındı)
     const i1 = await db.invoice.findUnique({ where: { orderId: o1.id } });
     const i2 = await db.invoice.findUnique({ where: { orderId: o2.id } });
     expect(i1).not.toBeNull();

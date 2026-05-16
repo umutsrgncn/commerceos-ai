@@ -101,6 +101,8 @@ async function installRoutes(page: Page, overrides: Overrides) {
   await mockJson("**/messages/supplier-reorder", "supplierReorder");
   await mockJson("**/products/describe", "productDescribe");
   await mockJson("**/customers/segment", "customerSegment");
+  // autopilot tetiklemesi `segment-by-id` endpoint'ini çağırıyor; ayni mock.
+  await mockJson("**/customers/segment-by-id", "customerSegment");
   await mockJson("**/goals/suggest", "goalSuggest");
   await mockJson("**/products/dead-stock-campaign", "deadStockCampaign");
   await mockText("**/chat/agent/stream", "agentStream");

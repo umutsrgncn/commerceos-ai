@@ -25,8 +25,10 @@ test.describe("iyzico Payment", () => {
     await authedPage.goto(ROUTES.orderDetail(order.id));
     await expect(authedPage.getByText(/Online ödeme/i).first()).toBeVisible();
     await expect(authedPage.getByText(/SANDBOX/i).first()).toBeVisible();
+    // Manuel "Ödeme linki oluştur" butonu kaldırıldı — artık Otopilot otomatik
+    // tahsilat başlatıyor. Bekleme mesajı görünmeli.
     await expect(
-      authedPage.getByRole("button", { name: /Ödeme linki oluştur/i }),
+      authedPage.getByText(/Otopilot açıkken sipariş onaylanınca otomatik tahsilat/i),
     ).toBeVisible();
   });
 

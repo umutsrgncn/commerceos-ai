@@ -17,10 +17,10 @@ test.describe("Settings — şirket + GİB", () => {
     const companyInput = authedPage.getByLabel(/Firma adı/i);
     await companyInput.fill("CommerceOS E2E Test Şirketi");
 
-    // İlk form'un submit butonu (şirket bilgileri)
+    // Şirket bilgileri formunu adres et — topbar'da search form'u var,
+    // .locator("form").first() onu yakalıyor. companyName input'unu içeren formu hedefle.
     await authedPage
-      .locator("form")
-      .first()
+      .locator('form:has(input[name="companyName"])')
       .getByRole("button", { name: /Kaydet/i })
       .click();
 

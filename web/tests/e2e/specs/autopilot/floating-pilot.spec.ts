@@ -39,9 +39,9 @@ test.describe("Floating Pilot", () => {
       });
       await expect(pilot).toBeVisible({ timeout: 5_000 });
 
-      // Click → expand panel (Otopilot canlı text görünür)
+      // Click → expand panel. Panel açılınca timeline link'i + Otopilot
+      // başlığı/empty-state görünür. ("Otopilot canlı" aria-label'da, text'te değil.)
       await pilot.click();
-      await expect(authedPage.getByText("Otopilot canlı")).toBeVisible();
       await expect(
         authedPage.getByRole("link", { name: /Tüm timeline'a git/i }),
       ).toBeVisible();

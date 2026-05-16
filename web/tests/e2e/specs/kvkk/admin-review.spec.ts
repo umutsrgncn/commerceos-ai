@@ -16,7 +16,8 @@ test.describe("KVKK admin review", () => {
     await authedPage.goto("/admin/data-requests");
     await expect(
       authedPage.getByRole("heading", {
-        name: /KVKK Veri Silme Talepleri/i,
+        // Başlık "KVKK · Veri Silme Talepleri" — ortadaki separator değişebilir.
+        name: /KVKK.*Veri Silme Talepleri/i,
       }),
     ).toBeVisible();
   });

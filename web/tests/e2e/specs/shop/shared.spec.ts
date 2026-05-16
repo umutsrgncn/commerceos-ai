@@ -13,10 +13,11 @@ test.describe("shared · landing + brand", () => {
 
   test("CommerceOS logo herhangi bir sayfada görünür", async ({ page }) => {
     await page.goto("/");
-    // Logo bir SVG veya bir text. En azından bir <svg> veya 'CommerceOS' metni olsun
-    const logoSvg = page.locator("svg").first();
-    const logoText = page.getByText(/CommerceOS|commerceos/i).first();
-    await expect(logoSvg.or(logoText)).toBeVisible();
+    // Logo: SVG + span "CommerceOS" aynı link içinde — direkt link role'ünü hedefle.
+    // (.or() strict mode'da 2 element döndürünce fail eder; tek deterministik locator.)
+    await expect(
+      page.getByRole("link", { name: /CommerceOS/i }).first(),
+    ).toBeVisible();
     await page.screenshot({
       path: `${test.info().outputDir}/brand-logo.png`,
       fullPage: false,

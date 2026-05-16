@@ -5,7 +5,7 @@
 import { test, expect } from "../../fixtures";
 import { ROUTES } from "../../helpers/routes";
 import { e2eName, E2E_PREFIX } from "../../helpers/test-user";
-import { getDb, seedCustomer } from "../../helpers/db";
+import { getDb, seedCustomer, seedProduct } from "../../helpers/db";
 
 test.describe("Customer addresses panel", () => {
   test("müşteri detayında 'Adresler' kartı görünür (boş hali)", async ({
@@ -70,6 +70,12 @@ test.describe("Customer addresses panel", () => {
 });
 
 test.describe("Order new — addresses UI", () => {
+  // NewOrderForm boş DB'de placeholder gösteriyor; form için müşteri + ürün şart.
+  test.beforeEach(async () => {
+    await seedCustomer({ name: e2eName("NewOrderCust") });
+    await seedProduct({ name: e2eName("NewOrderProd"), stock: 10 });
+  });
+
   test("yeni sipariş formunda Teslimat ve Fatura kartları görünür", async ({
     authedPage,
   }) => {

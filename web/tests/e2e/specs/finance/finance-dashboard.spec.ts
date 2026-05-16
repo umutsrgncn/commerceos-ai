@@ -9,9 +9,9 @@ test.describe("Finance dashboard", () => {
     await expect(
       authedPage.getByRole("heading", { name: "Finans", exact: true }),
     ).toBeVisible();
-    // AI panel'leri var mı?
+    // AI panel'leri var mı? (CardTitle "Finansal İçgörü" + "AI" rozeti — heading role'de "AI" görünmüyor)
     await expect(
-      authedPage.getByRole("heading", { name: /AI Finansal İçgörü/i }),
+      authedPage.getByText(/Finansal İçgörü/i).first(),
     ).toBeVisible();
     await expect(
       authedPage.getByText(/Cash flow tahmini/i).first(),

@@ -9,9 +9,12 @@ test.describe("Anomaly banner (dashboard)", () => {
     expect(mockAi.enabled).toBe(true);
     await authedPage.goto(ROUTES.dashboard);
 
-    // Banner başlığı veya emerald 'temiz' kart
-    const banner = authedPage.getByText(/AI Proaktif Uyarılar|Anormallik yok/i);
-    await expect(banner.first()).toBeVisible({ timeout: 15_000 });
+    // Banner default collapsed — toggle button'a tıklayıp aç ki anomaly detayı render olsun.
+    const toggle = authedPage.getByRole("button", {
+      name: /AI Proaktif Uyarılar/i,
+    });
+    await expect(toggle).toBeVisible({ timeout: 15_000 });
+    await toggle.click();
 
     // Mock yanıtımız bir anomaly döndürüyordu (MARKETING patlaması)
     const anomalyTitle = authedPage.getByText(/MARKETING %180 arttı/i);
