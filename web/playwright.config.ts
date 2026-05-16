@@ -1,4 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 /**
  * E2E test configuration.
@@ -17,6 +19,39 @@ import { defineConfig, devices } from "@playwright/test";
  *   E2E_REAL_AI=1 pnpm test:e2e          — AI mock'u kapat (yavaş, quota yer)
  *   E2E_HEADED=1 pnpm test:e2e --debug   — tarayıcılı debug
  */
+
+// .env.local'i yükle — pnpm test:e2e için DATABASE_URL/AUTH_SECRET gerekli.
+// Test runner + child dev server her ikisi de bu env'i miras alır.
+// (dotenv top-level'da yok, bağımlılık eklemeden manuel parse.)
+try {
+  const raw = readFileSync(path.resolve(__dirname, ".env.local"), "utf8");
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let val = trimmed.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = val;
+  }
+} catch {
+  // .env.local yoksa sessiz geç — CI ortamlarında env shell'den gelir
+}
+
+// Test schema güvencesi: production public'e dokunmamak için DATABASE_URL'i
+// her zaman commerceos_test'e çevir. Helper db.ts assertTestSchema() bunu zorlar.
+const baseDbUrl = process.env.DATABASE_URL;
+if (baseDbUrl) {
+  if (baseDbUrl.includes("schema=public")) {
+    process.env.DATABASE_URL = baseDbUrl.replace("schema=public", "schema=commerceos_test");
+  } else if (!baseDbUrl.includes("schema=commerceos_test")) {
+    const sep = baseDbUrl.includes("?") ? "&" : "?";
+    process.env.DATABASE_URL = `${baseDbUrl}${sep}schema=commerceos_test`;
+  }
+}
 
 const PORT = Number(process.env.E2E_PORT ?? 3000);
 const baseURL = `http://localhost:${PORT}`;
@@ -76,6 +111,9 @@ export default defineConfig({
       NEXTAUTH_URL: baseURL,
       AUTH_URL: baseURL,
       AUTH_TRUST_HOST: "true",
+      // Dev server'ı test schema'sına bağla — globalSetup'ın yazdığı admin
+      // ile auth route aynı schema'da çalışsın (stale hash riskini önle).
+      DATABASE_URL: process.env.DATABASE_URL ?? "",
     },
     stdout: "ignore",
     stderr: "pipe",

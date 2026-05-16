@@ -38,24 +38,21 @@ export default async function globalSetup() {
   await cleanupE2eData();
   console.log("[e2e] Eski test verileri temizlendi");
 
-  // 3) Test admin
-  const existing = await db.user.findUnique({
+  // 3) Test admin — UPSERT: hash her zaman TEST_ADMIN.password ile eşleşsin.
+  // create-if-not-exists yetersiz: önceki run'dan kalan stale hash login'i
+  // fail'a düşürür ve fark edilmez (test silently fail eder).
+  const hashedPassword = await bcrypt.hash(TEST_ADMIN.password, 12);
+  await db.user.upsert({
     where: { email: TEST_ADMIN.email },
+    update: { hashedPassword, name: TEST_ADMIN.name, role: TEST_ADMIN.role },
+    create: {
+      email: TEST_ADMIN.email,
+      name: TEST_ADMIN.name,
+      hashedPassword,
+      role: TEST_ADMIN.role,
+    },
   });
-  if (!existing) {
-    const hashedPassword = await bcrypt.hash(TEST_ADMIN.password, 12);
-    await db.user.create({
-      data: {
-        email: TEST_ADMIN.email,
-        name: TEST_ADMIN.name,
-        hashedPassword,
-        role: TEST_ADMIN.role,
-      },
-    });
-    console.log(`[e2e] Test admin oluşturuldu: ${TEST_ADMIN.email}`);
-  } else {
-    console.log(`[e2e] Test admin mevcut: ${TEST_ADMIN.email}`);
-  }
+  console.log(`[e2e] Test admin upsert tamam (fresh hash): ${TEST_ADMIN.email}`);
 
   console.log("[e2e] Setup tamam.");
 }
