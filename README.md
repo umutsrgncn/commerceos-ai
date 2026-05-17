@@ -16,7 +16,7 @@ Tek panel — sipariş, ürün, müşteri, finans, KVKK, GİB, iyzico.
 ![Next.js](https://img.shields.io/badge/Next.js-15-black)
 ![React](https://img.shields.io/badge/React-19-61DAFB)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6)
-![Gemini](https://img.shields.io/badge/Gemini-2.5_Pro+Flash-4285F4)
+![Gemini](https://img.shields.io/badge/Gemini-2.5_Pro-4285F4)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791)
 
 <br />
@@ -46,34 +46,22 @@ Tümü **Pamuk** isimli demo bir tekstil markası üzerinden çalışır — 40 
 
 Admin panelden bir kutuya doğal dilde görev yazarsın ("şu sayfaya şu butonu ekle"). Sonrasını agent yapar:
 
-```mermaid
-flowchart LR
-  user[👤 Görev:<br/>'şu butonu ekle'] --> plan
-  plan[🧠 Plan<br/>Gemini 2.5 Pro<br/>scope + adımlar] --> code
-  code[📝 Yaz<br/>Gemini 2.5 Flash<br/>tool-use loop] --> verify
-  verify[🛡️ Doğrula<br/>tsc + RSC + e2e] --> ship
-  ship[🚀 Yayınla<br/>Cloudflared tunnel] --> review[👤 Onay/Red]
-  review -->|onay| merged[✅ main'e merge]
-  review -->|red| dropped[🗑️ atıldı]
+![AI Geliştirici akışı](web/public/team/diagrams/01-agent-flow.png)
 
-  style plan fill:#6366f1,stroke:#312e81,color:#fff
-  style code fill:#d946ef,stroke:#86198f,color:#fff
-  style verify fill:#10b981,stroke:#065f46,color:#fff
-  style ship fill:#f59e0b,stroke:#92400e,color:#fff
-  style merged fill:#10b981,stroke:#065f46,color:#fff
-  style dropped fill:#ef4444,stroke:#7f1d1d,color:#fff
-```
+| Aşama | Görev |
+|---|---|
+| **Plan + Yaz** | Gemini 2.5 Pro. Kodu okur, planı çıkarır, tek bir tool-use döngüsünde edit eder. AGENTS.md project context'i (App Router server/client kuralları, repo pattern örnekleri) her task'a önden yüklenir. |
+| **Doğrula** | TSC build gate. Agent bittiğinde değişen dosyalarda `tsc --noEmit` koşar; hata varsa Gemini'ye hata listesini geri besler — max 3 düzeltme denemesi, geçemezse `FAILED` (main'e dokunmaz). |
+| **Önizle** | Cloudflared tunnel. İzole git worktree'de dev server açılır, geçici public URL üretilir; gerçek tarayıcıda davranışı görürsün. |
+| **Onay** | Onayla → main'e merge + canlı servis restart. Reddet → branch + worktree silinir. |
 
-| Aşama | Model | Görev |
-|---|---|---|
-| **Plan** | Gemini 2.5 Pro | Görevi triage eder, scope seçer, adımları çıkarır. Anlamsız ya da güvenlik riskli ise burada reddeder. |
-| **Yaz** | Gemini 2.5 Flash | Function-calling tool-use döngüsü: `list_dir`, `read_file`, `edit_file`, `write_file`. Komponent kataloğunu önden bilir, halüsinasyon yapmaz. |
-| **Doğrula** | tsc + RSC lint + e2e | TypeScript hatasız mı? Server/client karışmamış mı? Playwright spec'leri geçiyor mu? Yeşilden bir tanesi bile değilse `finish` reddedilir. |
-| **Yayınla** | Cloudflared tunnel | İzole branch'te commit + önizleme tüneli. Sen onayla → main'e merge. Reddet → dosyalar atılır. |
+> 67 e2e Playwright spec · %100 izole git worktree · agent commit author `CommerceOS-Agent-Project-Feature`
 
-> 23 yazılabilir scope · 67 e2e Playwright spec · %100 izole git worktree
->
-> Güvenlik: `prisma/`, `auth/`, `middleware/`, `.env` her zaman korumalı — agent yazamaz.
+### 🛠️ Mimari hikâyesi
+
+İlk versiyonda kendi custom tool-use loop'umuzu yazdık (~5700 satır TypeScript): scope yöneticisi, planner-agent ayrımı, function-calling tool seti, sticky context, signature gate, e2e gate. Başarı oranı **~%70**'di — basit task'larda çalışıyordu ama uzun refactor'larda halüsinasyon, micro-edit döngüsü, duplicate key yazma gibi sorunlar tekrarlıyordu.
+
+İkinci versiyonda olgun bir tool-use motorunu **Gemini 2.5 Pro** ile birleştirdik. Custom altyapımızın iskeletini (worktree, preview, review, merge, audit, commit policy) koruduk; "kod yazma" beynini bu motorla Pro modeline devrettik. Sonuç — başarı oranı belirgin yükseldi, halüsinasyon dropladı, kod hâlâ **Gemini servisi** ile yazılıyor, sadece çok daha kararlı bir döngüyle.
 
 ---
 
@@ -83,27 +71,7 @@ Otopilot her açıldığında **7 görev paralel** koşar. Bütçe limiti ve gü
 
 ![Otopilot panel](https://commerceos.cloud/team/shot-autopilot-dark.jpg)
 
-```mermaid
-flowchart TD
-  trigger((🔔 Event<br/>tetik)) --> review[💬 Yorum<br/>cevabı]
-  trigger --> invoice[🧾 E-fatura<br/>otomatik kes]
-  trigger --> stock[📦 Stok<br/>tedarikçi maili]
-  trigger --> bank[🏦 Havale<br/>eşleştir]
-  trigger --> segment[👥 Müşteri<br/>segment]
-  trigger --> price[🏷️ Fiyat<br/>önerisi]
-  trigger --> anomaly[⚠️ Anomali<br/>tespit]
-
-  review --> log[(📋 Audit log)]
-  invoice --> log
-  stock --> log
-  bank --> log
-  segment --> log
-  price --> log
-  anomaly --> log
-
-  style trigger fill:#d946ef,stroke:#86198f,color:#fff
-  style log fill:#1f2937,stroke:#374151,color:#9ca3af
-```
+![Otopilot 7 paralel iş](web/public/team/diagrams/02-autopilot-fanout.png)
 
 | # | Görev | Tetik | AI Aksiyon | Örnek çıktı |
 |---|---|---|---|---|
@@ -117,22 +85,7 @@ flowchart TD
 
 ### Otopilot iç akış
 
-```mermaid
-flowchart LR
-  event[Olay<br/>yorum/sipariş/stok] --> ai[Gemini 2.5<br/>güven skoru]
-  ai -->|eşik üstü| auto[Otomatik aksiyon]
-  ai -->|eşik altı| review[Admin onayı bekler]
-  auto --> exec[DB · GİB · SMTP]
-  review -->|✅ onay| exec
-  review -->|❌ red| skip[İptal]
-  exec --> log[(Audit log<br/>geri alınabilir)]
-
-  style event fill:#d946ef,stroke:#86198f,color:#fff
-  style ai fill:#6366f1,stroke:#312e81,color:#fff
-  style auto fill:#10b981,stroke:#065f46,color:#fff
-  style review fill:#f59e0b,stroke:#92400e,color:#fff
-  style exec fill:#06b6d4,stroke:#0e7490,color:#fff
-```
+![Otopilot karar akışı](web/public/team/diagrams/03-autopilot-inner.png)
 
 ---
 
@@ -163,116 +116,27 @@ Sayfanın istediğin yerinde AI tek tık uzaklıkta. Toplam **11 ayrı AI özell
 
 Asistan PostgreSQL'e **read-only kullanıcı** ile doğrudan SQL atar — `Order`, `Customer`, `Product`, `Inventory`, `Invoice`, `Review`, `BankTransaction`, `Refund` tablolarına erişir. Türkçe cevap + **grafik render** eder.
 
-```mermaid
-sequenceDiagram
-  autonumber
-  participant U as 👤 Yönetici
-  participant Web as Next.js
-  participant AI as FastAPI<br/>(Gemini 2.5)
-  participant DB as Postgres<br/>(read-only user)
-
-  U->>Web: "Son 7 gün en çok satan 3 ürün?"
-  Web->>AI: POST /chat { query, schema_context }
-  AI->>AI: 🧠 SQL üret + güvenlik kontrolü<br/>(yalnız SELECT, kullanıcı = read-only)
-  AI->>DB: SELECT name, SUM(quantity), SUM(total) ...
-  DB-->>AI: 3 satır
-  AI->>AI: 📊 Sonucu Türkçe yorumla + chart spec üret
-  AI-->>Web: { text, sql, chart: { type, data } }
-  Web-->>U: 💬 Türkçe cevap + grafik kart
-```
+![Veritabanıyla Türkçe konuş akışı](web/public/team/diagrams/04-db-chat-sequence.png)
 
 ### 🧪 Demo sorgu #1 — Top ürünler (bar chart)
 
-> 💬 **Kullanıcı:** "Bu hafta en çok satan 3 ürünü ciroyla beraber söyler misin?"
+Aşağıdaki 3 ekran görüntüsü, **commerceos.cloud/admin/ai** üzerinde canlı çalıştırılmış sorguların kayıtlarıdır — kullanıcının yazdığı, AI'ın tool çağrıları (`query_database`, `render_chart`), tam Türkçe yanıt metni ve grafik tek karede.
 
-<details>
-<summary>📜 AI'ın ürettiği SQL (oku → kapat)</summary>
-
-```sql
-SELECT p.name, SUM(oi.quantity) AS qty, SUM(oi.total) AS revenue
-FROM "OrderItem" oi
-JOIN "Product"   p ON p.id = oi."productId"
-JOIN "Order"     o ON o.id = oi."orderId"
-WHERE o."createdAt" >= NOW() - INTERVAL '7 days'
-  AND o.status NOT IN ('CANCELLED', 'REFUNDED')
-GROUP BY p.name
-ORDER BY revenue DESC
-LIMIT 3;
-```
-
-</details>
-
-> 💬 **AI:** Bu hafta en çok satanlar — toplam ciro **₺45.155** _(geçen haftadan %18 yüksek)_:
-
-```mermaid
-xychart-beta
-  title "Top 3 ürün — son 7 günlük ciro (₺)"
-  x-axis ["Pamuk Basic Tişört", "Eşofman Altı Gri", "Spor Sweatshirt"]
-  y-axis "Ciro (₺)" 0 --> 20000
-  bar [11703, 18962, 14490]
-```
-
-| # | Ürün | Adet | Ciro |
-|---|---|---:|---:|
-| 1 | Pamuk Basic Tişört | 47 | ₺11.703 |
-| 2 | Eşofman Altı Gri | 38 | ₺18.962 |
-| 3 | Spor Sweatshirt | 29 | ₺14.490 |
+![Top ürünler — canlı admin paneli kaydı](web/public/team/diagrams/bar-top-products.png)
 
 ---
 
-### 🧪 Demo sorgu #2 — 5 aylık ciro trendi (line chart)
+### 🧪 Demo sorgu #2 — Aylık ciro trendi (line chart)
 
-> 💬 **Kullanıcı:** "Son 5 ayın ciro trendini grafikle göster."
-
-```mermaid
-xychart-beta
-  title "Aylık ciro trendi (₺ bin)"
-  x-axis ["Ara 2025", "Oca 2026", "Şub 2026", "Mar 2026", "Nis 2026", "May 2026"]
-  y-axis "Ciro (₺ bin)" 0 --> 250
-  line [82, 124, 156, 178, 215, 195]
-  bar  [82, 124, 156, 178, 215, 195]
-```
-
-> 💬 **AI:** Ciro her ay büyüdü — Aralık ₺82bin → Nisan ₺215bin (**+162%**). Mayıs daha sürüyor (₺195bin / 13 gün), beklenen toplam **₺240bin**. En büyük büyüme Mart→Nisan'da (%21).
+![Aylık ciro trendi — canlı admin paneli kaydı](web/public/team/diagrams/line-revenue-trend.png)
 
 ---
 
-### 🧪 Demo sorgu #3 — Sipariş durum dağılımı (pie chart)
+### 🧪 Demo sorgu #3 — Sipariş durum dağılımı (bar chart)
 
-> 💬 **Kullanıcı:** "Mevcut siparişlerin durum dağılımı nasıl?"
-
-```mermaid
-pie showData
-  title Sipariş status dağılımı (toplam 310)
-  "DELIVERED" : 125
-  "SHIPPED"   : 64
-  "PENDING"   : 54
-  "CONFIRMED" : 38
-  "REFUNDED"  : 17
-  "CANCELLED" : 12
-```
-
-> 💬 **AI:** Toplam **310 sipariş**. Sağlıklı dağılım — DELIVERED %40, SHIPPED %21, aktif (PENDING + CONFIRMED) %30. İade oranı **%5,5** (normal aralıkta), iptal **%3,9**. Bahar koleksiyonu beden tablosu güncellemesi sonrası iade trendine bakman önerilir.
+![Sipariş durum dağılımı — canlı admin paneli kaydı](web/public/team/diagrams/bar-order-status.png)
 
 ---
-
-### 🧪 Demo sorgu #4 — Stok kontrol + aksiyon önerisi
-
-> 💬 **Kullanıcı:** "Eşofman altının stoğu nasıl, sipariş açmalı mıyım?"
-
-<details>
-<summary>📜 AI'ın ürettiği SQL</summary>
-
-```sql
-SELECT i.quantity, p.name, p.sku
-FROM "Inventory" i
-JOIN "Product" p ON p.id = i."productId"
-WHERE p.sku = 'PT-ESOFMAN-ALTI-GRI-193';
-```
-
-</details>
-
-> 💬 **AI:** `PT-ESOFMAN-ALTI-GRI-193`: **3 adet** stok kaldı 🔴 (kritik). Tedarikçinde 5 iş günü teslim süresi var. Otopilot'tan onaylarsan AI tedarikçiye sipariş maili yazabilir — son 30 günde 38 adet satıldı, **50 adet** sipariş önerisi.
 
 ### Güvenlik kuralları
 
@@ -461,8 +325,8 @@ WHERE p.sku = 'PT-ESOFMAN-ALTI-GRI-193';
 - asyncpg
 
 **Yapay zeka**
-- Gemini 2.5 Pro (planner)
-- Gemini 2.5 Flash (agent loop)
+- Gemini 2.5 Pro (tüm AI özellikleri + agent loop)
+- Tool-use motoru (agent loop · worktree + TSC gate)
 
 </td>
 <td valign="top">
@@ -487,53 +351,7 @@ WHERE p.sku = 'PT-ESOFMAN-ALTI-GRI-193';
 
 ## 🏗️ Mimari
 
-```mermaid
-flowchart TB
-  subgraph web["🌐 web/  (Next.js 15)"]
-    shop["/shop  Pamuk markası<br/>Müşteri akışı, sepet"]
-    admin["/admin  Yönetici paneli<br/>20+ modül"]
-    agentpage["/admin/agent  AI Geliştirici"]
-    sa[["Server Components<br/>+ Server Actions"]]
-    shop --- sa
-    admin --- sa
-    agentpage --- sa
-  end
-
-  subgraph data["📊 Veri katmanı"]
-    pg[(PostgreSQL 16<br/>public schema)]
-    pgro[(read-only user)]
-    redis[(Redis 7<br/>cache)]
-    pg --- pgro
-  end
-
-  subgraph ai["🧠 AI servisi (FastAPI :8000)"]
-    chat["/chat — DB ile konuş"]
-    insights["/insights — satış analizi"]
-    kvkk["/kvkk — gizlilik metni"]
-    gemini["Gemini 2.5 Pro+Flash"]
-  end
-
-  subgraph agent["🤖 AI Geliştirici worker"]
-    runner["runner.ts<br/>tool-use loop"]
-    worktree["git worktree<br/>izole branch"]
-    gates["tsc + RSC + e2e<br/>gate"]
-    tunnel["Cloudflared tunnel<br/>önizleme URL"]
-    runner --- worktree --- gates --- tunnel
-  end
-
-  sa <-->|Prisma| pg
-  sa -->|API| ai
-  pgro -->|SELECT| chat
-  ai --> gemini
-  ai <--> redis
-  agentpage <--> agent
-  agent -->|commit| pg
-
-  style web fill:#1f2937,stroke:#374151,color:#fff
-  style data fill:#0c4a6e,stroke:#0369a1,color:#fff
-  style ai fill:#831843,stroke:#be185d,color:#fff
-  style agent fill:#581c87,stroke:#7c3aed,color:#fff
-```
+![CommerceOS mimari](web/public/team/diagrams/05-architecture.png)
 
 **Üç ayrı süreç:**
 
