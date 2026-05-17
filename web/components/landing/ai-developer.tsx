@@ -169,7 +169,21 @@ const FACTS = [
 
 // ───────────── Component ─────────────
 
-export function AiDeveloperSection() {
+export type RealAgentTask = {
+  title: string;
+  scope: string;
+  iter: number;
+  files: number;
+  duration: string;
+};
+
+export function AiDeveloperSection({
+  realTasks,
+}: {
+  /** Server tarafından geçirilen gerçek MERGED task'lar; verilmezse mock. */
+  realTasks?: RealAgentTask[];
+}) {
+  const TASKS = realTasks && realTasks.length > 0 ? realTasks : EXAMPLE_TASKS;
   return (
     <section
       id="ai-developer"
@@ -265,7 +279,7 @@ export function AiDeveloperSection() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {EXAMPLE_TASKS.map((t) => (
+          {TASKS.map((t) => (
             <TaskCard key={t.title} task={t} />
           ))}
         </div>
@@ -454,7 +468,7 @@ function CheckRow({ text }: { text: string }) {
   );
 }
 
-function TaskCard({ task }: { task: (typeof EXAMPLE_TASKS)[number] }) {
+function TaskCard({ task }: { task: RealAgentTask }) {
   return (
     <div className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 transition hover:border-white/15 hover:bg-white/[0.04]">
       <div

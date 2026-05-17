@@ -9,6 +9,7 @@ import {
   SmoothScroll,
 } from "@/components/landing/landing-effects";
 import { AiDeveloperSection } from "@/components/landing/ai-developer";
+import { getRecentMergedAgentTasks } from "@/lib/queries/agent-recent";
 import { HeroDemo } from "@/components/landing/HeroDemo";
 import { DarkLock } from "@/components/landing/dark-lock";
 import { LandingFeatures } from "@/components/landing/landing-features";
@@ -41,7 +42,8 @@ export const metadata = {
     "Otopilot 7 farklı işi yönetir: yorum cevabı, e-fatura, stok sipariş, havale eşleştirme, fiyat, segmentasyon, anomali. Gemini AI + Türkiye'ye özel (KVKK, GİB, PayTR).",
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const realTasks = await getRecentMergedAgentTasks(4);
   return (
     <>
       <style>{`
@@ -277,7 +279,7 @@ export default function HomePage() {
         </section>
 
         {/* ─── AI Geliştirici — FLAGSHIP (otopilot'tan önce) ─── */}
-        <AiDeveloperSection />
+        <AiDeveloperSection realTasks={realTasks} />
 
         <LandingFeatures />
 

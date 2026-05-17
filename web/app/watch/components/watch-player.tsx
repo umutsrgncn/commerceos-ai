@@ -134,11 +134,11 @@ export function WatchPlayer() {
         Tarayıcınız videoyu desteklemiyor.
       </video>
 
-      {/* Dark overlay when not playing */}
+      {/* Dark overlay sadece paused durumda — playing iken (fullscreen dahil) tamamen şeffaf */}
       <div
         className={cn(
-          "pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-black/50 via-black/30 to-black/70 transition-opacity",
-          playing && !hovering ? "opacity-0" : "opacity-100",
+          "pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-black/50 via-black/30 to-black/70 transition-opacity duration-300",
+          playing ? "opacity-0" : "opacity-100",
         )}
       />
 

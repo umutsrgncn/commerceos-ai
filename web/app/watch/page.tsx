@@ -8,6 +8,7 @@ import {
   SmoothScroll,
 } from "@/components/landing/landing-effects";
 import { AiDeveloperSection } from "@/components/landing/ai-developer";
+import { getRecentMergedAgentTasks } from "@/lib/queries/agent-recent";
 import { HeroDemo } from "@/components/landing/HeroDemo";
 import { DarkLock } from "@/components/landing/dark-lock";
 import { LandingFeatures } from "@/components/landing/landing-features";
@@ -42,7 +43,8 @@ export const metadata = {
     "AI yöneticili e-ticaret panelinin kısa tanıtım videosu ve flagship özellikleri.",
 };
 
-export default function WatchPage() {
+export default async function WatchPage() {
+  const realTasks = await getRecentMergedAgentTasks(4);
   return (
     <>
       <style>{`
@@ -115,17 +117,26 @@ export default function WatchPage() {
               <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
             </Link>
 
-            {/* h1 yerine: tanıtım videosu */}
+            <h1 className="mt-7 text-balance text-5xl font-semibold leading-[1.04] tracking-tight sm:text-7xl">
+              E-ticaretin{" "}
+              <span className="bg-gradient-to-br from-indigo-300 via-fuchsia-300 to-emerald-300 bg-clip-text text-transparent">
+                AI ile yönetildiği
+              </span>
+              <br />
+              admin paneli
+            </h1>
+
+            <TextGenerateEffect
+              words="Otopilot 7 farklı işi paralel yönetir — yorum cevabı, e-fatura, stok, havale, fiyat, segment, anomali. Sen sadece onaylarsın."
+              className="mx-auto mt-6 max-w-2xl text-pretty text-base font-normal !text-white/70 sm:text-lg"
+              duration={0.4}
+            />
+
+            {/* Tanıtım videosu — h1'in altında */}
             <div className="relative mx-auto mt-10 max-w-4xl">
               <div className="absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-indigo-500/30 via-fuchsia-500/20 to-emerald-500/20 opacity-60 blur-2xl" />
               <WatchPlayer />
             </div>
-
-            <TextGenerateEffect
-              words="Otopilot 7 farklı işi paralel yönetir — yorum cevabı, e-fatura, stok, havale, fiyat, segment, anomali. Sen sadece onaylarsın."
-              className="mx-auto mt-10 max-w-2xl text-pretty text-base font-normal !text-white/70 sm:text-lg"
-              duration={0.4}
-            />
 
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <Link href="/login">
@@ -260,7 +271,7 @@ export default function WatchPage() {
           </div>
         </section>
 
-        <AiDeveloperSection />
+        <AiDeveloperSection realTasks={realTasks} />
 
         <LandingFeatures />
 
