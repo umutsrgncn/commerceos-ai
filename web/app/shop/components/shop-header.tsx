@@ -39,14 +39,7 @@ export function ShopHeader() {
           : "bg-transparent",
       )}
     >
-      {/* Üst announcement bandı */}
-      <div className="border-b border-[color:var(--color-border)]/70 bg-[color:var(--color-accent)]/[0.06] text-[10px] sm:text-xs">
-        <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 px-6 py-2 text-[color:var(--color-accent)]">
-          <span className="font-medium">
-            Bahar koleksiyonu yayında · 750₺ üzeri ücretsiz kargo
-          </span>
-        </div>
-      </div>
+
 
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 sm:py-5">
         {/* Sol — menü toggle (mobile) + logo */}
