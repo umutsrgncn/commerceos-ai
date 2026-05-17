@@ -118,23 +118,25 @@ Asistan PostgreSQL'e **read-only kullanıcı** ile doğrudan SQL atar — `Order
 
 ![Veritabanıyla Türkçe konuş akışı](web/public/team/diagrams/04-db-chat-sequence.png)
 
-### 🧪 Demo sorgu #1 — Top ürünler (bar chart)
+Aşağıdaki ekran görüntüleri **commerceos.cloud/admin/ai** üzerinde canlı çalıştırılmış sorguların kayıtlarıdır — kullanıcının yazdığı soru, AI'ın tool çağrıları (`query_database`, `render_chart`), tam Türkçe yanıt metni ve grafik tek karede.
 
-Aşağıdaki 3 ekran görüntüsü, **commerceos.cloud/admin/ai** üzerinde canlı çalıştırılmış sorguların kayıtlarıdır — kullanıcının yazdığı, AI'ın tool çağrıları (`query_database`, `render_chart`), tam Türkçe yanıt metni ve grafik tek karede.
+### 🧪 Demo sorgu #1 — Bu hafta en çok satan ürünler (bar chart)
 
-![Top ürünler — canlı admin paneli kaydı](web/public/team/diagrams/bar-top-products.png)
+> _"Bu hafta en çok satan 3 ürünü grafik olarak gelirlerini göster"_
+
+AI Postgres'e `OrderItem ⋈ Product ⋈ Order` SQL'i atar, son 7 günlük satışları ciroya göre sıralar, sonucu Türkçe özetler ve bar chart üretir.
+
+![Bu hafta en çok satan ürünler — canlı admin paneli kaydı](web/public/team/diagrams/demo-top-products.png)
 
 ---
 
 ### 🧪 Demo sorgu #2 — Aylık ciro trendi (line chart)
 
-![Aylık ciro trendi — canlı admin paneli kaydı](web/public/team/diagrams/line-revenue-trend.png)
+> _"Son 5 ayın ciro trendini ver"_
 
----
+AI ay bazında ciro toplamı çıkarır, line chart ile zaman serisini renderlar, Türkçe yorumla zirve ayını işaret eder.
 
-### 🧪 Demo sorgu #3 — Sipariş durum dağılımı (bar chart)
-
-![Sipariş durum dağılımı — canlı admin paneli kaydı](web/public/team/diagrams/bar-order-status.png)
+![Son 5 ayın ciro trendi — canlı admin paneli kaydı](web/public/team/diagrams/demo-revenue-trend.png)
 
 ---
 
