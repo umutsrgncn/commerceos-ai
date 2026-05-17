@@ -147,6 +147,25 @@ export async function runTaskWithAgent(taskId: string): Promise<void> {
       });
     }
 
+    // ─── Commit gate — yasak dosyalar değişmiş mi? ───
+    // Agent panik halinde `pnpm add` ile package.json/lockfile'ı bozabiliyor;
+    // ya da `prisma/`, auth, middleware, env gibi dokunulmaz alanlara dokunur.
+    // Bu durumda commit'i red et — main'e gitmesin.
+    const finalChanged = await getChangedFiles(wt);
+    const forbidden = filterForbiddenChanges(finalChanged);
+    if (forbidden.length > 0) {
+      await emitAgentEvent({
+        taskId,
+        type: "ERROR",
+        summary:
+          "Agent dokunulmaz dosyalara yazmış — task reddedildi:\n" +
+          forbidden.slice(0, 8).join("\n"),
+      });
+      throw new Error(
+        `Scope ihlali — agent ${forbidden.length} dokunulmaz dosyaya yazmış (package.json/lockfile/prisma/auth/.env). main'e merge edilmedi.`,
+      );
+    }
+
     await emitAgentEvent({
       taskId,
       type: "STATUS",
@@ -462,6 +481,39 @@ async function getChangedFiles(wt: Worktree): Promise<string[]> {
 }
 
 /**
+ * Agent'ın dokunması yasak dosyalar (commit gate'te red edilir).
+ * `package.json`/`lockfile` → bağımlılık ekleme paniği
+ * `prisma/`              → schema/migration agent kararı değil
+ * `auth.ts` / `middleware.ts` / `lib/auth/` → güvenlik
+ * `.env*`               → secret
+ * `next.config.ts`, `tsconfig.json`, build configleri → çerçeveye dokunma
+ */
+function filterForbiddenChanges(paths: string[]): string[] {
+  const patterns: RegExp[] = [
+    /^web\/package\.json$/,
+    /^web\/pnpm-lock\.yaml$/,
+    /^pnpm-lock\.yaml$/,
+    /^pnpm-workspace\.yaml$/,
+    /^web\/tsconfig\.json$/,
+    /^web\/next\.config\.ts$/,
+    /^web\/playwright\.config\.ts$/,
+    /^web\/vitest\.config\.ts$/,
+    /^web\/postcss\.config\.mjs$/,
+    /^web\/prisma\//,
+    /^web\/auth\.ts$/,
+    /^web\/auth\.config\.ts$/,
+    /^web\/middleware\.ts$/,
+    /^web\/lib\/auth\//,
+    /^(web\/)?\.env(\.|$)/,
+    /^docker-compose\.yml$/,
+    /^Dockerfile$/,
+    /^\.github\//,
+    /^AGENTS\.md$/,
+  ];
+  return paths.filter((p) => patterns.some((re) => re.test(p)));
+}
+
+/**
  * Worktree'nin web/ dizininde `tsc --noEmit` çalıştır, sadece değişen
  * dosyalara ait hataları döndür. Repo'da pre-existing TSC hataları var
  * (next.config.ts `ignoreBuildErrors: true`) — onları gürültü sayma.
@@ -513,13 +565,16 @@ function buildFixPrompt(tscErrors: string[], changedFiles: string[]): string {
   const errBlock = tscErrors.slice(0, 30).join("\n");
   const fileList = changedFiles.slice(0, 10).join(", ");
   return [
-    "Önceki düzenleme TypeScript hatalarıyla bitti. Aşağıdaki hataları DÜZELT:",
+    "Önceki düzenleme, SENİN dokunduğun dosyalarda TypeScript hatalarına neden oldu. Aşağıdaki hataları DÜZELT:",
     "",
     errBlock,
     "",
-    `Etkilenen dosyalar: ${fileList}`,
+    `Etkilenen dosyalar (senin diff'in): ${fileList}`,
     "",
-    "Kurallar:",
+    "KESİN KURALLAR:",
+    "- Bu hatalar SADECE senin dokunduğun dosyalarda. Repo'nun başka yerinde pre-existing TSC hataları olabilir — onlar SENİN İŞİN DEĞİL. Görmezden gel.",
+    "- ❌ `pnpm add`, `pnpm install`, `pnpm update`, `npm i` — ASLA çalıştırma. Eksik paket varsa bu ortam quirk'idir; bağımlılık ekleyerek 'düzeltme'.",
+    "- ❌ `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, `next.config.ts`, `prisma/`, `.env*`, `middleware.ts`, `auth.ts` — bunlara DOKUNMA. Commit gate seni red eder, task FAILED'a düşer.",
     "- AGENTS.md'deki Next.js App Router server/client pattern'ine uy.",
     "- `page.tsx`'lerin async + metadata export'u varsa onlara `\"use client\"` EKLEME — interaktif kısım için ayrı bir client component dosyası kullan.",
     "- Yeni eklenmiş kullanılmayan import varsa kaldır.",

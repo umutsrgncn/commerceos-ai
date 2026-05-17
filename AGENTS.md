@@ -99,12 +99,35 @@ Before declaring a task done, run through this mentally:
 
 ---
 
+## Dokunulmaz dosyalar — agent yazamaz
+
+The following are **off-limits** for any task. They define environment, dependencies, security, or schema, and any write here will be rejected at commit gate (task → FAILED):
+
+- `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`
+- `tsconfig.json`, `next.config.ts`, `playwright.config.ts`, `vitest.config.ts`, `postcss.config.mjs`
+- Anything under `prisma/` (schema, migrations)
+- Anything under `web/auth.ts`, `web/auth.config.ts`, `middleware.ts`, `lib/auth/`
+- Any `.env*` file
+- `docker-compose.yml`, `Dockerfile`, `.github/`, `AGENTS.md`
+
+If a task **looks like** it needs a new dependency, a Prisma model change, or auth/middleware tweak: **REFUSE the task and explain why** — humans need to decide that. Do not "fix" build errors by installing packages.
+
+## When TSC reports errors you didn't cause
+
+The repo carries ~20 pre-existing TSC errors (mostly `typedRoutes` noise on `<Link href={string}>` — masked by `typescript.ignoreBuildErrors: true` in `next.config.ts`). These existed before your task and are not yours to fix.
+
+The TSC build gate that runs after your task **filters to only the files you touched**. If you see errors flagged on files in your diff, those are yours — fix them. If you see errors on other files, ignore them.
+
+**Never** run `pnpm add`, `pnpm install`, `pnpm update`, or modify lockfiles to "fix" TSC errors. Missing modules are an environment quirk; do not commit a dependency change as a workaround.
+
 ## Anti-patterns observed in past failed tasks
 
 - ❌ Adding `"use client"` to an `async` `page.tsx` to "make a button work". → Build break. Use a sibling client component instead.
 - ❌ Importing `{ Button } from "@/components/ui/button"` and never rendering it. → Unused import + the feature isn't actually built.
 - ❌ Six `write` calls to the same file in a row without reading between them. → You are guessing; stop, re-read the file in full, then write once.
 - ❌ Declaring "tamamlandı" while TSC has errors on the file you just touched. → It isn't done. Fix the errors in the same session.
+- ❌ Seeing pre-existing TSC errors and running `pnpm add -D typescript` / `pnpm install` / modifying `pnpm-lock.yaml`. → That's not a fix, that's a panic move. The errors aren't yours; the task is done.
+- ❌ Modifying `package.json` to make build work. → If your task didn't require a new dep, you don't need one. Stop, re-read your diff, finish the actual feature.
 
 ---
 
