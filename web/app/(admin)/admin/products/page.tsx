@@ -8,6 +8,7 @@ import { listProducts } from "@/lib/queries/products";
 import { formatMoney, formatRelativeTime } from "@/lib/format";
 import type { ProductStatusValue } from "@/lib/schemas/products";
 
+import { CsvDownloadButton } from "./components/csv-download-button";
 import { ProductsFilters } from "./components/products-filters";
 import { StatusBadge } from "./components/status-badge";
 
@@ -51,12 +52,15 @@ export default async function ProductsPage({
             Kataloğun tek noktada — yeni ekle, düzenle, AI ile açıklama yazdır.
           </p>
         </div>
-        <Link href="/admin/products/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            Yeni ürün
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <CsvDownloadButton q={params.q} status={status} />
+          <Link href="/admin/products/new">
+            <Button>
+              <Plus className="h-4 w-4" />
+              Yeni ürün
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <ProductsFilters />

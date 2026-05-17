@@ -78,7 +78,7 @@ export function SlowMovingPanel({ items }: { items: SlowMovingItem[] }) {
                         href={`/admin/products/${item.id}`}
                         className="flex items-center gap-2 hover:underline"
                       >
-                        <ProductThumb src={item.image} alt={item.name} size={32} />
+                        <ProductThumb images={item.image} alt={item.name} className="h-8 w-8" />
                         <div className="min-w-0">
                           <div className="truncate font-medium">{item.name}</div>
                           <div className="font-mono text-[10px] text-[color:var(--color-muted)]">

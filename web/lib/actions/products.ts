@@ -7,10 +7,12 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireRole } from "@/lib/auth/permissions";
 import { recordActivity } from "@/lib/activity";
+import { listProducts } from "@/lib/queries/products";
 import {
   productCreateSchema,
   productUpdateSchema,
   slugify,
+  type ProductStatusValue,
 } from "@/lib/schemas/products";
 
 export type ProductActionState = {
@@ -179,4 +181,33 @@ export async function deleteProductAction(formData: FormData) {
   });
   revalidatePath("/admin/products");
   redirect("/admin/products");
+}
+
+export async function exportProductsToCsv(params: { q?: string; status?: ProductStatusValue }) {
+  await requireSession();
+  const { items } = await listProducts({
+    q: params.q,
+    status: params.status,
+    page: 1,
+    pageSize: 9999, // Tüm ürünleri al
+  });
+
+  const header = "ID,Name,SKU,Status,Price,Stock,Category,CreatedAt,UpdatedAt\\n";
+  const csv = items
+    .map((p) =>
+      [
+        p.id,
+        `"${p.name}"`,
+        p.sku,
+        p.status,
+        p.price / 100, // kuruş to TL
+        p.inventory?.quantity ?? 0,
+        `"${p.category?.name ?? ""}"`,
+        p.createdAt.toISOString(),
+        p.updatedAt.toISOString(),
+      ].join(",")
+    )
+    .join("\\n");
+
+  return header + csv;
 }
