@@ -10,7 +10,8 @@
  *
  * Worker bu fonksiyonu `runTaskWithAgent(taskId)` olarak çağırır.
  */
-import { spawn } from "node:child_process";
+import { spawn, execFile as execFileCb } from "node:child_process";
+import { promisify } from "node:util";
 
 import { db } from "@/lib/db";
 import { emitAgentEvent } from "./events";
@@ -22,9 +23,13 @@ import {
   type Worktree,
 } from "./worktree";
 
+const execFile = promisify(execFileCb);
+
 const AGENT_CLI_BIN = process.env.AGENT_CLI_BIN || "/root/.opencode/bin/opencode";
 const AGENT_MODEL = process.env.AGENT_MODEL || "google/gemini-2.5-flash";
 const AGENT_TIMEOUT_MS = Number(process.env.AGENT_TIMEOUT_MS || 30 * 60_000);
+/** TSC gate'i fail ederse opencode'a kaç defa düzelt çağrısı atılacak. */
+const MAX_FIX_ATTEMPTS = Number(process.env.AGENT_MAX_FIX_ATTEMPTS || 2);
 
 class CancelledError extends Error {
   constructor() {
@@ -88,6 +93,53 @@ export async function runTaskWithAgent(taskId: string): Promise<void> {
       await db.agentTask.update({
         where: { id: taskId },
         data: { tokensUsed: { increment: result.totalTokens } },
+      });
+    }
+
+    // ─── Build gate — TSC errors on changed files trigger fix loop ───
+    let fixTokens = 0;
+    for (let attempt = 1; attempt <= MAX_FIX_ATTEMPTS + 1; attempt++) {
+      if (await isCancelled(taskId)) throw new CancelledError();
+      const changed = await getChangedFiles(wt);
+      if (changed.length === 0) break; // hiç değişiklik yok, build check'e gerek yok
+      const tscErrors = await runTscOnChangedFiles(wt, changed);
+      if (tscErrors.length === 0) {
+        if (attempt > 1) {
+          await emitAgentEvent({
+            taskId,
+            type: "STATUS",
+            summary: `Hatalar düzeltildi (deneme ${attempt - 1}/${MAX_FIX_ATTEMPTS})`,
+          });
+        }
+        break;
+      }
+      if (attempt > MAX_FIX_ATTEMPTS) {
+        // Limit aşıldı — kullanıcıya sebebi göster, FAILED.
+        const errSummary = tscErrors.slice(0, 6).join("\n");
+        await emitAgentEvent({
+          taskId,
+          type: "ERROR",
+          summary:
+            `TSC hataları düzeltilemedi (${MAX_FIX_ATTEMPTS} deneme tükendi):\n` +
+            errSummary.slice(0, 700),
+        });
+        throw new Error(
+          `Kod doğrulaması başarısız — ${tscErrors.length} TSC hatası, ${MAX_FIX_ATTEMPTS} düzeltme denemesinden sonra hâlâ var.`,
+        );
+      }
+      await emitAgentEvent({
+        taskId,
+        type: "STATUS",
+        summary: `Kod doğrulanıyor — ${tscErrors.length} hata bulundu, düzeltiliyor (deneme ${attempt}/${MAX_FIX_ATTEMPTS})`,
+      });
+      const fixPrompt = buildFixPrompt(tscErrors, changed);
+      const fixResult = await runAgentSubprocess(taskId, wt, fixPrompt);
+      fixTokens += fixResult.totalTokens;
+    }
+    if (fixTokens > 0) {
+      await db.agentTask.update({
+        where: { id: taskId },
+        data: { tokensUsed: { increment: fixTokens } },
       });
     }
 
@@ -379,4 +431,95 @@ async function handleEvent(
     default:
       return;
   }
+}
+
+// ─── Build gate helpers ────────────────────────────────────────────────────
+
+/**
+ * Worktree'de agent'ın değiştirdiği dosyaları döndür (commit öncesi).
+ * Kapsam: `web/` altındaki ts/tsx/js/jsx dosyaları — TSC bunları check eder.
+ */
+async function getChangedFiles(wt: Worktree): Promise<string[]> {
+  try {
+    const { stdout } = await execFile(
+      "git",
+      ["status", "--porcelain", "--", "web/"],
+      { cwd: wt.path, maxBuffer: 1024 * 1024 * 4 },
+    );
+    return stdout
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => l.replace(/^[ AMDRCU?!]{1,2}\s+/, ""))
+      .filter((f) => /\.(tsx?|jsx?)$/.test(f));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Worktree'nin web/ dizininde `tsc --noEmit` çalıştır, sadece değişen
+ * dosyalara ait hataları döndür. Repo'da pre-existing TSC hataları var
+ * (next.config.ts `ignoreBuildErrors: true`) — onları gürültü sayma.
+ */
+async function runTscOnChangedFiles(
+  wt: Worktree,
+  changedFiles: string[],
+): Promise<string[]> {
+  // Path'ler `web/` ile başlıyor; tsc cwd'si `web/` olduğu için prefix at.
+  const rel = new Set(
+    changedFiles
+      .filter((f) => f.startsWith("web/"))
+      .map((f) => f.slice("web/".length)),
+  );
+  if (rel.size === 0) return [];
+
+  let stdout = "";
+  try {
+    const res = await execFile(
+      "pnpm",
+      ["exec", "tsc", "--noEmit", "--project", "tsconfig.json"],
+      {
+        cwd: `${wt.path}/web`,
+        maxBuffer: 1024 * 1024 * 16,
+      },
+    );
+    stdout = res.stdout;
+  } catch (err) {
+    // tsc non-zero exit'le döner — output yine stdout'ta
+    const e = err as { stdout?: string };
+    stdout = e.stdout ?? "";
+  }
+  return stdout
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => /\.tsx?\(\d+,\d+\): error/i.test(l))
+    .filter((l) => {
+      const m = l.match(/^([^(]+)\(/);
+      if (!m) return false;
+      return rel.has(m[1]);
+    });
+}
+
+/**
+ * Opencode'a "şu hataları düzelt" diye iletmek için yapılandırılmış prompt.
+ * AGENTS.md'deki ipucuları zaten yüklü — burada sadece somut hata listesi.
+ */
+function buildFixPrompt(tscErrors: string[], changedFiles: string[]): string {
+  const errBlock = tscErrors.slice(0, 30).join("\n");
+  const fileList = changedFiles.slice(0, 10).join(", ");
+  return [
+    "Önceki düzenleme TypeScript hatalarıyla bitti. Aşağıdaki hataları DÜZELT:",
+    "",
+    errBlock,
+    "",
+    `Etkilenen dosyalar: ${fileList}`,
+    "",
+    "Kurallar:",
+    "- AGENTS.md'deki Next.js App Router server/client pattern'ine uy.",
+    "- `page.tsx`'lerin async + metadata export'u varsa onlara `\"use client\"` EKLEME — interaktif kısım için ayrı bir client component dosyası kullan.",
+    "- Yeni eklenmiş kullanılmayan import varsa kaldır.",
+    "- Aynı dosyaya defalarca yazma; ÖNCE oku, sonra TEK düzgün yazma yap.",
+    "- TSC temizleninceye kadar düzelt.",
+  ].join("\n");
 }
