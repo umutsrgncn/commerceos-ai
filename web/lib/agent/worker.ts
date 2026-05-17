@@ -329,16 +329,55 @@ function sleep(ms: number) {
 }
 
 /**
- * Merge sonrası canlı web servisini restart — Next.js production server
- * /public statiklerini başlangıçta cache'liyor, restart olmadan yeni dosyalar
- * görünmüyor.
+ * Merge sonrası canlı deploy:
+ *  1. /opt/commerceos/web'de `pnpm build` (kaynaktan .next bundle üret)
+ *  2. systemctl restart commerceos-web (yeni bundle'ı yükle)
+ *
+ * Sadece systemctl restart yetmiyor — Next prod server `.next/`'i okur, kaynak
+ * .tsx değişikliği için build şart. Agent task'larında bunu unuttuğumuzda
+ * merge görünür ama canlıda eski kod kalıyordu.
  */
 async function restartWebService(taskId: string): Promise<void> {
   const { spawn } = await import("node:child_process");
+  const webDir = (process.env.AGENT_REPO_ROOT ?? "/opt/commerceos") + "/web";
+
+  // ── 1) pnpm build ──
   await emitAgentEvent({
     taskId,
     type: "NOTE",
-    summary: "Canlı servis restart ediliyor (commerceos-web)…",
+    summary: "Canlıya derleniyor (pnpm build)…",
+  });
+  const buildOk = await new Promise<boolean>((resolve) => {
+    const child = spawn("pnpm", ["build"], {
+      cwd: webDir,
+      stdio: "ignore",
+      env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
+    });
+    child.on("close", (code) => resolve(code === 0));
+    child.on("error", () => resolve(false));
+    // 4 dk üst sınır — Next build genelde 1-2 dk
+    setTimeout(() => {
+      try {
+        child.kill("SIGTERM");
+      } catch {}
+      resolve(false);
+    }, 4 * 60_000);
+  });
+  if (!buildOk) {
+    await emitAgentEvent({
+      taskId,
+      type: "ERROR",
+      summary:
+        "Canlı build başarısız — main'e merge edildi ama .next eski. Manuel müdahale gerek (pnpm build && systemctl restart commerceos-web).",
+    });
+    return;
+  }
+
+  // ── 2) systemctl restart ──
+  await emitAgentEvent({
+    taskId,
+    type: "NOTE",
+    summary: "Build tamam, web servisi yeniden başlatılıyor…",
   });
   await new Promise<void>((resolve) => {
     const child = spawn("systemctl", ["restart", "commerceos-web"], {
@@ -346,13 +385,12 @@ async function restartWebService(taskId: string): Promise<void> {
       detached: true,
     });
     child.on("close", () => resolve());
-    child.on("error", () => resolve()); // hata olsa bile worker akışı durmasın
-    // Detach + max 10sn bekle
-    setTimeout(() => resolve(), 10_000);
+    child.on("error", () => resolve());
+    setTimeout(() => resolve(), 15_000);
   });
   await emitAgentEvent({
     taskId,
     type: "NOTE",
-    summary: "Canlı servis restart komutu gönderildi.",
+    summary: "Canlı güncellendi.",
   });
 }
