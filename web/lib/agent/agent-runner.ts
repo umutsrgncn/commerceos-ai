@@ -25,11 +25,15 @@ import {
 
 const execFile = promisify(execFileCb);
 
-const AGENT_CLI_BIN = process.env.AGENT_CLI_BIN || "/root/.opencode/bin/opencode";
-const AGENT_MODEL = process.env.AGENT_MODEL || "google/gemini-2.5-flash";
+const AGENT_CLI_BIN = process.env.AGENT_CLI_BIN ?? "agent-cli";
+// Pro = uzun dosya refactor + dedup + multi-file dependency takibi için daha
+// güvenilir. Flash hızlı ama uzun task'larda koherent kalmıyor (test edildi:
+// 363k token harcayıp 20 duplicate key bıraktı). Maliyeti yüksek ama
+// hackathon demo'su kalite ister.
+const AGENT_MODEL = process.env.AGENT_MODEL || "google/gemini-2.5-pro";
 const AGENT_TIMEOUT_MS = Number(process.env.AGENT_TIMEOUT_MS || 30 * 60_000);
-/** TSC gate'i fail ederse opencode'a kaç defa düzelt çağrısı atılacak. */
-const MAX_FIX_ATTEMPTS = Number(process.env.AGENT_MAX_FIX_ATTEMPTS || 2);
+/** TSC gate'i fail ederse agent CLI'a kaç defa düzelt çağrısı atılacak. */
+const MAX_FIX_ATTEMPTS = Number(process.env.AGENT_MAX_FIX_ATTEMPTS || 3);
 
 class CancelledError extends Error {
   constructor() {
@@ -502,7 +506,7 @@ async function runTscOnChangedFiles(
 }
 
 /**
- * Opencode'a "şu hataları düzelt" diye iletmek için yapılandırılmış prompt.
+ * Agent'a "şu hataları düzelt" diye iletmek için yapılandırılmış prompt.
  * AGENTS.md'deki ipucuları zaten yüklü — burada sadece somut hata listesi.
  */
 function buildFixPrompt(tscErrors: string[], changedFiles: string[]): string {
