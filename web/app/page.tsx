@@ -174,10 +174,6 @@ export default async function HomePage() {
               </span>
               <span className="inline-flex items-center gap-1">
                 <Check className="h-3 w-3 text-emerald-400" />
-                Kredi kartı yok
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <Check className="h-3 w-3 text-emerald-400" />
                 Demo data hazır
               </span>
             </div>

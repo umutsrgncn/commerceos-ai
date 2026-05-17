@@ -21,7 +21,7 @@ Tek panel — sipariş, ürün, müşteri, finans, KVKK, GİB, iyzico.
 
 <br />
 
-![CommerceOS Dashboard](https://commerceos.cloud/team/shot-dashboard-dark.jpg)
+![CommerceOS Dashboard](https://commerceos.cloud/team/simple.png)
 
 </div>
 
