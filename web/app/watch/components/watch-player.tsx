@@ -6,8 +6,8 @@ import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 /**
- * Cinematic video player — dummy video, custom controls.
- * Dummy MP4 yoksa poster + play UI gösterir.
+ * CommerceOS tanıtım video oynatıcı — özel kontroller, browser frame'li.
+ * Video: /watch-promo.mp4 (takım çekimi), poster: /team/watch-cover.jpg
  */
 export function WatchPlayer() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -50,17 +50,19 @@ export function WatchPlayer() {
         </span>
       </div>
 
-      {/* Video */}
+      {/* Video — object-contain ki user'ın kompozisyonu kırpılmasın */}
       <video
         ref={videoRef}
         muted={muted}
         playsInline
         loop
-        poster="/team/shot-dashboard.jpg"
-        className="absolute inset-0 h-full w-full object-cover"
+        preload="metadata"
+        poster="/team/watch-cover.jpg"
+        className="absolute inset-0 h-full w-full bg-black object-contain"
         onClick={togglePlay}
       >
         <source src="/watch-promo.mp4" type="video/mp4" />
+        Tarayıcınız videoyu desteklemiyor.
       </video>
 
       {/* Dark overlay when not playing */}
