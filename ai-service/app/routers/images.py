@@ -72,11 +72,11 @@ async def generate_product_image(req: ProductImageRequest) -> ProductImageRespon
 class ImproveImageRequest(BaseModel):
     """Kullanıcının yüklediği fotoğrafları temel alır.
 
-    `source_images_b64`: 1-4 PNG/JPEG base64 — Gemini Vision ile analiz edilir.
-    Çıkan ürün açıklamasına göre Imagen 4 studio kalitesinde yeni görseller
-    üretir. Kullanıcı yüklediği fotoyu DOĞRUDAN düzeltmiyoruz (Imagen 4 fast
-    image-to-image desteklemiyor); referans olarak alıp tek-tek YENİ studio
-    görseller üretiyoruz.
+    `source_images_b64`: 1-4 PNG/JPEG base64 — Gemini 3 Pro Image
+    (image-to-image) ile DOĞRUDAN düzenlenir. Source görselin rengi, deseni,
+    formu korunur; sadece arka plan/aydınlatma/kompozisyon studio kalitesine
+    çekilir. (Eski sürümde Imagen 4 text-to-image kullanılıyordu; mavi elbise
+    yüklenip yeşil dönüyordu çünkü model source'u görmüyordu.)
     """
 
     source_images_b64: list[str] = Field(..., min_length=1, max_length=4)
@@ -158,39 +158,70 @@ async def _analyze_with_vision(image_bytes_list: list[bytes]) -> tuple[str, str]
 
 @router.post("/improve", response_model=ImproveImageResponse)
 async def improve_image(req: ImproveImageRequest) -> ImproveImageResponse:
-    """Kullanıcı fotoğraflarından e-ticaret studio görseli üret."""
-    image_bytes = [_decode_image(b) for b in req.source_images_b64]
+    """Kullanıcı fotoğrafını studio kalitesinde DÜZENLE — source'u referans tut.
 
-    # 1) Vision analizi → (TR açıklama UI'a, EN prompt Imagen'e)
-    tr_desc, en_prompt = await _analyze_with_vision(image_bytes)
+    Image-to-image akışı: Gemini 3 Pro Image source görseli direkt visual
+    context olarak alır → rengi, deseni, formu korur → sadece arka plan,
+    aydınlatma, kompozisyon studio kalitesine çekilir.
+    """
+    image_bytes_list = [_decode_image(b) for b in req.source_images_b64]
+    # Çoklu görsel verilirse ilkini ana referans say
+    primary = image_bytes_list[0]
 
-    # 2) Style template'ini sar
-    style_template = STYLE_TEMPLATES.get(req.style, STYLE_TEMPLATES["studio"])
-    final_prompt = style_template.format(subject=en_prompt.rstrip("."))
+    # 1) Vision analizi → sadece UI'da gösterilecek Türkçe açıklama için
+    #    (artık prompt indirection'ı için kullanılmıyor; image-to-image modeli
+    #    görseli kendi görüyor). Best-effort — fail ederse boş geç.
+    tr_desc = ""
+    try:
+        tr_desc, _ = await _analyze_with_vision(image_bytes_list)
+    except Exception as e:
+        log.warning("vision analyze skipped (best-effort): %s", e)
+
+    # 2) Editing instruction — image-to-image için kısa, source-koruyucu
+    style_brief = {
+        "studio": "soft studio lighting, clean seamless white/light background, e-commerce product photography quality, sharp focus, professional retouching",
+        "lifestyle": "natural daylight, lifestyle context, premium e-commerce look, subtle warm tone",
+        "minimal": "minimalist solid background (#FAFAFA), centered composition, no shadow halo, gallery-grade product shot",
+    }.get(req.style, "soft studio lighting, clean background, e-commerce quality")
+
+    instruction = (
+        f"Edit this product photo to studio e-commerce quality. {style_brief}. "
+        f"CRITICAL: preserve the EXACT product — colors, fabric, pattern, shape, "
+        f"silhouette must remain identical to the source. Only change background, "
+        f"lighting, framing. Do NOT change product color or design."
+    )
     if req.extra_hint:
         clean = req.extra_hint.strip().replace("\n", " ")
-        final_prompt = f"{final_prompt}. Note: {clean[:200]}"
+        instruction = f"{instruction} User note: {clean[:200]}"
 
-    # 3) Imagen 4 — N görsel üret
-    try:
-        images = await imagen.generate_images(
-            final_prompt,
-            count=req.count,
-            aspect_ratio="1:1",
-            negative_prompt=PRODUCT_NEGATIVE_PROMPT,
-        )
-    except Exception as err:
-        log.exception("imagen failed in improve")
-        raise HTTPException(status_code=502, detail=f"Imagen error: {err}") from err
+    # 3) Gemini 3 Pro Image — image-to-image edit, N görsel
+    images: list[bytes] = []
+    for _ in range(max(1, min(4, req.count))):
+        try:
+            edited = await imagen.edit_image(
+                primary,
+                instruction,
+                mime_type="image/jpeg",
+            )
+        except Exception as err:
+            log.exception("gemini image edit failed in improve")
+            raise HTTPException(
+                status_code=502, detail=f"Image edit error: {err}"
+            ) from err
+        if edited:
+            images.append(edited)
 
     if not images:
         raise HTTPException(
             status_code=422,
-            detail="Imagen güvenlik filtresi sonuçları engelledi. Fotoğrafı sadeleştir.",
+            detail=(
+                "Görsel güvenlik filtresine takıldı veya boş yanıt geldi. "
+                "Fotoğrafı sadeleştirip tekrar dene."
+            ),
         )
 
     return ImproveImageResponse(
         images_b64=[base64.b64encode(b).decode("ascii") for b in images],
-        prompt=final_prompt,
+        prompt=instruction,
         analyzed_description=tr_desc,
     )

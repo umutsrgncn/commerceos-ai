@@ -20,6 +20,12 @@ log = logging.getLogger(__name__)
 # slightly more polished output, fast is 2x quicker — pick based on UX needs.
 IMAGEN_MODEL = "imagen-4.0-fast-generate-001"
 
+# Gemini 3 Pro Image — image-to-image / image editing model. Source görsel
+# direkt visual context olarak girer; rengi, deseni, formu korur. "Fotomu
+# iyileştir" gibi referans-zorunlu use case'lerde Imagen text-to-image yerine
+# bu kullanılır.
+GEMINI_IMAGE_MODEL = "gemini-3-pro-image-preview"
+
 AspectRatio = Literal["1:1", "3:4", "4:3", "9:16", "16:9"]
 
 
@@ -73,3 +79,57 @@ async def generate_images(
             response,
         )
     return out
+
+
+async def edit_image(
+    source_image_bytes: bytes,
+    instruction: str,
+    *,
+    mime_type: str = "image/jpeg",
+) -> bytes | None:
+    """Source görseli **referans alarak** düzenle ve yeni görsel döndür.
+
+    Gemini 3 Pro Image (image-to-image) — kullanıcının yüklediği fotoğrafın
+    renk, desen ve formunu koruyarak prompt'taki yönlendirmeyi uygular. Imagen
+    text-to-image'in aksine source görseli "görür", bilinmeyen bir konsept
+    üretmez.
+
+    Args:
+        source_image_bytes: Kullanıcının yüklediği orijinal görsel.
+        instruction: Türkçe veya İngilizce yönergeler (ör. "studio lighting,
+            white background, e-commerce product shot").
+        mime_type: image/jpeg, image/png, image/webp.
+
+    Returns:
+        Yeni görsel PNG/JPEG bytes — model güvenlik filtresi engellerse None.
+    """
+    client = _client()
+    parts = [
+        types.Part.from_bytes(data=source_image_bytes, mime_type=mime_type),
+        types.Part.from_text(text=instruction),
+    ]
+    try:
+        response = await client.aio.models.generate_content(
+            model=GEMINI_IMAGE_MODEL,
+            contents=[types.Content(role="user", parts=parts)],
+            config=types.GenerateContentConfig(
+                response_modalities=["IMAGE"],
+            ),
+        )
+    except Exception as err:
+        log.exception("Gemini image edit failed")
+        raise
+
+    candidates = response.candidates or []
+    for cand in candidates:
+        if not cand.content or not cand.content.parts:
+            continue
+        for part in cand.content.parts:
+            inline = getattr(part, "inline_data", None)
+            if inline and inline.data:
+                return inline.data
+    log.warning(
+        "Gemini image edit returned no image. response=%r",
+        response,
+    )
+    return None
