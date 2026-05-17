@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play, Volume2, VolumeX } from "lucide-react";
+import { Maximize, Minimize, Pause, Play, Volume2, VolumeX } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 
@@ -22,6 +22,8 @@ export function WatchPlayer() {
   const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
   const [hovering, setHovering] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Hover otomatik gizleme — sadece oynarken
   useEffect(() => {
@@ -30,6 +32,29 @@ export function WatchPlayer() {
     v.volume = volume;
     v.muted = muted;
   }, [volume, muted]);
+
+  // Fullscreen change dinle (ESC ile çıkış durumunda state senk)
+  useEffect(() => {
+    const onChange = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    const el = containerRef.current;
+    if (!el) return;
+    try {
+      if (!document.fullscreenElement) {
+        await el.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // bazı tarayıcılarda video element'inde de denenebilir
+      const v = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+      if (v?.webkitEnterFullscreen) v.webkitEnterFullscreen();
+    }
+  }
 
   function togglePlay() {
     const v = videoRef.current;
@@ -73,7 +98,11 @@ export function WatchPlayer() {
 
   return (
     <div
-      className="group relative aspect-video overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl"
+      ref={containerRef}
+      className={cn(
+        "group relative overflow-hidden border border-white/10 bg-black shadow-2xl",
+        fullscreen ? "h-screen w-screen" : "aspect-video rounded-2xl",
+      )}
       onMouseEnter={() => setHovering(true)}
       onMouseLeave={() => setHovering(false)}
     >
@@ -203,6 +232,20 @@ export function WatchPlayer() {
               }}
             />
           </div>
+
+          {/* Fullscreen */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
+            aria-label={fullscreen ? "Tam ekrandan çık" : "Tam ekran"}
+          >
+            {fullscreen ? (
+              <Minimize className="h-4 w-4" />
+            ) : (
+              <Maximize className="h-4 w-4" />
+            )}
+          </button>
         </div>
       </div>
 
