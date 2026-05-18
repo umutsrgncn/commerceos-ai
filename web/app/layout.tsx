@@ -54,6 +54,18 @@ export default async function RootLayout({
 */`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `/*
+   __  (\\_
+(_ \\ ( '>
+  ) \\/_)=
+  (_(_ )_
+
+— çiğdem kılıç
+*/`,
+          }}
+        />
         {children}
       </body>
     </html>
