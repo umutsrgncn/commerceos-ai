@@ -39,7 +39,23 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable}`}
       {...(theme && { "data-theme": theme })}
     >
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `/*
+     /\`·.¸
+     /¸...¸\`:·
+ ¸.·´  ¸   \`·.¸.·´)
+: © ) fishy     ¸  {
+ \`·.¸ \`·  ¸.·´\\\`·¸)
+      \`\\\\´´\\¸.·´
+
+— umut sargıncan
+*/`,
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }
