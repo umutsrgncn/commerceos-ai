@@ -150,7 +150,7 @@ export default async function WatchPage() {
                   <ArrowRight className="h-4 w-4" />
                 </MovingBorderButton>
               </Link>
-              <a href="#ai-developer">
+              <a href="#hero-demo">
                 <Button
                   size="lg"
                   variant="outline"
@@ -174,7 +174,7 @@ export default async function WatchPage() {
             </div>
 
             {/* commerceos.cloud/admin önizleme — mouse-following canlı animasyon (KORUNDU) */}
-            <div className="relative mx-auto mt-16 max-w-5xl">
+            <div id="hero-demo" className="relative mx-auto mt-16 max-w-5xl scroll-mt-24">
               <div className="absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-indigo-500/30 via-fuchsia-500/20 to-emerald-500/20 opacity-60 blur-2xl" />
               <HeroDemo />
             </div>
